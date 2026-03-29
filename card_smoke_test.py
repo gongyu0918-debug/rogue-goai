@@ -610,6 +610,14 @@ async def smoke_bonus_spawn_safety():
     assert game.board[3][3] == 1
 
 
+async def smoke_place_stone_does_not_overwrite():
+    game = make_game(size=5)
+    game.board[2][2] = 1
+    captured = game.place_stone(2, 2, "W")
+    assert captured == 0
+    assert game.board[2][2] == 1
+
+
 async def smoke_foolish_wisdom_ultimate():
     game = make_game()
     game.ultimate = True
@@ -866,6 +874,7 @@ async def main():
         await smoke_fog_mask_refresh()
         await smoke_foolish_wisdom_rogue()
         await smoke_bonus_spawn_safety()
+        await smoke_place_stone_does_not_overwrite()
         await smoke_foolish_wisdom_ultimate()
         await smoke_two_player_rogue_shared_cards()
         await smoke_ai_rogue_support()

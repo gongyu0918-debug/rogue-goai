@@ -1108,6 +1108,8 @@ class GoGame:
     def place_stone(self, x, y, color):
         cv = 1 if color == "B" else 2
         ov = 3 - cv
+        if self.board[y][x] != 0:
+            return 0
         self.board[y][x] = cv
         captured = 0
         for nx, ny in self.neighbors(x, y):
