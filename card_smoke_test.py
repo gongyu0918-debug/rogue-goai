@@ -323,6 +323,18 @@ async def smoke_new_rogue_cards():
 async def smoke_sansan_trap():
     game = make_game()
     game.rogue_card = "sansan_trap"
+    game.place_stone(2, 2, "B")
+    sent = []
+
+    async def send_self(payload):
+        sent.append(copy.deepcopy(payload))
+
+    await s._apply_player_rogue_move_effects(game, send_self, 2, 2, "B", 0)
+    assert game.rogue_sansan_trap_done is False
+    assert sum(1 for x, y in s._adjacent8_points(2, 2, game.size) if game.board[y][x] == 1) == 0
+
+    game = make_game()
+    game.rogue_card = "sansan_trap"
     game.current_player = game.ai_color
     sent = []
 
@@ -368,7 +380,29 @@ async def smoke_new_ultimate_cards():
     game.board[2][2] = 2
     modified = await s._apply_ultimate_effect(game, send, 1, 1, "B", "corner_helper")
     assert modified is True
-    assert game.ultimate_corner_helper_done is True
+    assert 0 in game.ultimate_corner_helper_done
+
+    game.board[8][8] = 1
+    game.board[7][7] = 1
+    modified = await s._apply_ultimate_effect(game, send, 7, 7, "B", "corner_helper")
+    assert modified is True
+    assert len(game.ultimate_corner_helper_done) == 2
+
+    game = make_game()
+    game.ultimate = True
+    game.ultimate_move_count = 1
+    modified = await s._apply_ultimate_effect(game, send, 2, 2, "B", "shadow_clone")
+    assert modified is True
+    assert len(game.ultimate_shadow_clone_links) == 1
+    game.board[2][2] = 0
+    fx, fy = game.ultimate_shadow_clone_links[0]["to"]
+    game.board[fy][fx] = 0
+    game.ultimate_move_count = 2
+    resolved = await s._resolve_pending_ultimate_shadow_links(game, send)
+    assert resolved is True
+    assert game.board[2][2] == 1
+    assert game.board[fy][fx] == 1
+    assert len(game.ultimate_shadow_clone_links) == 0
 
     game = make_game()
     game.ultimate = True

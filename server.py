@@ -42,7 +42,7 @@ USER_DATA_DIR = Path(os.environ.get("LOCALAPPDATA", str(BASE_DIR))) / "GoAI"
 USER_KATAGO_DIR = USER_DATA_DIR / "katago"
 USER_KATAGO_HOME = USER_KATAGO_DIR / "KataGoData"
 USER_RUNTIME_CONFIG_DIR = USER_KATAGO_DIR / "runtime"
-SERVER_REV = "20260329-rogue-two-player-ai"
+SERVER_REV = "20260329-legacy-compat"
 KATAGO_EXE = BASE_DIR / "katago" / "katago.exe"             # CUDA build (legacy/optional)
 KATAGO_CUDA_EXE = BASE_DIR / "katago" / "katago_cuda.exe"   # CUDA (downloaded upgrade)
 KATAGO_OPENCL_EXE = BASE_DIR / "katago" / "katago_opencl.exe"  # OpenCL (any GPU)
@@ -118,7 +118,7 @@ RANK_LABELS = {
 MAX_GAME_VISITS = 20000   # Hard cap on visits per move
 ROGUE_MAX_VISITS = 800    # Cap for rogue mode (chaotic board, no need for deep search)
 ULTIMATE_MAX_VISITS = 400 # Cap for ultimate mode (20 moves, effects dominate)
-CPU_MAX_VISITS = 500      # Hard cap for CPU mode (keep response < 5s)
+CPU_MAX_VISITS = 250      # Hard cap for older CPU mode (prefer stable replies over deep search)
 
 # Rogue mode tuning: keep the cards impactful without turning every game into
 # a scripted auto-win. These are intentionally a bit generous to emphasize the
@@ -342,7 +342,7 @@ ROGUE_CARDS = {
     },
     "joseki_ocd": {
         "name": "定式强迫症",
-        "desc": "点亮 7 点，命中 3 个自动补全其余",
+        "desc": "开局亮出 7 个目标点，下中其中 3 个，剩下 4 个会自动补成你的棋子",
         "icon": "📐",
     },
     "handicap_quest": {
@@ -362,7 +362,7 @@ ROGUE_CARDS = {
     },
     "corner_helper": {
         "name": "守角辅助",
-        "desc": "角部 5×5 有 2 子时，自动补 2 颗援军",
+        "desc": "任一角的 5×5 区域里有 2 颗己子时，就会在那个角再补 2 颗援军",
         "icon": "🏯",
     },
     "sanrensei": {
@@ -452,7 +452,7 @@ ULTIMATE_CARDS = {
     },
     "shadow_clone": {
         "name": "影分身",
-        "desc": "对称位自动出现一颗分身棋",
+        "desc": "先生成一颗镜像棋；下一回合会按原落点和镜像点强制连成一整条线，就算两端棋子被提掉也照样连线",
         "icon": "👥",
     },
     "plague": {
@@ -512,7 +512,7 @@ ULTIMATE_CARDS = {
     },
     "corner_helper": {
         "name": "守角要塞",
-        "desc": "满足条件后 8×8 角部封城，敌子全灭",
+        "desc": "四个角分别独立结算：某个角的 5×5 区域里有 2 颗己子时，就会封满该角 8×8 边界并清掉里面的敌子",
         "icon": "🏯",
     },
     "sanrensei": {
@@ -1069,11 +1069,12 @@ class GoGame:
         self.ultimate_godhand_center: Optional[tuple[int, int]] = None
         self.ultimate_godhand_trigger: list[tuple] = []
         self.ultimate_godhand_done: bool = False
-        self.ultimate_corner_helper_done: bool = False
+        self.ultimate_corner_helper_done: set[int] = set()
         self.ultimate_sanrensei_done: bool = False
         self.ultimate_quickthink_active: bool = False
         self.ultimate_quickthink_token: int = 0
         self.ultimate_fool_shapes: set[tuple[tuple[int, int], ...]] = set()
+        self.ultimate_shadow_clone_links: list[dict] = []
 
     # ─── Board logic ─────────────────────────────────────────────────────────
     def neighbors(self, x, y):
@@ -1370,17 +1371,49 @@ def _build_engine_candidates() -> tuple[bool, list[dict]]:
     return has_gpu, candidates
 
 
-def _select_model() -> Optional[Path]:
+def _available_models() -> list[Path]:
+    models = []
     for candidate in (KATAGO_MODEL_LARGE, KATAGO_MODEL, KATAGO_MODEL_SMALL):
         if candidate.exists():
-            return candidate
-    return None
+            models.append(candidate)
+    return models
+
+
+def _get_nvidia_driver_major() -> Optional[int]:
+    try:
+        out = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
+            timeout=10,
+            creationflags=0x08000000 if sys.platform == "win32" else 0,
+        ).decode("utf-8", errors="replace").strip().splitlines()
+        if not out:
+            return None
+        first = out[0].strip()
+        major = first.split(".")[0]
+        return int(major)
+    except Exception:
+        return None
+
+
+def _cuda_backend_supported() -> bool:
+    if not _has_nvidia_gpu():
+        return False
+    major = _get_nvidia_driver_major()
+    if major is None or major < 528:
+        return False
+    # Prefer CUDA only when the packaged runtime is actually present.
+    cuda_runtime_ready = all(path.exists() for path in (
+        BASE_DIR / "katago" / "cublas64_12.dll",
+        BASE_DIR / "katago" / "cudart64_12.dll",
+    )) and any((BASE_DIR / "katago" / name).exists() for name in ("cudnn64_9.dll", "cudnn64_8.dll"))
+    return cuda_runtime_ready
 
 
 def _build_engine_candidates() -> tuple[bool, list[dict]]:
     has_gpu = _has_nvidia_gpu()
+    cuda_ok = _cuda_backend_supported()
     candidates = []
-    if has_gpu and KATAGO_CUDA_EXE.exists():
+    if cuda_ok and KATAGO_CUDA_EXE.exists():
         candidates.append({
             "exe": KATAGO_CUDA_EXE,
             "config": KATAGO_CONFIG,
@@ -1389,7 +1422,7 @@ def _build_engine_candidates() -> tuple[bool, list[dict]]:
             "startup_timeout": 60.0,
             "stall_timeout": 20.0,
         })
-    if has_gpu and KATAGO_EXE.exists():
+    if cuda_ok and KATAGO_EXE.exists():
         candidates.append({
             "exe": KATAGO_EXE,
             "config": KATAGO_CONFIG,
@@ -1452,8 +1485,8 @@ def _run_engine_startup(trigger: str, token: int):
             _engine_log(f"{trigger}: KataGo disabled, skip startup")
             return
 
-        model = _select_model()
-        if not model:
+        models = _available_models()
+        if not models:
             CPU_MODE = False
             _set_engine_state(
                 phase="failed",
@@ -1477,7 +1510,7 @@ def _run_engine_startup(trigger: str, token: int):
                 message="未找到任何 KataGo 引擎，当前仅支持纯对弈",
                 active_backend=None,
                 active_backend_exe=None,
-                active_model=model.name,
+                active_model=models[0].name,
                 last_error="No KataGo engine found",
                 attempts=[],
                 candidates=[],
@@ -1489,64 +1522,41 @@ def _run_engine_startup(trigger: str, token: int):
         attempts = []
         _set_engine_state(
             phase="initializing",
-            message=f"正在准备模型 {model.name}",
+            message=f"正在准备模型 {models[0].name}",
             active_backend=None,
             active_backend_exe=None,
-            active_model=model.name,
+            active_model=models[0].name,
             last_error=None,
             attempts=attempts,
-            candidates=[item["label"] for item in candidates],
+            candidates=[f"{item['label']} + {model.name}" for item in candidates for model in models],
             nvidia_detected=has_gpu,
         )
-        _engine_log(f"{trigger}: selected model {model.name}")
+        _engine_log(f"{trigger}: available models {', '.join(model.name for model in models)}")
 
-        for idx, candidate in enumerate(candidates, start=1):
-            if not _engine_token_is_current(token):
-                _engine_log(f"{trigger}: startup cancelled before {candidate['label']}")
-                return
-
-            exe = candidate["exe"]
-            cfg = candidate["config"]
-            is_cpu = candidate["cpu_mode"]
-            label = candidate["label"]
-            attempt = {
-                "label": label,
-                "exe": exe.name,
-                "config": cfg.name,
-                "status": "starting",
-            }
-            attempts.append(attempt)
-            _set_engine_state(
-                phase="initializing",
-                message=f"尝试启动 {label} 引擎 ({idx}/{len(candidates)})",
-                active_backend=label,
-                active_backend_exe=exe.name,
-                active_model=model.name,
-                last_error=None,
-                attempts=attempts,
-                nvidia_detected=has_gpu,
-            )
-            _engine_log(f"Trying {label}: {exe.name} with {model.name}")
-            try:
-                engine.start(
-                    exe,
-                    cfg,
-                    model,
-                    startup_timeout=float(candidate.get("startup_timeout", 120.0)),
-                    stall_timeout=float(candidate.get("stall_timeout", 45.0)),
-                    stderr_callback=lambda line, current_label=label: _engine_progress_callback(
-                        current_label, token, line
-                    ),
-                )
+        total_attempts = len(candidates) * len(models)
+        current_attempt = 0
+        for candidate in candidates:
+            for model in models:
+                current_attempt += 1
                 if not _engine_token_is_current(token):
-                    engine.stop()
-                    _engine_log(f"{trigger}: startup cancelled after {label} became ready")
+                    _engine_log(f"{trigger}: startup cancelled before {candidate['label']}")
                     return
-                attempt["status"] = "ready"
-                CPU_MODE = is_cpu
+
+                exe = candidate["exe"]
+                cfg = candidate["config"]
+                is_cpu = candidate["cpu_mode"]
+                label = candidate["label"]
+                attempt = {
+                    "label": f"{label} + {model.name}",
+                    "exe": exe.name,
+                    "config": cfg.name,
+                    "model": model.name,
+                    "status": "starting",
+                }
+                attempts.append(attempt)
                 _set_engine_state(
-                    phase="ready",
-                    message=f"{label} 引擎已就绪",
+                    phase="initializing",
+                    message=f"尝试启动 {label} + {model.name} ({current_attempt}/{total_attempts})",
                     active_backend=label,
                     active_backend_exe=exe.name,
                     active_model=model.name,
@@ -1554,32 +1564,60 @@ def _run_engine_startup(trigger: str, token: int):
                     attempts=attempts,
                     nvidia_detected=has_gpu,
                 )
-                _engine_log(f"{label} ready with model {model.name}")
-                return
-            except Exception as exc:
-                attempt["status"] = "failed"
-                attempt["error"] = str(exc)
-                CPU_MODE = False
-                _engine_log(f"{label} failed: {exc}")
-                engine.stop()
-                if not _engine_token_is_current(token):
-                    _engine_log(f"{trigger}: startup cancelled after {label} failure")
+                _engine_log(f"Trying {label}: {exe.name} with {model.name}")
+                try:
+                    engine.start(
+                        exe,
+                        cfg,
+                        model,
+                        startup_timeout=float(candidate.get("startup_timeout", 120.0)),
+                        stall_timeout=float(candidate.get("stall_timeout", 45.0)),
+                        stderr_callback=lambda line, current_label=label: _engine_progress_callback(
+                            current_label, token, line
+                        ),
+                    )
+                    if not _engine_token_is_current(token):
+                        engine.stop()
+                        _engine_log(f"{trigger}: startup cancelled after {label} became ready")
+                        return
+                    attempt["status"] = "ready"
+                    CPU_MODE = is_cpu
+                    _set_engine_state(
+                        phase="ready",
+                        message=f"{label} 引擎已就绪",
+                        active_backend=label,
+                        active_backend_exe=exe.name,
+                        active_model=model.name,
+                        last_error=None,
+                        attempts=attempts,
+                        nvidia_detected=has_gpu,
+                    )
+                    _engine_log(f"{label} ready with model {model.name}")
                     return
-                has_more = idx < len(candidates)
-                _set_engine_state(
-                    phase="initializing" if has_more else "failed",
-                    message=(
-                        f"{label} 启动失败，正在尝试下一个后端"
-                        if has_more else
-                        "所有引擎启动失败，当前仅支持纯对弈"
-                    ),
-                    active_backend=label,
-                    active_backend_exe=exe.name,
-                    active_model=model.name,
-                    last_error=str(exc),
-                    attempts=attempts,
-                    nvidia_detected=has_gpu,
-                )
+                except Exception as exc:
+                    attempt["status"] = "failed"
+                    attempt["error"] = str(exc)
+                    CPU_MODE = False
+                    _engine_log(f"{label} with {model.name} failed: {exc}")
+                    engine.stop()
+                    if not _engine_token_is_current(token):
+                        _engine_log(f"{trigger}: startup cancelled after {label} failure")
+                        return
+                    has_more = current_attempt < total_attempts
+                    _set_engine_state(
+                        phase="initializing" if has_more else "failed",
+                        message=(
+                            f"{label} + {model.name} 启动失败，正在尝试下一个组合"
+                            if has_more else
+                            "所有引擎启动失败，当前仅支持纯对弈"
+                        ),
+                        active_backend=label,
+                        active_backend_exe=exe.name,
+                        active_model=model.name,
+                        last_error=str(exc),
+                        attempts=attempts,
+                        nvidia_detected=has_gpu,
+                    )
 
         CPU_MODE = False
         _set_engine_state(
@@ -2102,6 +2140,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
 
                         if p_card:
                             await _apply_ultimate_effect(game, send, x, y, color, p_card)
+                        await _resolve_pending_ultimate_shadow_links(game, send)
 
                         chain_bonus = (
                             p_card == "chain"
@@ -2532,10 +2571,11 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                     game.ultimate_godhand_center = None
                     game.ultimate_godhand_trigger = []
                     game.ultimate_godhand_done = False
-                    game.ultimate_corner_helper_done = False
+                    game.ultimate_corner_helper_done = set()
                     game.ultimate_sanrensei_done = False
                     game.ultimate_quickthink_active = False
                     game.ultimate_fool_shapes = set()
+                    game.ultimate_shadow_clone_links = []
                     if card_id == "joseki_burst":
                         game.ultimate_joseki_targets = _pick_joseki_targets(
                             game.size, ULTIMATE_JOSEKI_TARGET_COUNT)
@@ -2951,6 +2991,28 @@ def _find_corner_with_min_stones(game: GoGame, color: str, span: int, count: int
     return None
 
 
+def _line_points_between(x1: int, y1: int, x2: int, y2: int) -> list[tuple[int, int]]:
+    pts: list[tuple[int, int]] = []
+    dx = abs(x2 - x1)
+    dy = abs(y2 - y1)
+    sx = 1 if x1 < x2 else -1
+    sy = 1 if y1 < y2 else -1
+    err = dx - dy
+    x, y = x1, y1
+    while True:
+        pts.append((x, y))
+        if x == x2 and y == y2:
+            break
+        e2 = err * 2
+        if e2 > -dy:
+            err -= dy
+            x += sx
+        if e2 < dx:
+            err += dx
+            y += sy
+    return pts
+
+
 def _player_non_pass_coords(game: GoGame, color: str, limit: Optional[int] = None) -> list[tuple[int, int]]:
     coords = []
     for move_color, gtp in game.moves:
@@ -2962,6 +3024,36 @@ def _player_non_pass_coords(game: GoGame, color: str, limit: Optional[int] = Non
         if limit is not None and len(coords) >= limit:
             break
     return coords
+
+
+async def _resolve_pending_ultimate_shadow_links(game: GoGame, send_fn) -> bool:
+    if not game.ultimate_shadow_clone_links:
+        return False
+    pending = []
+    modified = False
+    for link in game.ultimate_shadow_clone_links:
+        if game.ultimate_move_count < link["trigger_move"]:
+            pending.append(link)
+            continue
+        changed = 0
+        for px, py in _line_points_between(*link["from"], *link["to"]):
+            if game.board[py][px] != link["color"]:
+                game.board[py][px] = link["color"]
+                changed += 1
+        if changed:
+            modified = True
+            await send_fn({
+                "type": "rogue_event",
+                "msg": (
+                    f"👥 影分身连线完成："
+                    f"{coord_to_gtp(link['from'][0], link['from'][1], game.size)}"
+                    f" 连到 "
+                    f"{coord_to_gtp(link['to'][0], link['to'][1], game.size)}"
+                    f"，铺开 {changed} 颗同色棋"
+                ),
+            })
+    game.ultimate_shadow_clone_links = pending
+    return modified
 
 
 def _get_ai_rogue_forbidden_points(game: GoGame) -> list[tuple[int, int]]:
@@ -3189,7 +3281,8 @@ async def _apply_player_rogue_move_effects(game: GoGame, send_fn,
         await send_fn({"type": "rogue_event",
                        "msg": f"✨ 神之一手发动，在暗点周围爆发 {len(changed)} 颗同色棋"})
 
-    if (game.rogue_card == "sansan_trap"
+    if (game.two_player
+            and game.rogue_card == "sansan_trap"
             and not game.rogue_sansan_trap_done
             and (x, y) in _get_sansan_points(game.size)):
         nearby = [(nx, ny) for nx, ny in _adjacent8_points(x, y, game.size) if game.board[ny][nx] == 0]
@@ -3430,8 +3523,8 @@ async def _apply_ultimate_effect(game: GoGame, send_fn, x: int, y: int,
             await send_fn({"type": "rogue_event", "msg": msg})
 
     elif card == "shadow_clone":
-        # Place at the symmetric point. If occupied, try to clone into a nearby
-        # empty point around the mirror so the card still pays off more often.
+        # Place at the symmetric point, then force a delayed line between the
+        # original move and its mirror on the next turn.
         mx, my = size - 1 - x, size - 1 - y
         clone_target = None
         if game.board[my][mx] == 0:
@@ -3450,8 +3543,14 @@ async def _apply_ultimate_effect(game: GoGame, send_fn, x: int, y: int,
             tx, ty = clone_target
             game.board[ty][tx] = cv
             modified = True
+            game.ultimate_shadow_clone_links.append({
+                "trigger_move": game.ultimate_move_count + 1,
+                "color": cv,
+                "from": (x, y),
+                "to": (tx, ty),
+            })
             await send_fn({"type": "rogue_event",
-                           "msg": f"👥 影分身！在 {coord_to_gtp(tx, ty, size)} 出现分身"})
+                           "msg": f"👥 影分身！在 {coord_to_gtp(tx, ty, size)} 出现分身，下一回合会连成镜像线"})
 
     elif card == "plague":
         # Convert ALL enemy stones in 3×3 area
@@ -3659,23 +3758,33 @@ async def _apply_ultimate_effect(game: GoGame, send_fn, x: int, y: int,
                            "msg": f"✨ 神之一手发动，清空 {cleared} 颗敌子并洒下 {filled} 颗同色棋"})
 
     elif card == "corner_helper":
-        if not game.ultimate_corner_helper_done:
-            corner = _find_corner_with_min_stones(game, color, 5, 2)
-            if corner is not None:
-                cleared = 0
-                for px, py in _get_corner_square_points(size, corner, 8):
-                    if game.board[py][px] == ov:
-                        game.board[py][px] = 0
-                        cleared += 1
-                        modified = True
-                boundary = _get_corner_boundary_points(size, corner, 8)
-                placed = _set_points_to_color(game, boundary, color)
-                if placed:
+        corner = None
+        for candidate in range(4):
+            if candidate in game.ultimate_corner_helper_done:
+                continue
+            own = sum(
+                1
+                for px, py in _get_corner_square_points(size, candidate, 5)
+                if game.board[py][px] == cv
+            )
+            if own >= 2:
+                corner = candidate
+                break
+        if corner is not None:
+            cleared = 0
+            for px, py in _get_corner_square_points(size, corner, 8):
+                if game.board[py][px] == ov:
+                    game.board[py][px] = 0
+                    cleared += 1
                     modified = True
-                if cleared or placed:
-                    game.ultimate_corner_helper_done = True
-                    await send_fn({"type": "rogue_event",
-                                   "msg": f"🏯 守角要塞封锁角部，清空 {cleared} 子并筑边 {len(placed)} 子"})
+            boundary = _get_corner_boundary_points(size, corner, 8)
+            placed = _set_points_to_color(game, boundary, color)
+            if placed:
+                modified = True
+            if cleared or placed:
+                game.ultimate_corner_helper_done.add(corner)
+                await send_fn({"type": "rogue_event",
+                               "msg": f"🏯 守角要塞封锁角部，清空 {cleared} 子并筑边 {len(placed)} 子"})
 
     elif card == "sanrensei":
         if not game.ultimate_sanrensei_done:
@@ -3827,6 +3936,40 @@ async def _ultimate_force_score(game: GoGame, send_fn):
                     "score": score_str, "reason": "ultimate_20moves"})
 
 
+def _is_suspicious_ai_pass(game: GoGame, gtp_move: str, color: str) -> bool:
+    if gtp_move.upper() != "PASS":
+        return False
+    non_pass_moves = sum(1 for c, m in game.moves if c == color and m.upper() != "PASS")
+    empty_points = sum(1 for row in game.board for cell in row if cell == 0)
+    return non_pass_moves < 3 and empty_points > max(20, game.size * 2)
+
+
+async def _pick_nonpass_fallback_move(game: GoGame, color: str, visits: int) -> Optional[str]:
+    try:
+        lines, _ = engine.analyze(
+            color,
+            visits=max(100, min(visits, 1200)),
+            interval=50,
+            duration=1.5,
+            extra_args=["rootInfo", "true"],
+        )
+        result = engine.parse_analysis(lines, [], game.size, to_move_color=color)
+        for item in result.get("top_moves", []):
+            gtp = (item.get("move") or item.get("gtp") or "").strip()
+            if not gtp or gtp.upper() in {"PASS", "RESIGN"}:
+                continue
+            coord = gtp_to_coord(gtp, game.size)
+            if not coord or game.board[coord[1]][coord[0]] != 0:
+                continue
+            with engine.command_lock:
+                resp = engine._send_command_locked(f"play {color} {gtp}")
+                if "?" not in resp:
+                    return gtp
+    except Exception as exc:
+        _engine_log(f"non-pass fallback failed: {exc}")
+    return None
+
+
 async def _ultimate_ai_move(game: GoGame, send_fn,
                             allow_double_bonus: bool = True):
     """AI move in ultimate mode - generates move, applies AI's card effect."""
@@ -3870,6 +4013,12 @@ async def _ultimate_ai_move(game: GoGame, send_fn,
             else:
                 gtp_move = "pass"
 
+    if _is_suspicious_ai_pass(game, gtp_move, color):
+        fallback_move = await _pick_nonpass_fallback_move(game, color, visits)
+        if fallback_move:
+            _engine_log(f"Suspicious early PASS in ultimate mode, replaced with {fallback_move}")
+            gtp_move = fallback_move
+
     coord = gtp_to_coord(gtp_move, game.size)
     if gtp_move.upper() != "PASS" and coord:
         x, y = coord
@@ -3903,11 +4052,12 @@ async def _ultimate_ai_move(game: GoGame, send_fn,
     if ai_card and coord and gtp_move.upper() != "PASS":
         board_modified = await _apply_ultimate_effect(
             game, send_fn, coord[0], coord[1], color, ai_card)
-        if board_modified:
-            # AI-side ultimate effects can rewrite the visible board directly.
-            # Sync immediately so the engine does not continue from a stale
-            # pre-effect position on the player's next move.
-            await _sync_board_to_katago(game)
+    pending_modified = await _resolve_pending_ultimate_shadow_links(game, send_fn)
+    if board_modified or pending_modified:
+        # AI-side ultimate effects can rewrite the visible board directly.
+        # Sync immediately so the engine does not continue from a stale
+        # pre-effect position on the player's next move.
+        await _sync_board_to_katago(game)
 
     chain_bonus = (
         ai_card == "chain"
@@ -4174,6 +4324,12 @@ async def _ai_move(game: GoGame, send_fn):
             print(f"[AI] genmove returned error: {resp}")
             return
         gtp_move = resp.replace("=", "").strip()
+
+    if _is_suspicious_ai_pass(game, gtp_move, color):
+        fallback_move = await _pick_nonpass_fallback_move(game, color, visits)
+        if fallback_move:
+            _engine_log(f"Suspicious early PASS in rogue/normal mode, replaced with {fallback_move}")
+            gtp_move = fallback_move
 
     if gtp_move.upper() == "RESIGN":
         if card:

@@ -102,10 +102,16 @@ Current fallback path:
 
 Recommended environment for source development:
 
-- Windows 10/11
+- Windows 8.1 / 10 / 11
 - Python 3.11
 - a modern browser
 - optional GPU
+
+Runtime notes:
+
+- Older CPUs around the Intel i7-6700K class are supported, but the CPU backend is intentionally tuned for stability rather than maximum strength
+- NVIDIA GPUs with outdated drivers may skip CUDA and fall back to OpenCL or CPU automatically
+- Windows 8.1 is the practical lower bound for the current Python 3.11 based build pipeline. Plain Windows 8 is not an officially guaranteed target
 
 Python packages used by the source version include:
 
