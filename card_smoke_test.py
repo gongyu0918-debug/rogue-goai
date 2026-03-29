@@ -664,6 +664,74 @@ async def smoke_undo_preserves_bonus_stones():
     assert game.board == board_after_bonus
 
 
+async def smoke_bonus_turn_does_not_grant_extra_ai_move():
+    async def run_case(rogue_card=None, ultimate_card=None):
+        game = make_game()
+        sent = []
+
+        async def send(payload):
+            sent.append(copy.deepcopy(payload))
+
+        old_engine = s.engine
+        old_sync = s._sync_board_to_katago
+        old_shuffle = s.random.shuffle
+        try:
+            s.engine = DummyEngine(["F6"])
+
+            async def fake_sync(_game):
+                return None
+
+            s._sync_board_to_katago = fake_sync
+            s.random.shuffle = lambda _items: None
+
+            if rogue_card:
+                game.rogue_enabled = True
+                game.rogue_card = rogue_card
+                x, y = 4, 4
+                gtp = s.coord_to_gtp(x, y, game.size)
+                game.moves.append(("B", gtp))
+                game.place_stone(x, y, "B")
+                game.passed["B"] = False
+                game.current_player = "W"
+                await s._apply_player_rogue_move_effects(game, send, x, y, "B", 0)
+                await s._ai_move(game, send)
+                ai_moves = [m for m in game.moves if m[0] == game.ai_color]
+                ai_events = [m for m in sent if m.get("type") == "ai_move"]
+                assert len(ai_moves) == 1
+                assert len(ai_events) == 1
+                assert ai_events[0]["gtp"].upper() == "F6"
+
+            if ultimate_card:
+                game = make_game()
+                sent.clear()
+                game.ultimate = True
+                game.current_player = game.player_color
+                game.ultimate_player_card = ultimate_card
+                game.ultimate_ai_card = "meteor"
+                x, y = 4, 4
+                gtp = s.coord_to_gtp(x, y, game.size)
+                game.ultimate_move_count += 1
+                game.moves.append(("B", gtp))
+                game.place_stone(x, y, "B")
+                game.passed["B"] = False
+                await s._apply_ultimate_effect(game, send, x, y, "B", ultimate_card)
+                await s._ultimate_ai_move(game, send)
+                ai_moves = [m for m in game.moves if m[0] == game.ai_color]
+                ai_events = [m for m in sent if m.get("type") == "ai_move"]
+                assert len(ai_moves) == 1
+                assert len(ai_events) == 1
+                assert ai_events[0]["gtp"].upper() == "F6"
+        finally:
+            s.engine = old_engine
+            s._sync_board_to_katago = old_sync
+            s.random.shuffle = old_shuffle
+
+    await run_case(rogue_card="sanrensei")
+    await run_case(rogue_card="foolish_wisdom")
+    await run_case(ultimate_card="proliferate")
+    await run_case(ultimate_card="sanrensei")
+
+
 async def smoke_foolish_wisdom_ultimate():
     game = make_game()
     game.ultimate = True
@@ -923,6 +991,7 @@ async def main():
         await smoke_place_stone_does_not_overwrite()
         await smoke_batch_bonus_persists_after_followup_move()
         await smoke_undo_preserves_bonus_stones()
+        await smoke_bonus_turn_does_not_grant_extra_ai_move()
         await smoke_foolish_wisdom_ultimate()
         await smoke_two_player_rogue_shared_cards()
         await smoke_ai_rogue_support()
