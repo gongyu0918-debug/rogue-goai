@@ -2,6 +2,9 @@
 
 This project uses, depends on, or is designed to work with third-party software and assets.
 
+The original code in this repository is licensed separately under the `GoAI Non-Commercial License v1.0`.
+This file only documents third-party components and their attribution / licensing context.
+
 ## 1. KataGo Engine
 
 - Project: `KataGo`

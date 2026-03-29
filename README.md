@@ -105,24 +105,26 @@ python launcher.py
 
 ## Commercial Use And License
 
-The original code in this repository is released under the MIT License.
+The original code in this repository is not under a blanket MIT-style commercial license anymore.
 
-That means, in plain language:
+Current policy:
 
-- commercial use is allowed
-- modification is allowed
-- redistribution is allowed
-- private use is allowed
+- non-commercial use is allowed
+- non-commercial modification is allowed
+- non-commercial redistribution is allowed
+- non-commercial sharing of the packaged build is allowed
+- commercial use is not automatically allowed
 
-The main condition is:
+In plain language:
 
-- you must keep the original copyright notice and license text with copies or substantial portions of the project source
+- if you are a normal player, hobbyist, student, streamer, club member, or friend sharing this for non-commercial purposes, you can use and share it directly
+- if you want to use this project in a commercial product, paid service, business deployment, paid bundle, or other commercial setting, please contact the repository owner first
 
-So if you reuse this project or parts of its code, please retain the source attribution through the included license notice.
+Please keep the copyright notice and license text when redistributing the project source or substantial portions of it.
 
 Important:
 
-- this applies to this repository's own original code
+- this policy applies to this repository's own original code and content
 - third-party components remain under their own licenses
 - bundled or downloaded engine binaries, model files, NVIDIA files, and other third-party materials are not relicensed by this repository
 
