@@ -14,6 +14,7 @@ import sys
 import threading
 import time
 import tkinter as tk
+import platform
 import urllib.error
 import urllib.request
 import webbrowser
@@ -301,10 +302,11 @@ class GoAILauncher:
         self._update_btn = tk.Button(
             bf2, text="检查引擎更新", width=14, font=sec_font,
             fg=TEXT, bg=BG3, activeforeground=TEXT, activebackground="#3D3D3D",
-            relief="flat", borderwidth=0, cursor="hand2", pady=5,
+            relief="flat", borderwidth=0, cursor="arrow", state="disabled", pady=5,
             command=self._check_katago_update
         )
         self._update_btn.pack(side="left")
+        self._update_btn.config(text="引擎更新已禁用")
 
         # ── Performance Upgrade Row ──
         bf3 = tk.Frame(content, bg=BG)
@@ -332,6 +334,9 @@ class GoAILauncher:
         # ── Log Area ──
         tk.Label(content, text="运行日志", font=("Microsoft YaHei", 9, "bold"), fg=GOLD, bg=BG).pack(anchor="w", pady=(5, 5))
         
+        if not _upgrade_installed():
+            self._apply_upgrade_button_policy()
+
         self._log = scrolledtext.ScrolledText(
             content, font=("Consolas", 9), bg="#000000", fg="#4CAF50",
             insertbackground="#4CAF50", relief="flat", wrap="word",
@@ -561,6 +566,157 @@ class GoAILauncher:
         if vram >= 3000:
             return 2, "入门级"
         return 1, "低端"
+
+    @staticmethod
+    def _detect_video_controller_names():
+        commands = [
+            [
+                "powershell",
+                "-NoProfile",
+                "-Command",
+                "Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name",
+            ],
+            ["wmic", "path", "win32_VideoController", "get", "name"],
+        ]
+        for cmd in commands:
+            try:
+                out = subprocess.check_output(
+                    cmd,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=8,
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                    if hasattr(subprocess, "CREATE_NO_WINDOW") else 0,
+                )
+            except Exception:
+                continue
+            names = []
+            for raw in out.splitlines():
+                line = raw.strip()
+                if not line or line.lower() == "name":
+                    continue
+                names.append(line)
+            if names:
+                return names
+        return []
+
+    @staticmethod
+    def _detect_cpu_name():
+        commands = [
+            [
+                "powershell",
+                "-NoProfile",
+                "-Command",
+                "Get-CimInstance Win32_Processor | Select-Object -ExpandProperty Name",
+            ],
+            ["wmic", "cpu", "get", "name"],
+        ]
+        for cmd in commands:
+            try:
+                out = subprocess.check_output(
+                    cmd,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=8,
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                    if hasattr(subprocess, "CREATE_NO_WINDOW") else 0,
+                )
+            except Exception:
+                continue
+            for raw in out.splitlines():
+                line = raw.strip()
+                if not line or line.lower() == "name":
+                    continue
+                return line
+        return platform.processor() or ""
+
+    @staticmethod
+    def _classify_cpu(name: str):
+        upper = (name or "").upper()
+        if not upper:
+            return 2, "未知"
+        if re.search(r"CELERON|PENTIUM|ATHLON SILVER|J\d{4}|N[34567]\d{2}|A4-|A6-", upper):
+            return 1, "偏弱"
+        if re.search(r"I3-|I5-2|I5-3|I7-2|I7-3|FX-|A8-|A10-", upper):
+            return 1, "偏弱"
+        if re.search(r"I5-4|I5-5|I5-6|I7-4|I7-5|I7-6|RYZEN 3", upper):
+            return 2, "一般"
+        if re.search(r"I5-7|I5-8|I5-9|I7-7|I7-8|I7-9|RYZEN 5|RYZEN 7", upper):
+            return 3, "良好"
+        if re.search(r"I7-1\d|I9-|ULTRA 7|ULTRA 9|RYZEN 9", upper):
+            return 4, "较强"
+        return 2, "一般"
+
+    @staticmethod
+    def _has_discrete_gpu(video_names):
+        for name in video_names:
+            upper = name.upper()
+            if re.search(r"NVIDIA.*(RTX|GTX|QUADRO|TESLA)|RADEON\s+RX|RADEON PRO|ARC\s+A", upper):
+                return True
+        return False
+
+    @staticmethod
+    def _is_integrated_only(video_names):
+        if not video_names:
+            return True
+        return not GoAILauncher._has_discrete_gpu(video_names)
+
+    def _get_upgrade_policy(self):
+        gpu_name, gpu_vram, driver_ver = self._detect_nvidia_gpu()
+        video_names = self._detect_video_controller_names()
+        cpu_name = self._detect_cpu_name()
+        cpu_tier, cpu_label = self._classify_cpu(cpu_name)
+        has_discrete_gpu = self._has_discrete_gpu(video_names)
+        integrated_only = self._is_integrated_only(video_names)
+
+        if integrated_only:
+            return {
+                "allowed": False,
+                "reason": "当前设备主要为核显环境。为了保证对弈稳定性，性能升级包已暂时关闭。",
+                "detail": f"显卡: {', '.join(video_names) or '未识别'}；CPU: {cpu_name or '未识别'} ({cpu_label})",
+            }
+        if cpu_tier <= 1:
+            return {
+                "allowed": False,
+                "reason": "当前设备整体性能偏弱。为了避免升级后更慢或出现启动问题，性能升级包已暂时关闭。",
+                "detail": f"CPU: {cpu_name or '未识别'} ({cpu_label})",
+            }
+        if gpu_name and driver_ver:
+            return {
+                "allowed": True,
+                "reason": "",
+                "detail": f"NVIDIA {gpu_name} / 驱动 {driver_ver}",
+            }
+        if has_discrete_gpu:
+            return {
+                "allowed": True,
+                "reason": "",
+                "detail": f"显卡: {', '.join(video_names)}；CPU: {cpu_name or '未识别'} ({cpu_label})",
+            }
+        return {
+            "allowed": False,
+            "reason": "当前设备暂不建议安装性能升级包，继续使用默认轻量模式会更稳妥。",
+            "detail": f"显卡: {', '.join(video_names) or '未识别'}；CPU: {cpu_name or '未识别'} ({cpu_label})",
+        }
+
+    def _apply_upgrade_button_policy(self):
+        policy = self._get_upgrade_policy()
+        self._upgrade_policy = policy
+        if policy["allowed"]:
+            self._upgrade_btn.config(state="normal", text="⬆ 性能升级包", cursor="hand2")
+        else:
+            self._upgrade_btn.config(
+                state="disabled",
+                text="性能升级不可用",
+                bg=BG3,
+                fg=MUTED,
+                activeforeground=MUTED,
+                activebackground=BG3,
+                cursor="arrow",
+            )
+            self._upgrade_hint.config(text="当前设备建议继续使用默认轻量模式，更稳妥")
 
     def _set_status(self, running: bool, text: str):
         def _do():
@@ -1014,6 +1170,8 @@ class GoAILauncher:
 
     def _check_katago_update(self):
         """Check GitHub for the latest KataGo release and offer to update."""
+        self._log_msg("引擎更新入口已禁用，当前版本优先保证兼容性与稳定性。", GOLD)
+        return
         self._update_btn.config(state="disabled")
         self._log_msg("正在检查 KataGo 更新…", GOLD)
 
@@ -1236,6 +1394,16 @@ class GoAILauncher:
 
     def _show_upgrade_dialog(self):
         """Show upgrade options dialog."""
+        policy = getattr(self, "_upgrade_policy", None) or self._get_upgrade_policy()
+        self._upgrade_policy = policy
+        if not policy.get("allowed"):
+            messagebox.showinfo(
+                "性能升级包",
+                f"{policy['reason']}\n\n{policy['detail']}\n\n如果只是想稳定对弈，继续使用当前默认轻量版即可。",
+                parent=self.root,
+            )
+            return
+
         dlg = tk.Toplevel(self.root)
         dlg.title("性能升级包")
         dlg.geometry("480x380")
@@ -1326,6 +1494,17 @@ class GoAILauncher:
         ).pack(side="left", padx=10)
 
     def _start_upgrade(self, dlg):
+        policy = getattr(self, "_upgrade_policy", None) or self._get_upgrade_policy()
+        self._upgrade_policy = policy
+        if not policy.get("allowed"):
+            dlg.destroy()
+            messagebox.showinfo(
+                "性能升级包",
+                f"{policy['reason']}\n\n{policy['detail']}",
+                parent=self.root,
+            )
+            self._apply_upgrade_button_policy()
+            return
         dlg.destroy()
         want_model = self._upgrade_model_var.get()
         want_cuda = self._upgrade_cuda_var.get()
