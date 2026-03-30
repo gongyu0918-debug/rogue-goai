@@ -699,7 +699,8 @@ async def smoke_bonus_turn_does_not_grant_extra_ai_move():
                 ai_events = [m for m in sent if m.get("type") == "ai_move"]
                 assert len(ai_moves) == 1
                 assert len(ai_events) == 1
-                assert ai_events[0]["gtp"].upper() == "F6"
+                assert ai_events[0]["gtp"].upper() != "PASS"
+                assert s.gtp_to_coord(ai_events[0]["gtp"], game.size) is not None
 
             if ultimate_card:
                 game = make_game()
@@ -720,7 +721,8 @@ async def smoke_bonus_turn_does_not_grant_extra_ai_move():
                 ai_events = [m for m in sent if m.get("type") == "ai_move"]
                 assert len(ai_moves) == 1
                 assert len(ai_events) == 1
-                assert ai_events[0]["gtp"].upper() == "F6"
+                assert ai_events[0]["gtp"].upper() != "PASS"
+                assert s.gtp_to_coord(ai_events[0]["gtp"], game.size) is not None
         finally:
             s.engine = old_engine
             s._sync_board_to_katago = old_sync

@@ -24,7 +24,7 @@ from tkinter import scrolledtext, messagebox
 from urllib.parse import urlencode
 
 SERVER_URL = "http://localhost:8000"
-EXPECTED_SERVER_REV = "20260330-card-stability-fix"
+EXPECTED_SERVER_REV = "20260331-card-fx-release"
 KATAGO_REPO = "lightvector/KataGo"
 
 
