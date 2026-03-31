@@ -196,18 +196,18 @@ class GoAILauncher:
 
         tk.Label(
             hdr,
-            text="GoAI · 局域网围棋平台",
-            font=("Microsoft YaHei", 20, "bold"),
+            text="GoAI 启动台",
+            font=("Microsoft YaHei", 21, "bold"),
             fg=GOLD,
             bg=BG2,
-        ).place(relx=0.5, rely=0.4, anchor="center")
+        ).place(relx=0.5, rely=0.36, anchor="center")
         tk.Label(
             hdr,
-            text="基于 KataGo 核心引擎驱动 · 适配手机与电脑",
+            text="围棋 Rogue 对弈场 · 统一服务、局域网访问与 AI 启停",
             font=("Microsoft YaHei", 9),
             fg=MUTED,
             bg=BG2,
-        ).place(relx=0.5, rely=0.75, anchor="center")
+        ).place(relx=0.5, rely=0.72, anchor="center")
 
         # ── Main Content Container ──
         content = tk.Frame(self.root, bg=BG, padx=30, pady=15)
@@ -235,13 +235,15 @@ class GoAILauncher:
         ).pack(side="left")
 
         # Server address
+        addr_box = tk.Frame(sf, bg=BG3, padx=10, pady=5)
+        addr_box.pack(side="right")
         tk.Label(
-            sf,
-            text="地址: http://localhost:8000",
+            addr_box,
+            text="Local: http://localhost:8000",
             font=("Consolas", 10),
-            fg=MUTED,
-            bg=BG,
-        ).pack(side="right", pady=4)
+            fg="#AFC7D9",
+            bg=BG3,
+        ).pack()
 
         # ── Primary Actions ──
         bf = tk.Frame(content, bg=BG)
@@ -249,7 +251,7 @@ class GoAILauncher:
 
         btn_font = ("Microsoft YaHei", 11, "bold")
         self._start_btn = tk.Button(
-            bf, text="▶ 启动服务", width=12, font=btn_font,
+            bf, text="▶ 启动对局服务", width=12, font=btn_font,
             fg=BG, bg=GOLD, activeforeground=BG, activebackground="#E5C158",
             relief="flat", borderwidth=0, cursor="hand2", pady=8,
             command=self._start_server
@@ -265,7 +267,7 @@ class GoAILauncher:
         self._stop_btn.pack(side="left", padx=(0, 10))
 
         self._open_btn = tk.Button(
-            bf, text="🌐 打开游戏界面", width=14, font=btn_font,
+            bf, text="🌐 打开对弈界面", width=14, font=btn_font,
             fg=TEXT, bg=GREEN, activeforeground=TEXT, activebackground="#3CB371",
             relief="flat", borderwidth=0, cursor="hand2", state="disabled", pady=8,
             command=self._open_browser
@@ -278,14 +280,14 @@ class GoAILauncher:
         
         self._ai_enabled = tk.BooleanVar(value=True)
         self._ai_check = tk.Checkbutton(
-            mf, text="启动时加载 KataGo AI 引擎（取消勾选进入纯对弈模式）",
+            mf, text="启动时加载 KataGo AI（取消勾选可进入纯双人对弈）",
             variable=self._ai_enabled, font=("Microsoft YaHei", 9),
             fg=TEXT, bg=BG, activeforeground=TEXT, activebackground=BG,
             selectcolor=BG3, cursor="hand2"
         )
         self._ai_check.pack(anchor="w")
 
-        # ── Secondary Actions (Model management) ──
+        # ── Utility Actions ──
         bf2 = tk.Frame(content, bg=BG)
         bf2.pack(fill="x", pady=(0, 15))
         self._model_running = True
@@ -298,22 +300,10 @@ class GoAILauncher:
             command=self._toggle_model
         )
         self._stop_model_btn.pack(side="left", padx=(0, 10))
-
-        self._update_btn = tk.Button(
-            bf2, text="检查引擎更新", width=14, font=sec_font,
-            fg=TEXT, bg=BG3, activeforeground=TEXT, activebackground="#3D3D3D",
-            relief="flat", borderwidth=0, cursor="arrow", state="disabled", pady=5,
-            command=self._check_katago_update
-        )
-        self._update_btn.pack(side="left")
-        self._update_btn.config(text="引擎更新已禁用")
-
-        # ── Performance Upgrade Row ──
-        bf3 = tk.Frame(content, bg=BG)
-        bf3.pack(fill="x", pady=(0, 10))
+        self._update_btn = None
 
         self._upgrade_btn = tk.Button(
-            bf3, text="⬆ 性能升级包", width=14, font=sec_font,
+            bf2, text="⬆ 性能升级包", width=14, font=sec_font,
             fg="#000", bg=GOLD, activeforeground="#000", activebackground="#E5C040",
             relief="flat", borderwidth=0, cursor="hand2", pady=5,
             command=self._show_upgrade_dialog
@@ -321,7 +311,7 @@ class GoAILauncher:
         self._upgrade_btn.pack(side="left", padx=(0, 10))
 
         self._upgrade_hint = tk.Label(
-            bf3, text="下载大模型/CUDA加速 — 显著提升棋力",
+            bf2, text="按设备情况补装大模型或加速组件",
             font=("Microsoft YaHei", 8), fg=MUTED, bg=BG)
         self._upgrade_hint.pack(side="left")
 
@@ -332,7 +322,7 @@ class GoAILauncher:
             self._upgrade_hint.config(text="大模型与 CUDA 升级已就绪")
 
         # ── Log Area ──
-        tk.Label(content, text="运行日志", font=("Microsoft YaHei", 9, "bold"), fg=GOLD, bg=BG).pack(anchor="w", pady=(5, 5))
+        tk.Label(content, text="运行日志", font=("Microsoft YaHei", 9, "bold"), fg=GOLD, bg=BG).pack(anchor="w", pady=(8, 5))
         
         if not _upgrade_installed():
             self._apply_upgrade_button_policy()
@@ -351,7 +341,7 @@ class GoAILauncher:
         ft.pack_propagate(False)
         
         tk.Label(
-            ft, text="GoAI © 2026 - Designed for PC & Mobile",
+            ft, text="GoAI © 2026 · Rogue Go Arena",
             font=("Microsoft YaHei", 8), fg=MUTED, bg=BG2,
         ).pack(side="left", padx=15, pady=9)
         
@@ -1172,7 +1162,8 @@ class GoAILauncher:
         """Check GitHub for the latest KataGo release and offer to update."""
         self._log_msg("引擎更新入口已禁用，当前版本优先保证兼容性与稳定性。", GOLD)
         return
-        self._update_btn.config(state="disabled")
+        if self._update_btn:
+            self._update_btn.config(state="disabled")
         self._log_msg("正在检查 KataGo 更新…", GOLD)
 
         def _do():
@@ -1212,7 +1203,7 @@ class GoAILauncher:
 
                 if not asset_url:
                     self._log_msg("未找到适用的 Windows CUDA/OpenCL 版本", RED)
-                    self._call_in_ui(lambda: self._update_btn.config(state="normal"))
+                    self._call_in_ui(lambda: self._update_btn and self._update_btn.config(state="normal"))
                     return
 
                 # Detect current version
@@ -1252,13 +1243,14 @@ class GoAILauncher:
                             daemon=True,
                         ).start()
                     else:
-                        self._update_btn.config(state="normal")
+                        if self._update_btn:
+                            self._update_btn.config(state="normal")
 
                 self._call_in_ui(_ask)
 
             except Exception as e:
                 self._log_msg(f"检查更新失败: {e}", RED)
-                self._call_in_ui(lambda: self._update_btn.config(state="normal"))
+                self._call_in_ui(lambda: self._update_btn and self._update_btn.config(state="normal"))
 
         threading.Thread(target=_do, daemon=True).start()
 
@@ -1382,7 +1374,7 @@ class GoAILauncher:
                 except Exception:
                     self._log_msg("恢复失败，请手动从 katago_backup 目录恢复", RED)
         finally:
-            self._call_in_ui(lambda: self._update_btn.config(state="normal"))
+            self._call_in_ui(lambda: self._update_btn and self._update_btn.config(state="normal"))
 
     # ── Performance Upgrade ─────────────────────────────────────────────────
     LARGE_MODEL_INDEX_URL = "https://katagotraining.org/networks/"

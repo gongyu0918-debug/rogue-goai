@@ -157,9 +157,18 @@ ULTIMATE_TIMEWARP_TRIGGER_CHANCE = 0.85
 ULTIMATE_TERRITORY_RADIUS = 4
 ULTIMATE_JOSEKI_TARGET_COUNT = 7
 ULTIMATE_JOSEKI_REQUIRED_HITS = 3
-ULTIMATE_JOSEKI_BONUS_STONES = 12
+ULTIMATE_JOSEKI_BONUS_STONES = 50
 ULTIMATE_GODHAND_FILL_COUNT = 50
 ULTIMATE_QUICKTHINK_SECONDS = 5
+ULTIMATE_WALL_TRIGGER_CHANCE = 0.60
+ROGUE_LAST_STAND_THRESHOLD = 0.30
+ULTIMATE_LAST_STAND_THRESHOLD = 0.30
+ROGUE_LAST_STAND_CLEAR_COUNT = 1
+ROGUE_LAST_STAND_SPAWN_COUNT = 1
+ULTIMATE_LAST_STAND_CLEAR_COUNT = 30
+ULTIMATE_LAST_STAND_SPAWN_COUNT = 30
+ULTIMATE_FIVE_IN_ROW_CLEAR_COUNT = 30
+ULTIMATE_FIVE_IN_ROW_SPAWN_COUNT = 30
 
 ROGUE_FEATURED_CARDS = {
     "god_hand",
@@ -169,6 +178,8 @@ ROGUE_FEATURED_CARDS = {
     "no_regret",
     "quickthink",
     "foolish_wisdom",
+    "five_in_row",
+    "last_stand",
 }
 
 TWO_PLAYER_ROGUE_POOL = [
@@ -180,6 +191,7 @@ TWO_PLAYER_ROGUE_POOL = [
     "corner_helper",
     "sanrensei",
     "foolish_wisdom",
+    "five_in_row",
 ]
 
 AI_ROGUE_POOL = [
@@ -196,6 +208,8 @@ ULTIMATE_FEATURED_CARDS = {
     "sanrensei",
     "quickthink",
     "foolish_wisdom",
+    "five_in_row",
+    "last_stand",
 }
 
 # Maximum seconds KataGo may think per move (safety net)
@@ -386,6 +400,16 @@ ROGUE_CARDS = {
         "desc": "摆出孤立愚形，5×5 内随机长出 1 颗己棋",
         "icon": "🧩",
     },
+    "five_in_row": {
+        "name": "五子连珠",
+        "desc": "这是五子棋，不是围棋。每当我方横、竖、斜正好连成 5 颗同色棋，就会在首尾各补 1 颗棋子",
+        "icon": "🎯",
+    },
+    "last_stand": {
+        "name": "起死回生",
+        "desc": "当我方胜率跌到 30% 以下时，仅触发 1 次：在上一手周围 3×3 内随机消掉 1 颗敌子，并随机补 1 颗己棋（不会落在禁着点）",
+        "icon": "🫀",
+    },
 }
 
 
@@ -498,12 +522,12 @@ ULTIMATE_CARDS = {
     },
     "wall": {
         "name": "万里长城",
-        "desc": "整行或整列筑起一面不可逾越的棋墙",
+        "desc": "有 60% 概率发动：整行或整列筑起一面不可逾越的棋墙",
         "icon": "🧱",
     },
     "joseki_burst": {
         "name": "定式爆发",
-        "desc": "命中定式后补满目标 + 额外爆出 12 子",
+        "desc": "命中定式后补满目标，并额外爆出 50 颗同色棋",
         "icon": "📐",
     },
     "god_hand": {
@@ -530,6 +554,16 @@ ULTIMATE_CARDS = {
         "name": "愚形连锁",
         "desc": "检测到愚形就连锁生成，最多铺满 20 颗己棋",
         "icon": "🧩",
+    },
+    "five_in_row": {
+        "name": "五子连珠爆发",
+        "desc": "这是五子棋，不是围棋。每当我方横、竖、斜正好连成 5 颗同色棋，就会随机清除对方 30 颗棋子，并在全盘随机补下 30 颗己棋；该效果可连锁触发",
+        "icon": "🎯",
+    },
+    "last_stand": {
+        "name": "起死回生",
+        "desc": "当我方胜率跌到 30% 以下时：全盘随机清除对方 30 颗棋子，并随机补下 30 颗己棋",
+        "icon": "🫀",
     },
 }
 
@@ -1050,6 +1084,8 @@ class GoGame:
         self.ai_rogue_sansan_trap_done: bool = False
         self.rogue_corner_helper_done: bool = False
         self.rogue_sanrensei_done: bool = False
+        self.rogue_five_in_row_seen: set[tuple[tuple[int, int], ...]] = set()
+        self.rogue_last_stand_done: dict[str, bool] = {"B": False, "W": False}
         self.rogue_quickthink_stage: int = 0
         self.rogue_fool_shapes: set[tuple[tuple[int, int], ...]] = set()
         # 让子棋任务: player passes 2 turns, then gets bonus turns
@@ -1072,10 +1108,13 @@ class GoGame:
         self.ultimate_godhand_done: bool = False
         self.ultimate_corner_helper_done: set[int] = set()
         self.ultimate_sanrensei_done: bool = False
+        self.ultimate_five_in_row_seen: set[tuple[tuple[int, int], ...]] = set()
+        self.ultimate_last_stand_done: dict[str, bool] = {"B": False, "W": False}
         self.ultimate_quickthink_active: bool = False
         self.ultimate_quickthink_token: int = 0
         self.ultimate_fool_shapes: set[tuple[tuple[int, int], ...]] = set()
         self.ultimate_shadow_clone_links: list[dict] = []
+        self.last_analysis: dict = {"winrate": 0.5, "score": 0.0, "top_moves": [], "ownership": []}
         self._history: list[dict] = []
         self.reset_history()
 
@@ -1956,8 +1995,10 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
 
     async def do_analysis(g: GoGame) -> dict:
         if not engine.ready:
-            return {"winrate": 0.5, "score": 0.0, "top_moves": [],
-                    "ownership": []}
+            result = {"winrate": 0.5, "score": 0.0, "top_moves": [],
+                      "ownership": []}
+            g.last_analysis = copy.deepcopy(result)
+            return result
         color = g.current_player
         analysis_visits = max(80, min(get_game_visits(g.level, len(g.moves)) // 2, 1000))
 
@@ -1985,7 +2026,9 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                 return {"winrate": 0.5, "score": 0.0, "top_moves": [],
                         "ownership": []}
 
-        return await run_in_executor(_analyze)
+        result = await run_in_executor(_analyze)
+        g.last_analysis = copy.deepcopy(result)
+        return result
 
     async def do_analysis_bg(g: GoGame):
         """Run analysis in background so the AI move is shown immediately."""
@@ -2605,6 +2648,8 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                     game.ultimate_godhand_done = False
                     game.ultimate_corner_helper_done = set()
                     game.ultimate_sanrensei_done = False
+                    game.ultimate_five_in_row_seen = set()
+                    game.ultimate_last_stand_done = {"B": False, "W": False}
                     game.ultimate_quickthink_active = False
                     game.ultimate_fool_shapes = set()
                     game.ultimate_shadow_clone_links = []
@@ -3108,6 +3153,265 @@ def _find_corner_with_min_stones(game: GoGame, color: str, span: int, count: int
     return None
 
 
+def _line_key(points: list[tuple[int, int]] | tuple[tuple[int, int], ...]) -> tuple[tuple[int, int], ...]:
+    return tuple(sorted(points))
+
+
+def _find_exact_five_lines(game: GoGame, color: str) -> list[tuple[tuple[int, int], ...]]:
+    cv = 1 if color == "B" else 2
+    lines = []
+    seen = set()
+    directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+    for y in range(game.size):
+        for x in range(game.size):
+            if game.board[y][x] != cv:
+                continue
+            for dx, dy in directions:
+                px, py = x - dx, y - dy
+                if 0 <= px < game.size and 0 <= py < game.size and game.board[py][px] == cv:
+                    continue
+                run = []
+                cx, cy = x, y
+                while 0 <= cx < game.size and 0 <= cy < game.size and game.board[cy][cx] == cv:
+                    run.append((cx, cy))
+                    cx += dx
+                    cy += dy
+                if len(run) != 5:
+                    continue
+                key = _line_key(run)
+                if key in seen:
+                    continue
+                seen.add(key)
+                lines.append(key)
+    return lines
+
+
+def _line_endpoints(
+    line: tuple[tuple[int, int], ...]
+) -> tuple[Optional[tuple[int, int]], Optional[tuple[int, int]]]:
+    if len(line) != 5:
+        return None, None
+    sorted_line = sorted(line)
+    x1, y1 = sorted_line[0]
+    x2, y2 = sorted_line[1]
+    dx, dy = x2 - x1, y2 - y1
+    start = (x1 - dx, y1 - dy)
+    end = (sorted_line[-1][0] + dx, sorted_line[-1][1] + dy)
+    return start, end
+
+
+def _spawn_random_owned_stones(
+    game: GoGame,
+    color: str,
+    count: int,
+    rng: random.Random,
+    *,
+    area: Optional[list[tuple[int, int]]] = None,
+    forbidden: Optional[set[tuple[int, int]]] = None,
+) -> list[tuple[int, int]]:
+    forbidden = forbidden or set()
+    candidates = list(area) if area is not None else [
+        (x, y)
+        for y in range(game.size)
+        for x in range(game.size)
+    ]
+    unique = []
+    seen = set()
+    for point in candidates:
+        if point in seen or point in forbidden:
+            continue
+        seen.add(point)
+        x, y = point
+        if game.board[y][x] == 0:
+            unique.append(point)
+    rng.shuffle(unique)
+    return _spawn_bonus_points(game, unique[:count], color)
+
+
+def _clear_random_enemy_stones(
+    game: GoGame,
+    color: str,
+    count: int,
+    rng: random.Random,
+    *,
+    area: Optional[list[tuple[int, int]]] = None,
+) -> list[tuple[int, int]]:
+    ov = 2 if color == "B" else 1
+    candidates = list(area) if area is not None else [
+        (x, y)
+        for y in range(game.size)
+        for x in range(game.size)
+    ]
+    enemies = []
+    seen = set()
+    for point in candidates:
+        if point in seen:
+            continue
+        seen.add(point)
+        x, y = point
+        if game.board[y][x] == ov:
+            enemies.append(point)
+    rng.shuffle(enemies)
+    cleared = enemies[:count]
+    for x, y in cleared:
+        game.board[y][x] = 0
+    return cleared
+
+
+def _get_player_bonus_forbidden_points(game: GoGame, color: str) -> set[tuple[int, int]]:
+    if game.two_player:
+        return set()
+    if color != game.player_color:
+        return set()
+    return set(_get_ai_rogue_forbidden_points(game))
+
+
+async def _estimate_side_winrate(game: GoGame, color: str) -> float:
+    if not engine.ready:
+        return 0.5
+    await _sync_board_to_katago(game)
+
+    def _analyze():
+        try:
+            lines, ownership = engine.analyze(
+                game.current_player,
+                visits=120,
+                interval=50,
+                duration=0.7,
+                extra_args=["rootInfo", "true", "ownership", "false"],
+            )
+            result = engine.parse_analysis(
+                lines,
+                ownership,
+                game.size,
+                to_move_color=game.current_player,
+            )
+            black_wr = float(result.get("winrate", 0.5))
+            return black_wr if color == "B" else 1.0 - black_wr
+        except Exception:
+            return 0.5
+
+    try:
+        return max(0.0, min(1.0, float(await run_in_executor(_analyze))))
+    except Exception:
+        return 0.5
+
+
+async def _trigger_rogue_five_in_row(game: GoGame, send_fn, color: str):
+    new_lines = [
+        line
+        for line in _find_exact_five_lines(game, color)
+        if line not in game.rogue_five_in_row_seen
+    ]
+    if not new_lines:
+        return
+    endpoints = []
+    for line in new_lines:
+        game.rogue_five_in_row_seen.add(line)
+        start, end = _line_endpoints(line)
+        for point in (start, end):
+            if not point:
+                continue
+            x, y = point
+            if 0 <= x < game.size and 0 <= y < game.size and game.board[y][x] == 0:
+                endpoints.append(point)
+    changed = _spawn_bonus_points(game, endpoints, color)
+    if changed:
+        if engine.ready:
+            await _sync_board_to_katago(game)
+        await send_fn({
+            "type": "rogue_event",
+            "msg": f"🎯 五子连珠发动，正好连成 5 子，首尾额外补下 {len(changed)} 颗棋子",
+        })
+
+
+async def _trigger_rogue_last_stand(
+    game: GoGame,
+    send_fn,
+    color: str,
+    center: tuple[int, int],
+):
+    if game.rogue_last_stand_done.get(color):
+        return
+    if await _estimate_side_winrate(game, color) >= ROGUE_LAST_STAND_THRESHOLD:
+        return
+    area = _get_square_points(center[0], center[1], 1, game.size)
+    rng = random.Random(time.time_ns())
+    cleared = _clear_random_enemy_stones(game, color, ROGUE_LAST_STAND_CLEAR_COUNT, rng, area=area)
+    forbidden = _get_player_bonus_forbidden_points(game, color)
+    changed = _spawn_random_owned_stones(
+        game,
+        color,
+        ROGUE_LAST_STAND_SPAWN_COUNT,
+        rng,
+        area=area,
+        forbidden=forbidden,
+    )
+    if not cleared and not changed:
+        return
+    game.rogue_last_stand_done[color] = True
+    if engine.ready:
+        await _sync_board_to_katago(game)
+    await send_fn({
+        "type": "rogue_event",
+        "msg": f"🫀 起死回生发动，在上一手周围扭转局面：清掉 {len(cleared)} 颗敌子，补下 {len(changed)} 颗己棋",
+    })
+
+
+async def _trigger_ultimate_last_stand(game: GoGame, send_fn, color: str):
+    if game.ultimate_last_stand_done.get(color):
+        return False
+    if await _estimate_side_winrate(game, color) >= ULTIMATE_LAST_STAND_THRESHOLD:
+        return False
+    rng = random.Random(time.time_ns())
+    cleared = _clear_random_enemy_stones(game, color, ULTIMATE_LAST_STAND_CLEAR_COUNT, rng)
+    changed = _spawn_random_owned_stones(game, color, ULTIMATE_LAST_STAND_SPAWN_COUNT, rng)
+    if not cleared and not changed:
+        return False
+    game.ultimate_last_stand_done[color] = True
+    await send_fn({
+        "type": "rogue_event",
+        "msg": f"🫀 起死回生发动，绝境反扑：清掉 {len(cleared)} 颗敌子，并补下 {len(changed)} 颗己棋",
+    })
+    return bool(cleared or changed)
+
+
+async def _trigger_ultimate_five_in_row(game: GoGame, send_fn, color: str):
+    rng = random.Random(time.time_ns())
+    total_cleared = 0
+    total_spawned = 0
+    chain_count = 0
+    while True:
+        new_lines = [
+            line
+            for line in _find_exact_five_lines(game, color)
+            if line not in game.ultimate_five_in_row_seen
+        ]
+        if not new_lines:
+            break
+        for line in new_lines:
+            game.ultimate_five_in_row_seen.add(line)
+            cleared = _clear_random_enemy_stones(
+                game, color, ULTIMATE_FIVE_IN_ROW_CLEAR_COUNT, rng
+            )
+            spawned = _spawn_random_owned_stones(
+                game, color, ULTIMATE_FIVE_IN_ROW_SPAWN_COUNT, rng
+            )
+            if not cleared and not spawned:
+                continue
+            chain_count += 1
+            total_cleared += len(cleared)
+            total_spawned += len(spawned)
+        if chain_count == 0:
+            break
+    if chain_count > 0:
+        await send_fn({
+            "type": "rogue_event",
+            "msg": f"🎯 五子连珠爆发连锁 {chain_count} 次：随机清除 {total_cleared} 颗敌子，并补下 {total_spawned} 颗己棋",
+        })
+    return chain_count > 0
+
+
 def _line_points_between(x1: int, y1: int, x2: int, y2: int) -> list[tuple[int, int]]:
     pts: list[tuple[int, int]] = []
     dx = abs(x2 - x1)
@@ -3251,6 +3555,8 @@ async def _activate_rogue_card(game: GoGame, send_fn, card_id: str):
     game.rogue_sansan_trap_done = False
     game.rogue_corner_helper_done = False
     game.rogue_sanrensei_done = False
+    game.rogue_five_in_row_seen = set()
+    game.rogue_last_stand_done = {"B": False, "W": False}
     game.rogue_quickthink_stage = 0
     game.rogue_fool_shapes = set()
     if card_id != "seal":
@@ -3350,16 +3656,12 @@ async def _apply_player_rogue_move_effects(game: GoGame, send_fn,
             empty_adj = [(ax, ay) for ax, ay in adj if game.board[ay][ax] == 0]
             if empty_adj:
                 bx, by = random.choice(empty_adj)
-                b_gtp = coord_to_gtp(bx, by, game.size)
-                if engine.ready:
-                    r = await run_in_executor(
-                        engine.send_command,
-                        f"play {color} {b_gtp}")
-                    if "?" not in r:
-                        game.place_stone(bx, by, color)
-                        game.moves.append((color, b_gtp))
-                        await send_fn({"type": "rogue_event",
-                                       "msg": f"萌芽触发：在 {b_gtp} 额外长出一颗己方棋子"})
+                changed = _spawn_bonus_points(game, [(bx, by)], color)
+                if changed:
+                    if engine.ready:
+                        await _sync_board_to_katago(game)
+                    await send_fn({"type": "rogue_event",
+                                   "msg": f"萌芽触发：在 {coord_to_gtp(bx, by, game.size)} 额外长出一颗己方棋子"})
 
     if (game.rogue_card == "joseki_ocd"
             and not game.rogue_joseki_done):
@@ -3475,6 +3777,12 @@ async def _apply_player_rogue_move_effects(game: GoGame, send_fn,
         if new_shapes:
             await send_fn({"type": "rogue_event",
                            "msg": f"🪤 大智若愚发动，识别到 {len(new_shapes)} 个愚形，额外长出 {len(changed)} 颗己方棋子"})
+
+    if game.rogue_card == "five_in_row":
+        await _trigger_rogue_five_in_row(game, send_fn, color)
+
+    if game.rogue_card == "last_stand":
+        await _trigger_rogue_last_stand(game, send_fn, color, (x, y))
 
     if (game.rogue_card == "handicap_quest"
             and game.rogue_handicap_active
@@ -3841,6 +4149,14 @@ async def _apply_ultimate_effect(game: GoGame, send_fn, x: int, y: int,
                 await send_fn({"type": "rogue_event",
                                "msg": f"定式爆发完成：补满 {len(remaining_targets)} 个目标点，并额外爆发 {len(changed) - len(remaining_targets)} 颗棋子"})
 
+    elif card == "five_in_row":
+        if await _trigger_ultimate_five_in_row(game, send_fn, color):
+            modified = True
+
+    elif card == "last_stand":
+        if await _trigger_ultimate_last_stand(game, send_fn, color):
+            modified = True
+
     elif card == "god_hand":
         if not game.ultimate_godhand_trigger:
             game.ultimate_godhand_center = _random_hidden_center(game.size, 2, rng)
@@ -3956,32 +4272,34 @@ async def _apply_ultimate_effect(game: GoGame, send_fn, x: int, y: int,
                            "msg": f"🪤 大智若愚连锁结束，本次共生成 {total_generated} 颗己方棋子"})
 
     elif card == "wall":
-        # Fill whichever of the row/column yields the larger wall so the card
-        # feels explosive rather than coin-flippy.
-        row_slots = sum(1 for fx in range(size) if game.board[y][fx] == 0)
-        col_slots = sum(1 for fy in range(size) if game.board[fy][x] == 0)
-        choose_row = row_slots >= col_slots
-        if choose_row:
-            placed = len(_spawn_bonus_points(
-                game,
-                [(fx, y) for fx in range(size) if game.board[y][fx] == 0],
-                color,
-            ))
-            if placed > 0:
-                modified = True
-                await send_fn({"type": "rogue_event",
-                               "msg": f"🧱 万里长城！第 {size - y} 行筑起 {placed} 子"})
+        if random.random() < ULTIMATE_WALL_TRIGGER_CHANCE:
+            row_slots = sum(1 for fx in range(size) if game.board[y][fx] == 0)
+            col_slots = sum(1 for fy in range(size) if game.board[fy][x] == 0)
+            choose_row = row_slots >= col_slots
+            if choose_row:
+                placed = len(_spawn_bonus_points(
+                    game,
+                    [(fx, y) for fx in range(size) if game.board[y][fx] == 0],
+                    color,
+                ))
+                if placed > 0:
+                    modified = True
+                    await send_fn({"type": "rogue_event",
+                                   "msg": f"🧱 万里长城发动！第 {size - y} 行筑起 {placed} 子"})
+            else:
+                placed = len(_spawn_bonus_points(
+                    game,
+                    [(x, fy) for fy in range(size) if game.board[fy][x] == 0],
+                    color,
+                ))
+                if placed > 0:
+                    modified = True
+                    cols = "ABCDEFGHJKLMNOPQRST"
+                    await send_fn({"type": "rogue_event",
+                                   "msg": f"🧱 万里长城发动！{cols[x]} 列筑起 {placed} 子"})
         else:
-            placed = len(_spawn_bonus_points(
-                game,
-                [(x, fy) for fy in range(size) if game.board[fy][x] == 0],
-                color,
-            ))
-            if placed > 0:
-                modified = True
-                cols = "ABCDEFGHJKLMNOPQRST"
-                await send_fn({"type": "rogue_event",
-                               "msg": f"🧱 万里长城！{cols[x]} 列筑起 {placed} 子"})
+            await send_fn({"type": "rogue_event",
+                           "msg": "🧱 万里长城未能成型，这次没有筑起城墙"})
 
     return modified
 

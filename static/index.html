@@ -827,7 +827,8 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 
 /* Rogue Cards */
 .rogue-card {
-  width: 164px;
+  width: auto;
+  min-width: 0;
   min-height: 208px;
   padding: 18px 14px;
   border-radius: 18px;
@@ -863,7 +864,8 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 
 /* Ultimate mode cards & bar */
 .ultimate-card {
-  width: 164px;
+  width: auto;
+  min-width: 0;
   min-height: 208px;
   padding: 18px 14px;
   border-radius: 18px;
@@ -1005,6 +1007,8 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 .fx-mirror { --banner-glow: rgba(126,208,255,.26); }
 .fx-slip { --banner-glow: rgba(255,172,92,.24); }
 .fx-seal { --banner-glow: rgba(255,105,119,.24); }
+.fx-five_in_row { --banner-glow: rgba(255,219,112,.26); }
+.fx-last_stand { --banner-glow: rgba(255,126,126,.28); }
 .fx-godflash {
   position: fixed;
   inset: 0;
@@ -1096,6 +1100,55 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
   0% { opacity: 0; transform: scaleX(.2); }
   25% { opacity: 1; }
   100% { opacity: 0; transform: scaleX(1); }
+}
+.fx-five-line,
+.fx-last-stand-pulse {
+  position: absolute;
+  pointer-events: none;
+}
+.fx-five-line {
+  left: 50%;
+  top: 50%;
+  width: min(72%, 520px);
+  height: 4px;
+  border-radius: 999px;
+  transform-origin: center center;
+  background: linear-gradient(90deg, rgba(255,238,172,0), rgba(255,220,110,.95), rgba(255,248,220,.98), rgba(255,220,110,.95), rgba(255,238,172,0));
+  box-shadow: 0 0 18px rgba(255,210,82,.52);
+  animation: fiveLineSweep 1.05s ease-out forwards;
+}
+@keyframes fiveLineSweep {
+  0% { opacity: 0; transform: translate(-50%, -50%) scaleX(.08); }
+  22% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scaleX(1.06); }
+}
+.fx-last-stand-pulse {
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(255,227,227,.98), rgba(255,108,108,.54) 45%, rgba(0,0,0,0) 72%);
+  box-shadow: 0 0 22px rgba(255,94,94,.45);
+  animation: lastStandPulse 1.2s ease-out forwards;
+}
+.fx-last-stand-pulse::after {
+  content: "";
+  position: absolute;
+  inset: -18px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,145,145,.72);
+  animation: lastStandRing 1.2s ease-out forwards;
+}
+@keyframes lastStandPulse {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); }
+  24% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(2.6); }
+}
+@keyframes lastStandRing {
+  0% { opacity: .8; transform: scale(.3); }
+  100% { opacity: 0; transform: scale(1.9); }
 }
 
 </style>
@@ -1424,20 +1477,20 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 
 <!-- Rogue Card Selection Overlay -->
 <div id="rogue-overlay" class="overlay-modal">
-  <div class="modal-content" style="max-width:560px; background:rgba(15,15,20,0.97);">
+  <div class="modal-content" style="max-width:640px; background:rgba(15,15,20,0.97);">
     <h2 style="color:#f5dd93; text-align:center; margin-bottom:4px; font-size:1.24rem; letter-spacing:.06em;">Rogue 模式</h2>
     <p style="color:#97a3b1; text-align:center; margin-bottom:18px; font-size:.85rem; line-height:1.6;">从三张规则卡中选一张，让这一局从开盘开始就偏离常规。</p>
-    <div id="rogue-cards" style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;"></div>
+    <div id="rogue-cards" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; align-items:stretch;"></div>
   </div>
 </div>
 
 <!-- Ultimate Card Selection Overlay -->
 <div id="ultimate-overlay" class="overlay-modal">
-  <div class="modal-content" style="max-width:600px; background:rgba(30,5,5,0.97); border:2px solid #ff4444;">
+  <div class="modal-content" style="max-width:640px; background:rgba(30,5,5,0.97); border:2px solid #ff4444;">
     <h2 style="color:#ff8f86; text-align:center; margin-bottom:4px; font-size:1.34rem; text-shadow:0 0 12px rgba(255,68,68,0.4); letter-spacing:.05em;">
       大招模式</h2>
     <p style="color:#ffc1bb; text-align:center; margin-bottom:18px; font-size:.85rem; line-height:1.6;">挑选你的终局武器。你会得到一张强卡，AI 也会得到它的回应。</p>
-    <div id="ultimate-cards" style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;"></div>
+    <div id="ultimate-cards" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; align-items:stretch;"></div>
   </div>
 </div>
 
@@ -1536,6 +1589,8 @@ const ROGUE_CARD_I18N = {
   no_regret: { name: "No Regrets", desc: "Undo disabled \u2014 but each move has 14% chance to add a free stone." },
   quickthink: { name: "Quick Think", desc: "Play within 3s to unlock a 2s bonus move window." },
   foolish_wisdom: { name: "Wise Fool", desc: "Form an isolated ugly shape to sprout a bonus stone in the 5\u00d75 area." },
+  five_in_row: { name: "Five in a Row", desc: "This is Gomoku, not Go. Whenever your stones form exactly 5 in a row, one bonus stone appears at each end." },
+  last_stand: { name: "Last Stand", desc: "Once per game, if your winrate drops below 30%, remove 1 enemy stone and add 1 friendly stone inside the last move's 3\u00d73 area without landing on forbidden points." },
 };
 
 const ULTIMATE_CARD_I18N = {
@@ -1554,13 +1609,15 @@ const ULTIMATE_CARD_I18N = {
   blackout: { name: "Cataclysm", desc: "Wipe all enemy stones in a cross pattern from your move." },
   magnet: { name: "Magnet Pull", desc: "Your stones rush toward the point, crushing enemies in their path." },
   necro: { name: "Necromancy", desc: "Summon 3 friendly stones and convert 2 enemy stones." },
-  wall: { name: "Great Wall", desc: "Fill an entire row or column with an impassable stone wall." },
-  joseki_burst: { name: "Joseki Burst", desc: "Complete joseki points, then detonate 12 bonus stones." },
+  wall: { name: "Great Wall", desc: "60% chance to trigger. Fill an entire row or column with an impassable stone wall." },
+  joseki_burst: { name: "Joseki Burst", desc: "Complete joseki points, then detonate 50 bonus stones." },
   god_hand: { name: "Hand of God", desc: "Trigger the hidden diamond \u2014 wipe enemies and flood the board with 50 stones." },
   corner_helper: { name: "Corner Fortress", desc: "Each corner can trigger once. If a corner's 5\u00d75 area has 2 of your stones, that corner's 8\u00d78 boundary is filled and enemies inside are cleared." },
   sanrensei: { name: "Star Ignition", desc: "Play your first 3 moves on star points to ignite star-point influence across the board." },
   quickthink: { name: "Speed Storm", desc: "Place unlimited stones for 5 seconds \u2014 then the AI reads the board." },
   foolish_wisdom: { name: "Fool's Chain", desc: "Ugly-shape chain reaction spawns up to 20 stones until it stops." },
+  five_in_row: { name: "Five in a Row Burst", desc: "This is Gomoku, not Go. Whenever your stones form exactly 5 in a row, remove 30 enemy stones and drop 30 friendly stones across the board. This effect can chain." },
+  last_stand: { name: "Last Stand", desc: "If your winrate drops below 30%, clear 30 enemy stones and add 30 friendly stones across the entire board." },
 };
 
 let rogueOfferCards = [];
@@ -1594,6 +1651,7 @@ function getRogueCardName(cardId) {
       shadow: "影子", sprout: "萌芽", joseki_ocd: "定式强迫症", handicap_quest: "让子任务",
       god_hand: "神之一手", corner_helper: "守角辅助", sanrensei: "三连星",
       no_regret: "永不悔棋", quickthink: "快速思考", foolish_wisdom: "大智若愚",
+      five_in_row: "五子连珠", last_stand: "起死回生",
     }[cardId] || cardId);
 }
 
@@ -1607,6 +1665,7 @@ function getUltimateCardName(cardId) {
       blackout: "天崩地裂", magnet: "磁力吸附", necro: "亡灵召唤", wall: "万里长城",
       joseki_burst: "定式爆发", god_hand: "神之一手", corner_helper: "守角要塞",
       sanrensei: "三连星爆发", quickthink: "极速风暴", foolish_wisdom: "愚形连锁",
+      five_in_row: "五子连珠爆发", last_stand: "起死回生",
     }[cardId] || cardId);
 }
 
@@ -1637,6 +1696,8 @@ function translateServerEventMessage(message) {
     [/^✨ 神之一手发动，在暗点周围爆发 (\d+) 颗同色棋$/, (n) => `✨ Hand of God triggered: ${n} same-color stones burst around the hidden point.`],
     [/^🏯 守角辅助补强了 (\d+) 颗角部援军$/, (n) => `🏯 Corner Assistant reinforced the corner with ${n} support stones.`],
     [/^✦ 三连星发动，额外点亮 (\d+) 个星位$/, (n) => `✦ Three-Star Formation triggered: ${n} extra star points were lit up.`],
+    [/^🎯 五子连珠发动，正好连成 5 子，首尾额外补下 (\d+) 颗棋子$/, (n) => `🎯 Five in a Row triggered: an exact line of 5 added ${n} bonus stones at both ends.`],
+    [/^🫀 起死回生发动，在上一手周围扭转局面：清掉 (\d+) 颗敌子，补下 (\d+) 颗己棋$/, (cleared, changed) => `🫀 Last Stand triggered near the last move: cleared ${cleared} enemy stones and added ${changed} friendly stones.`],
     [/^🚫 永不悔棋发动，在 (.+) 补了一手$/, (gtp) => `🚫 No Regrets triggered: a bonus stone was added at ${gtp}.`],
     [/^🪤 大智若愚发动，识别到 (\d+) 个愚形，额外长出 (\d+) 颗己方棋子$/, (shapes, stones) => `🪤 Wise Fool triggered: found ${shapes} awkward shapes and spawned ${stones} extra friendly stones.`],
     [/^让子任务奖励触发：每满 (\d+) 手获得一次奖励，本回合 AI 虚手$/, (n) => `Handicap Quest bonus triggered: every ${n} moves grants a reward, and the AI passes this turn.`],
@@ -1659,10 +1720,13 @@ function translateServerEventMessage(message) {
     [/^✨ 神之一手发动，清空 (\d+) 颗敌子并洒下 (\d+) 颗同色棋$/, (cleared, filled) => `✨ Hand of God triggered: cleared ${cleared} enemies and scattered ${filled} same-color stones.`],
     [/^🏯 守角要塞封锁角部，清空 (\d+) 子并筑边 (\d+) 子$/, (cleared, placed) => `🏯 Corner Fortress sealed the corner, cleared ${cleared} stones, and built ${placed} boundary stones.`],
     [/^✦ 三连星爆发，清空 (\d+) 子并扩张 (\d+) 颗星位势力$/, (cleared, changed) => `✦ Star Ignition burst: cleared ${cleared} stones and expanded ${changed} star-point influence stones.`],
+    [/^🎯 五子连珠爆发连锁 (\d+) 次：随机清除 (\d+) 颗敌子，并补下 (\d+) 颗己棋$/, (chains, cleared, spawned) => `🎯 Five in a Row Burst chained ${chains} times: cleared ${cleared} enemy stones and spawned ${spawned} friendly stones.`],
+    [/^🫀 起死回生发动，绝境反扑：清掉 (\d+) 颗敌子，并补下 (\d+) 颗己棋$/, (cleared, spawned) => `🫀 Last Stand triggered: cleared ${cleared} enemy stones and spawned ${spawned} friendly stones.`],
     [/^🪤 大智若愚第 (\d+) 波发动，识别到 (\d+) 个愚形，生成 (\d+) 颗己方棋子$/, (wave, shapes, batch) => `🪤 Wise Fool wave ${wave}: found ${shapes} awkward shapes and generated ${batch} friendly stones.`],
     [/^🪤 大智若愚连锁结束，本次共生成 (\d+) 颗己方棋子$/, (n) => `🪤 Wise Fool chain ended. Total stones generated this time: ${n}.`],
-    [/^🧱 万里长城！第 (\d+) 行筑起 (\d+) 子$/, (row, placed) => `🧱 Great Wall built ${placed} stones on row ${row}.`],
-    [/^🧱 万里长城！([A-Z]) 列筑起 (\d+) 子$/, (col, placed) => `🧱 Great Wall built ${placed} stones on column ${col}.`],
+    [/^🧱 万里长城发动！第 (\d+) 行筑起 (\d+) 子$/, (row, placed) => `🧱 Great Wall triggered and built ${placed} stones on row ${row}.`],
+    [/^🧱 万里长城发动！([A-Z]) 列筑起 (\d+) 子$/, (col, placed) => `🧱 Great Wall triggered and built ${placed} stones on column ${col}.`],
+    [/^🧱 万里长城未能成型，这次没有筑起城墙$/, () => `🧱 Great Wall failed to form this time.`],
     [/^AI 的连珠棋触发，AI 将继续落子$/, () => "The AI's Combo Chain triggered. The AI will play again."],
     [/^AI 的双刀流触发，AI 将继续落子$/, () => "The AI's Dual Blades triggered. The AI will play again."],
     [/^掷骰触发，AI 这手选择虚手$/, () => "Dice Roll triggered. The AI chose to pass this turn."],
@@ -2197,6 +2261,8 @@ function inferEffectTheme(message) {
     { key: "sanrensei", match: /三连星|Star/i, title: ui("星位共鸣", "Star ignition"), icon: "✦", cls: "fx-sanrensei fx-rogue" },
     { key: "corner_helper", match: /守角|Corner/i, title: ui("角部强化", "Corner fortified"), icon: "🏯", cls: "fx-corner_helper fx-rogue" },
     { key: "foolish_wisdom", match: /大智若愚|愚形|Wise Fool|Fool/i, title: ui("愚形连锁", "Ugly shape chain"), icon: "🪤", cls: "fx-foolish_wisdom fx-rogue" },
+    { key: "five_in_row", match: /五子连珠|Five in a Row/i, title: ui("五子连珠", "Five in a Row"), icon: "🎯", cls: "fx-five_in_row fx-rogue" },
+    { key: "last_stand", match: /起死回生|Last Stand/i, title: ui("起死回生", "Last Stand"), icon: "🫀", cls: "fx-last_stand fx-rogue" },
     { key: "mirror", match: /镜像|Mirror/i, title: ui("镜像偏折", "Mirror pulse"), icon: "🪞", cls: "fx-mirror fx-rogue" },
     { key: "slip", match: /手滑|Butter/i, title: ui("手滑偏移", "Butterfingers"), icon: "🍃", cls: "fx-slip fx-rogue" },
   ];
@@ -2328,6 +2394,28 @@ function playSanrenseiConstellation(isUltimate = false) {
   }
 }
 
+function playFiveInRowBurst() {
+  const layer = document.getElementById("board-fx-layer");
+  if (!layer) return;
+  [0, 45, -45].forEach((deg, idx) => {
+    const line = document.createElement("span");
+    line.className = "fx-five-line";
+    line.style.transform = `translate(-50%, -50%) rotate(${deg}deg)`;
+    line.style.animationDelay = `${idx * 70}ms`;
+    layer.appendChild(line);
+    setTimeout(() => line.remove(), 1100 + idx * 70);
+  });
+}
+
+function playLastStandPulse() {
+  const layer = document.getElementById("board-fx-layer");
+  if (!layer) return;
+  const pulse = document.createElement("span");
+  pulse.className = "fx-last-stand-pulse";
+  layer.appendChild(pulse);
+  setTimeout(() => pulse.remove(), 1260);
+}
+
 function triggerSignatureCardEffect(message) {
   const raw = String(message || "");
   if (/神之一手|Hand of God/i.test(raw)) {
@@ -2341,6 +2429,12 @@ function triggerSignatureCardEffect(message) {
   }
   if (/三连星爆发|Star Ignition burst/i.test(raw)) {
     playSanrenseiConstellation(true);
+  }
+  if (/五子连珠|Five in a Row/i.test(raw)) {
+    playFiveInRowBurst();
+  }
+  if (/起死回生|Last Stand/i.test(raw)) {
+    playLastStandPulse();
   }
 }
 
@@ -3521,6 +3615,8 @@ const ULTIMATE_NAMES = {
   sanrensei: "三连星爆发",
   quickthink: "极速风暴",
   foolish_wisdom: "愚形连锁",
+  five_in_row: "五子连珠爆发",
+  last_stand: "起死回生",
 };
 
 function updateUltimateBar() {

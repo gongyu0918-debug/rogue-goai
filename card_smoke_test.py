@@ -66,7 +66,7 @@ class DummyEngine:
             except (ValueError, IndexError):
                 continue
             top_moves.append({"move": move, "gtp": move})
-        return {"top_moves": top_moves}
+        return {"top_moves": top_moves, "winrate": 0.52, "score": 1.0, "ownership": []}
 
 
 def make_game(size=9):
@@ -863,6 +863,165 @@ async def smoke_ai_rogue_support():
     assert any(msg.get("type") == "rogue_event" for msg in sent)
 
 
+async def smoke_five_in_row_and_last_stand_cards():
+    game = make_game(size=9)
+    game.rogue_card = "five_in_row"
+    for x in range(2, 7):
+        game.board[4][x] = 1
+    sent = []
+
+    async def send(payload):
+        sent.append(copy.deepcopy(payload))
+
+    old_sync = s._sync_board_to_katago
+    try:
+        async def fake_sync(_game):
+            return None
+
+        s._sync_board_to_katago = fake_sync
+        await s._apply_player_rogue_move_effects(game, send, 4, 4, "B", 0)
+    finally:
+        s._sync_board_to_katago = old_sync
+
+    assert game.board[4][1] == 1
+    assert game.board[4][7] == 1
+    assert any("五子连珠" in msg.get("msg", "") for msg in sent)
+
+    game = make_game(size=9)
+    game.rogue_card = "last_stand"
+    game.player_color = "B"
+    game.current_player = "W"
+    game.board[4][4] = 1
+    game.board[3][4] = 2
+    game.board[5][5] = 2
+    game.ai_rogue_enabled = True
+    game.ai_rogue_card = "fog"
+    game.ai_rogue_seal_points = [(5, 4)]
+    sent = []
+
+    async def send_last(payload):
+        sent.append(copy.deepcopy(payload))
+
+    old_estimate = s._estimate_side_winrate
+    old_sync = s._sync_board_to_katago
+    old_shuffle = s.random.shuffle
+    try:
+        async def fake_estimate(_game, _color):
+            return 0.2
+
+        async def fake_sync(_game):
+            return None
+
+        s._estimate_side_winrate = fake_estimate
+        s._sync_board_to_katago = fake_sync
+        s.random.shuffle = lambda _items: None
+        await s._apply_player_rogue_move_effects(game, send_last, 4, 4, "B", 0)
+        board_after_first = copy.deepcopy(game.board)
+        await s._apply_player_rogue_move_effects(game, send_last, 4, 4, "B", 0)
+    finally:
+        s._estimate_side_winrate = old_estimate
+        s._sync_board_to_katago = old_sync
+        s.random.shuffle = old_shuffle
+
+    assert game.rogue_last_stand_done["B"] is True
+    assert board_after_first == game.board
+    assert game.board[4][5] == 0
+    assert any("起死回生" in msg.get("msg", "") for msg in sent)
+
+    game = make_game(size=9)
+    game.ultimate = True
+    for x in range(2, 7):
+        game.board[4][x] = 1
+    for i in range(30):
+        game.board[i // 9][i % 9] = 2
+    game.board[4][2] = 1
+    game.board[4][3] = 1
+    game.board[4][4] = 1
+    game.board[4][5] = 1
+    game.board[4][6] = 1
+    sent = []
+    old_shuffle = s.random.shuffle
+    try:
+        s.random.shuffle = lambda _items: None
+        modified = await s._apply_ultimate_effect(game, send, 4, 4, "B", "five_in_row")
+    finally:
+        s.random.shuffle = old_shuffle
+    assert modified is True
+    assert any("五子连珠爆发" in msg.get("msg", "") for msg in sent)
+
+    game = make_game(size=9)
+    game.ultimate = True
+    for i in range(30):
+        game.board[(i + 10) // 9][(i + 10) % 9] = 2
+    sent = []
+    old_estimate = s._estimate_side_winrate
+    old_shuffle = s.random.shuffle
+    try:
+        async def fake_estimate(_game, _color):
+            return 0.2
+
+        s._estimate_side_winrate = fake_estimate
+        s.random.shuffle = lambda _items: None
+        modified = await s._apply_ultimate_effect(game, send, 4, 4, "B", "last_stand")
+    finally:
+        s._estimate_side_winrate = old_estimate
+        s.random.shuffle = old_shuffle
+    assert modified is True
+    assert game.ultimate_last_stand_done["B"] is True
+    assert any("起死回生" in msg.get("msg", "") for msg in sent)
+
+
+async def smoke_ultimate_joseki_and_wall_updates():
+    assert s.ULTIMATE_JOSEKI_BONUS_STONES == 50
+
+    game = make_game(size=9)
+    game.ultimate = True
+    game.ultimate_joseki_targets = [(1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6), (7, 7)]
+    game.ultimate_joseki_hits = s.ULTIMATE_JOSEKI_REQUIRED_HITS - 1
+    sent = []
+
+    async def send(payload):
+        sent.append(copy.deepcopy(payload))
+
+    old_shuffle = s.random.shuffle
+    try:
+        s.random.shuffle = lambda _items: None
+        modified = await s._apply_ultimate_effect(game, send, 3, 3, "B", "joseki_burst")
+    finally:
+        s.random.shuffle = old_shuffle
+    assert modified is True
+    assert game.ultimate_joseki_done is True
+    assert any("定式爆发完成" in msg.get("msg", "") for msg in sent)
+
+    game = make_game(size=9)
+    game.ultimate = True
+    sent = []
+    async def send_wall(payload):
+        sent.append(copy.deepcopy(payload))
+    old_random = s.random.random
+    try:
+        s.random.random = lambda: 0.0
+        modified = await s._apply_ultimate_effect(game, send_wall, 4, 4, "B", "wall")
+    finally:
+        s.random.random = old_random
+    assert modified is True
+    assert any("万里长城发动" in msg.get("msg", "") for msg in sent)
+
+    game = make_game(size=9)
+    game.ultimate = True
+    sent = []
+    async def send_wall_fail(payload):
+        sent.append(copy.deepcopy(payload))
+    old_random = s.random.random
+    try:
+        s.random.random = lambda: 0.99
+        modified = await s._apply_ultimate_effect(game, send_wall_fail, 4, 4, "B", "wall")
+    finally:
+        s.random.random = old_random
+    assert modified is False
+    assert any("未能成型" in msg.get("msg", "") for msg in sent)
+
+
 async def smoke_seal_fallback():
     game = make_game()
     seed_board(game)
@@ -997,6 +1156,8 @@ async def main():
         await smoke_foolish_wisdom_ultimate()
         await smoke_two_player_rogue_shared_cards()
         await smoke_ai_rogue_support()
+        await smoke_five_in_row_and_last_stand_cards()
+        await smoke_ultimate_joseki_and_wall_updates()
     finally:
         s.engine = old_engine
     print("card smoke test: OK")
