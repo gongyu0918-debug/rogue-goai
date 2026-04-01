@@ -62,6 +62,14 @@ body::after {
   0% { transform: translate(-50%, -50%) scale(0); opacity: .38; }
   100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
 }
+@keyframes skillPulse {
+  0%, 100% { opacity: .42; transform: scale(.94); }
+  50% { opacity: .95; transform: scale(1.04); }
+}
+@keyframes skillBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
 @keyframes bannerDrop {
   0% { transform: translate(-50%, -16px) scale(.95); opacity: 0; }
   12% { transform: translate(-50%, 0) scale(1); opacity: 1; }
@@ -378,6 +386,29 @@ header h1 {
 }
 .board-toolbar button:active { transform: translateY(0); }
 .board-toolbar button:disabled { opacity: 0.3; cursor: not-allowed; }
+.board-toolbar button.skill-btn {
+  color: #f5dd93;
+  border-color: rgba(212,175,55,.28);
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,237,170,.16), transparent 42%),
+    linear-gradient(180deg, #1f2129, #12151b);
+}
+.board-toolbar button.skill-btn:hover:not(:disabled) {
+  border-color: rgba(212,175,55,.72);
+  box-shadow: 0 14px 28px rgba(212,175,55,.18);
+}
+.board-toolbar button.skill-btn.skill-ready::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 20px;
+  background: radial-gradient(circle, rgba(212,175,55,.2), rgba(212,175,55,0) 70%);
+  animation: skillPulse 1.9s ease-in-out infinite;
+  pointer-events: none;
+}
+.board-toolbar button.skill-btn.skill-ready:not(:disabled) {
+  animation: skillBob 1.9s ease-in-out infinite;
+}
 
 /* Side Panel Drawer */
 .settings-drawer {
@@ -459,7 +490,7 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 .btn-purple:hover:not(:disabled)  { background: #6a579e; }
 
 /* Start mode selector */
-.mode-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.mode-row { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: nowrap; overflow-x: auto; }
 .mode-btn {
   flex: 1; padding: 10px 6px;
   border: 1px solid rgba(255,255,255,.07);
@@ -850,17 +881,8 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 .rogue-card .rc-icon { font-size: 2.4rem; margin-bottom: 12px; }
 .rogue-card .rc-name { color: #f5dd93; font-weight: 700; font-size: 1rem; margin-bottom: 8px; }
 .rogue-card .rc-desc { color: #afbac8; font-size: .78rem; line-height: 1.5; }
-/* Rogue ability bar */
-#rogue-bar { display:none; position:absolute; bottom:12px; left:12px; z-index:40;
-  background:rgba(15,15,20,0.9); border:1px solid rgba(212,175,55,0.32);
-  border-radius:14px; padding:8px 10px; backdrop-filter:blur(10px);
-  box-shadow:0 12px 28px rgba(0,0,0,.28); }
-#rogue-bar .rb-badge { color:#d4af37; font-size:.75rem; font-weight:600; }
-#rogue-bar button { background:none; border:1px solid rgba(212,175,55,0.4);
-  color:#d4af37; border-radius:6px; padding:3px 8px; font-size:.72rem;
-  cursor:pointer; margin-left:6px; }
-#rogue-bar button:disabled { opacity:0.3; cursor:default; }
-#rogue-bar button:hover:not(:disabled) { background:rgba(212,175,55,0.15); }
+/* Legacy Rogue ability bar kept hidden after moving active skills into toolbar */
+#rogue-bar { display:none !important; }
 .rogue-seal-mark { position:absolute; pointer-events:none; z-index:30; }
 
 /* Ultimate mode cards & bar */
@@ -1233,6 +1255,7 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
       <button id="btn-score" title="计算胜负" disabled>⚖️</button>
       <button id="btn-territory-toggle" title="形势分析" onclick="toggleTerritory()">👁️</button>
       <button id="btn-resign" title="认输" disabled>🏳️</button>
+      <button id="btn-skill" class="skill-btn" title="主动技能" style="display:none" disabled>✨</button>
       <button title="打开功能" onclick="document.getElementById('settings-drawer').classList.add('open')">⚙️</button>
     </div>
     
@@ -1357,11 +1380,11 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 
     <div class="form-row"><label>开局</label>
       <div class="mode-row" style="flex:1; margin:0">
-        <div class="mode-btn active" id="mode-normal" onclick="setMode('normal')">正常对局</div>
-        <div class="mode-btn" id="mode-watch"  onclick="setMode('watch')">AI 观战</div>
+        <div class="mode-btn active" id="mode-normal" onclick="setMode('normal')">对局</div>
+        <div class="mode-btn" id="mode-watch"  onclick="setMode('watch')">学习</div>
         <div class="mode-btn" id="mode-guess"  onclick="setMode('guess')">猜先</div>
         <div class="mode-btn" id="mode-give"   onclick="setMode('give')">让先</div>
-        <div class="mode-btn" id="mode-two"    onclick="setMode('two')">两人对局</div>
+        <div class="mode-btn" id="mode-two"    onclick="setMode('two')">双人</div>
       </div>
     </div>
 
@@ -1424,7 +1447,7 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
     <!-- Time Control -->
     <div class="divider" style="margin:12px 0;"></div>
     <div class="form-row">
-      <label>用时</label>
+      <label>风格</label>
       <select id="sel-time-mode">
         <option value="none" selected>无限制</option>
         <option value="byoyomi">包干+读秒</option>
@@ -1896,15 +1919,16 @@ function applyLanguage() {
     ui("让子", "Handicap"),
     ui("贴目", "Komi"),
     ui("对手", "Opponent"),
-    ui("用时", "Time"),
+    ui("风格", "Style"),
     ui("主时", "Main Time"),
     ui("读秒", "Byo-yomi")
   ];
   setupLabels.forEach((el, idx) => { if (setupTexts[idx]) el.textContent = setupTexts[idx]; });
-  setText("#mode-normal", ui("正常对局", "Normal"));
+  setText("#mode-normal", ui("对局", "Normal"));
+  setText("#mode-watch", ui("学习", "Study"));
   setText("#mode-guess", ui("猜先", "Guess Color"));
   setText("#mode-give", ui("让先", "Take Black"));
-  setText("#mode-two", ui("两人对局", "Two Players"));
+  setText("#mode-two", ui("双人", "Two Players"));
   setText("#btn-new", ui("确认开始", "Start"));
   setText("#confirm-msg", ui("确认执行此操作？", "Confirm this action?"));
   const confirmBtns = document.querySelectorAll("#confirm-modal .btn-row button");
@@ -2876,7 +2900,7 @@ function setMode(mode) {
     rowColor.style.display = "none";
     rowHandicap.style.display = "flex";
     hint.style.display = "block";
-    hint.textContent = "两人对局：黑白双方均由人落子，可选择是否启用AI形势分析";
+    hint.textContent = "双人：黑白双方均由人落子，可选择是否启用AI形势分析";
     rogueRow.style.display = "none";
     ultimateRow.style.display = "none";
     document.getElementById("chk-rogue").checked = false;
@@ -3567,6 +3591,47 @@ function updateRogueBar() {
   }
 }
 
+function getRogueSkillConfig() {
+  if (activeRogueCard === "puppet") {
+    return { key: "puppet", icon: "P", uses: rogueUses.puppet || 0, title: "Active Skill: Puppet" };
+  }
+  if (activeRogueCard === "twin") {
+    return { key: "twin", icon: "2", uses: rogueUses.twin || 0, title: "Active Skill: Combo" };
+  }
+  if (activeRogueCard === "exchange") {
+    return { key: "exchange", icon: "<>", uses: rogueUses.exchange || 0, title: "Active Skill: Turn Steal" };
+  }
+  if (activeRogueCard === "coach_mode") {
+    return { key: "coach_mode", icon: "AI", uses: rogueUses.coach_mode || 0, title: "Active Skill: Coach Mode" };
+  }
+  return null;
+}
+
+function updateRogueSkillButton() {
+  const btn = document.getElementById("btn-skill");
+  if (!btn) return;
+  const cfg = getRogueSkillConfig();
+  if (!cfg) {
+    btn.style.display = "none";
+    btn.disabled = true;
+    btn.textContent = "*";
+    btn.title = "Active Skill";
+    btn.dataset.skill = "";
+    btn.classList.remove("skill-ready");
+    return;
+  }
+  btn.style.display = "";
+  btn.dataset.skill = cfg.key;
+  btn.textContent = cfg.icon;
+  btn.title = `${cfg.title} (${cfg.uses})`;
+  btn.disabled = cfg.uses <= 0;
+  btn.classList.toggle("skill-ready", cfg.uses > 0);
+}
+
+function updateRogueBar() {
+  updateRogueSkillButton();
+}
+
 function resetRogueState() {
   activeRogueCard = null;
   activeAiRogueCard = null;
@@ -3576,6 +3641,7 @@ function resetRogueState() {
   aiRogueSeals = [];
   puppetMode = false;
   document.getElementById("rogue-bar").style.display = "none";
+  updateRogueSkillButton();
   document.getElementById("rogue-overlay").classList.remove("show");
   document.getElementById("seal-overlay").style.display = "none";
   // Ultimate reset
@@ -3786,6 +3852,26 @@ document.getElementById("rb-coach").addEventListener("click", () => {
   if (!activeRogueCard || activeRogueCard !== "coach_mode") return;
   if ((rogueUses.coach_mode || 0) <= 0) return;
   sendWS({ action: "rogue_use_coach" });
+});
+document.getElementById("btn-skill").addEventListener("click", () => {
+  const cfg = getRogueSkillConfig();
+  if (!cfg || cfg.uses <= 0) return;
+  if (cfg.key === "puppet") {
+    puppetMode = true;
+    log(ui("🎭 傀儡术：请在棋盘上点击 AI 的落子位置", "🎭 Puppet Move: click the point where the AI should play."));
+    return;
+  }
+  if (cfg.key === "twin") {
+    sendWS({ action: "rogue_use_twin" });
+    return;
+  }
+  if (cfg.key === "exchange") {
+    sendWS({ action: "rogue_use_exchange" });
+    return;
+  }
+  if (cfg.key === "coach_mode") {
+    sendWS({ action: "rogue_use_coach" });
+  }
 });
 
 function render() {
@@ -4023,7 +4109,7 @@ function handleMessage(msg) {
       if (timerMode !== "none") startTimerFor(msg.current_player);
       triggerBoardIntro();
       if (twoPlayerMode) {
-        log(ui("两人对局开始 — 黑棋先行", "Two-player game started — Black moves first"));
+        log(ui("双人对局开始 — 黑棋先行", "Two-player game started — Black moves first"));
       } else {
         log(ui(`新对局 — 我执${myColor==="B"?"黑":"白"}棋，AI：${RANK_LABELS[msg.level]||msg.level}`,
           `New game — you play ${myColor==="B"?"Black":"White"}, AI: ${RANK_LABELS[msg.level]||msg.level}`));
@@ -4308,7 +4394,7 @@ function updateUI() {
   document.getElementById("info-cap-b").textContent = gameState.captures?.B || 0;
   document.getElementById("info-cap-w").textContent = gameState.captures?.W || 0;
   document.getElementById("info-level").textContent =
-    twoPlayerMode ? "两人对局" : (RANK_LABELS[gameState.level] || gameState.level || "—");
+    twoPlayerMode ? "双人" : (RANK_LABELS[gameState.level] || gameState.level || "—");
 }
 
 function updateWinRate(wr) {
@@ -4809,7 +4895,7 @@ function updateUI() {
   document.getElementById("info-cap-b").textContent = gameState.captures?.B || 0;
   document.getElementById("info-cap-w").textContent = gameState.captures?.W || 0;
   document.getElementById("info-level").textContent =
-    twoPlayerMode ? ui("两人对局", "Two Players") : (RANK_LABELS[gameState.level] || gameState.level || "—");
+    twoPlayerMode ? ui("双人", "Two Players") : (RANK_LABELS[gameState.level] || gameState.level || "—");
 }
 
 function updateWinRate(wr) {
@@ -4911,14 +4997,14 @@ function setMode(mode) {
     rowColor.style.display = "none";
     rowHandicap.style.display = "flex";
     hint.style.display = "block";
-    hint.textContent = ui("两人对局：黑白双方均由人落子，可启用共享 Rogue 规则卡；大招模式仍仅限单人对 AI", "Two Players: both sides are human, shared Rogue rule cards are available; Ultimate mode remains single-player only");
+    hint.textContent = ui("双人：黑白双方均由人落子，可启用共享 Rogue 规则卡；大招模式仍仅限单人对 AI", "Two Players: both sides are human, shared Rogue rule cards are available; Ultimate mode remains single-player only");
     document.getElementById("chk-ultimate").checked = false;
   } else if (mode === "watch") {
     rowColor.style.display = "none";
     rowHandicap.style.display = "none";
     if (rowStyle) rowStyle.style.display = "flex";
     hint.style.display = "block";
-    hint.textContent = ui("AI 观战：黑白双方都由 AI 对弈，你只负责旁观和复盘", "AI Watch: both Black and White are played by AI while you spectate");
+    hint.textContent = ui("学习：黑白双方都由 AI 对弈，你只负责旁观和复盘", "Study: both Black and White are played by AI while you spectate");
     document.getElementById("chk-ultimate").checked = false;
     document.getElementById("chk-rogue").checked = false;
   }
