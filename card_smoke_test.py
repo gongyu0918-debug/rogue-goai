@@ -288,7 +288,7 @@ async def smoke_new_rogue_cards():
 
     game = make_game()
     game.rogue_card = "sanrensei"
-    game.moves = [("B", "C7"), ("W", "E5"), ("B", "E7"), ("W", "D5"), ("B", "G7")]
+    game.moves = [("B", "C7"), ("W", "E5"), ("B", "G7")]
     old_sync = s._sync_board_to_katago
     try:
         async def fake_sync(_game):
@@ -299,6 +299,7 @@ async def smoke_new_rogue_cards():
     finally:
         s._sync_board_to_katago = old_sync
     assert game.rogue_sanrensei_done is True
+    assert sum(1 for x, y in s._get_star_points(game.size) if game.board[y][x] == 1) >= 1
 
     game = make_game()
     game.rogue_card = "no_regret"
@@ -548,10 +549,12 @@ async def smoke_fog_mask_refresh():
 
     old_engine = s.engine
     old_pick = s._pick_fog_mask
+    old_pick_single = s._pick_fog_point
     old_avoid = s._ai_move_avoid_points
     try:
         s.engine = DummyEngine(["E5"])
         s._pick_fog_mask = lambda _size, _rng: [(3, 3), (3, 4), (4, 3), (4, 4)]
+        s._pick_fog_point = lambda _game, _rng: [(5, 5)]
 
         async def fake_avoid(_game, _color, _visits, _time_limit, forbidden):
             marker["forbidden"] = list(forbidden)
@@ -562,11 +565,42 @@ async def smoke_fog_mask_refresh():
     finally:
         s.engine = old_engine
         s._pick_fog_mask = old_pick
+        s._pick_fog_point = old_pick_single
         s._ai_move_avoid_points = old_avoid
 
     assert marker["forbidden"] == [(3, 3), (3, 4), (4, 3), (4, 4)]
     assert game.rogue_seal_points == [(3, 3), (3, 4), (4, 3), (4, 4)]
     assert any(msg.get("type") == "rogue_event" for msg in sent)
+
+    game = make_game()
+    game.rogue_card = "fog"
+    game.current_player = game.ai_color
+    game.moves = [("W", "D4")] * s.ROGUE_FOG_AI_MOVES
+    sent = []
+    marker["forbidden"] = None
+    old_engine = s.engine
+    old_pick = s._pick_fog_mask
+    old_pick_single = s._pick_fog_point
+    old_avoid = s._ai_move_avoid_points
+    try:
+        s.engine = DummyEngine(["E5"])
+        s._pick_fog_mask = lambda _size, _rng: [(3, 3), (3, 4), (4, 3), (4, 4)]
+        s._pick_fog_point = lambda _game, _rng: [(5, 5)]
+
+        async def fake_avoid_late(_game, _color, _visits, _time_limit, forbidden):
+            marker["forbidden"] = list(forbidden)
+            return "E5"
+
+        s._ai_move_avoid_points = fake_avoid_late
+        await s._ai_move(game, send)
+    finally:
+        s.engine = old_engine
+        s._pick_fog_mask = old_pick
+        s._pick_fog_point = old_pick_single
+        s._ai_move_avoid_points = old_avoid
+
+    assert marker["forbidden"] == [(5, 5)]
+    assert game.rogue_seal_points == [(5, 5)]
 
 
 async def smoke_foolish_wisdom_rogue():
@@ -825,7 +859,7 @@ async def smoke_ai_rogue_support():
 
     await s._activate_ai_rogue_card(game, send, "golden_corner")
     assert game.ai_rogue_card == "golden_corner"
-    assert len(game.ai_rogue_seal_points) == 16
+    assert len(game.ai_rogue_seal_points) == 25
     assert any(msg.get("type") == "rogue_ai_selected" for msg in sent)
 
     game = make_game()

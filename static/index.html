@@ -1675,34 +1675,34 @@ function updateChallengeInfo() {
 
 const ROGUE_CARD_I18N = {
   tengen: { name: "Tengen", desc: "For its first 3 moves, the AI is pulled toward the center and star points." },
-  dice: { name: "Dice Roll", desc: "Each AI move has a 14% chance of being skipped entirely." },
+  dice: { name: "Dice Roll", desc: "Each AI move has a 6% chance of being skipped entirely." },
   erosion: { name: "Erosion", desc: "Every capture shifts komi by 4 points in the captor's favor." },
   puppet: { name: "Puppet", desc: "Choose a point \u2014 the AI is forced to play there (once per game)." },
-  seal: { name: "Seal", desc: "Mark 3 forbidden points the AI cannot touch during its first 8 moves." },
+  seal: { name: "Seal", desc: "Mark 3 forbidden points the AI cannot touch for the whole game." },
   twin: { name: "Combo", desc: "Play two moves in a single turn once per game for a local follow-up." },
   nerf: { name: "Nerf", desc: "Crush the AI's search power so it often relies on shallow reading." },
   komi_relief: { name: "Komi Cut", desc: "Komi shifts 7 points in your favor." },
   time_press: { name: "Time Crunch", desc: "The AI gets only 0.06 seconds per move." },
   lowline: { name: "Low Sweep", desc: "The AI hugs the 2nd\u20133rd lines for 6 moves." },
   suboptimal: { name: "Second Best", desc: "For its first 10 moves, the AI is much more likely to choose weaker backup options." },
-  mirror: { name: "Mirror", desc: "24% chance the AI copies your last move symmetrically." },
-  slip: { name: "Butterfingers", desc: "20% chance the AI slips to a straight-adjacent point." },
-  blackhole: { name: "Black Hole", desc: "The central 13-line zone is off-limits to the AI for its first 10 moves." },
+  mirror: { name: "Mirror", desc: "8% chance the AI mirrors your last move across the board." },
+  slip: { name: "Butterfingers", desc: "10% chance the AI slips to a straight-adjacent point." },
+  blackhole: { name: "Black Hole", desc: "The central 13-line zone is off-limits to the AI for the whole game." },
   exchange: { name: "Turn Steal", desc: "Force the AI to pass \u2014 you keep playing (once per game)." },
-  fog: { name: "Fog of War", desc: "For the AI's first 6 moves, a drifting 3\u00d73 no-go zone blocks the area each turn." },
+  fog: { name: "Fog of War", desc: "For the AI's first 6 moves, a drifting 3\u00d73 no-go zone appears. After that, each turn adds 1 random forbidden point." },
   gravity: { name: "Gravity Well", desc: "The AI is pulled toward star points for 5 moves." },
-  golden_corner: { name: "Golden Corner", desc: "A random 4\u00d74 corner is sealed off from the AI for its first 10 moves." },
-  sansan: { name: "3-3 Rush", desc: "For its first 2 moves, the AI is forced to fight for one of the four 3-3 points, then avoids corner 4\u00d74 zones for 2 moves." },
+  golden_corner: { name: "Golden Corner", desc: "A random 5\u00d75 corner is sealed off from the AI for its first 12 moves." },
+  sansan: { name: "3-3 Rush", desc: "For its first 2 moves, the AI is forced to open on the four 3-3 points, then avoids corner 4\u00d74 zones for 2 moves." },
   shadow: { name: "Shadow", desc: "On its first 2 moves, the AI has a high chance to cling to its previous stone." },
   sprout: { name: "Sprout", desc: "Each capture spawns a bonus friendly stone nearby." },
   joseki_ocd: { name: "Joseki OCD", desc: "5 target points appear. Hit any 3 of them to auto-fill the remaining 2 with your stones." },
-  handicap_quest: { name: "Handicap Quest", desc: "Pass once to start; after every 6 moves you force an AI pass, up to 3 times." },
+  handicap_quest: { name: "Handicap Quest", desc: "Pass once to start; after every 10 moves you force an AI pass, up to 2 times." },
   god_hand: { name: "Hand of God", desc: "Step on a hidden diamond zone \u2014 2 friendly stones burst into nearby empty points inside a 3\u00d73 area." },
-  sansan_trap: { name: "3-3 Trap", desc: "If the opponent's very first move lands on any 3-3 point, you immediately gain 3 nearby counter-stones." },
+  sansan_trap: { name: "3-3 Trap", desc: "Only if the opponent's very first move lands on any 3-3 point, you immediately gain 3 nearby counter-stones." },
   corner_helper: { name: "Corner Guard", desc: "If any corner's 5\u00d75 area has 2 of your stones, that corner gains 2 reinforcements." },
-  sanrensei: { name: "Three Stars", desc: "If 2 of your first 4 moves land on star points, spawn 2 bonus stones." },
+  sanrensei: { name: "Three Stars", desc: "If your first 2 moves both land on star points, the game auto-fills a 3rd star point stone." },
   no_regret: { name: "No Regrets", desc: "Undo disabled \u2014 but each move has an 8% chance to add a free stone." },
-  quickthink: { name: "Quick Think", desc: "Play within 5s to unlock a 3s bonus move window." },
+  quickthink: { name: "Quick Think", desc: "Play within 3s to unlock a 1s bonus move window. Hints and undo are disabled while this card is active." },
   foolish_wisdom: { name: "Wise Fool", desc: "Form an ugly shape to sprout 2 bonus stones in the nearby 5\u00d75 area." },
   five_in_row: { name: "Five in a Row", desc: "This is Gomoku, not Go. Whenever your stones form exactly 5 in a row, it tries to extend both ends; if an end is blocked, it adds a support stone near that end instead." },
   coach_mode: { name: "Coach Login", desc: "Active: a stronger AI plays the next 30 turns for you. If your winrate stays below 50% after that, it plays 10 extra turns." },
@@ -1855,6 +1855,7 @@ function translateServerEventMessage(message) {
     [/^△ 三三陷阱发动，在 (.+) 周围反打 (\d+) 子$/, (gtp, n) => `△ 3-3 Is a Trap triggered near ${gtp}, spawning ${n} counter stones.`],
     [/^蚕食反制：AI 提掉了 (\d+) 子，当前贴目变为 (.+)$/, (captured, komi) => `Erosion countered: the AI captured ${captured} stones, komi is now ${komi}.`],
     [/^🐛 蚕食！AI 提 (\d+) 子，贴目变为 (.+)$/, (captured, komi) => `🐛 Erosion! The AI captured ${captured} stones, komi is now ${komi}.`],
+    [/^打劫禁着：不能立即提回$/, () => "Ko rule: you cannot immediately recapture."],
   ];
   for (const [pattern, formatter] of patterns) {
     const m = message.match(pattern);
@@ -3425,6 +3426,7 @@ function drawHintPercentChip(cx, cy, pct, rank) {
 
 function drawHints() {
   if (!showHints || reviewMode) return;
+  if (isHintLockedByCard()) return;
   if (!analysis.top_moves || !analysis.top_moves.length) return;
   if (!gameState || gameState.game_over) return;
   const myTurn = twoPlayerMode ? true : (gameState.current_player === myColor);
@@ -3508,6 +3510,7 @@ function drawTerritory() {
 // ─── Review mode hint drawing ─────────────────────────────────────────────────
 function drawReviewHints() {
   if (!reviewMode || !showHints) return;
+  if (isHintLockedByCard()) return;
   if (!analysis.top_moves || !analysis.top_moves.length) return;
 
   const board = buildBoardAtIndex(reviewMoves, reviewBoardSize, reviewIndex);
@@ -3729,6 +3732,7 @@ function updateRogueSkillButton() {
 
 function updateRogueBar() {
   updateRogueSkillButton();
+  refreshHintVisibility();
 }
 
 function resetRogueState() {
@@ -3863,6 +3867,17 @@ function drawRogueMarks() {
         ctx.stroke();
       }
     });
+  }
+  // Draw ko-forbidden point (small square marker)
+  if (gameState && gameState.ko_point && !reviewMode) {
+    const [kx, ky] = gameState.ko_point;
+    if (gameState.board[ky][kx] === 0) {
+      const px = PAD + kx * CELL;
+      const py = PAD + ky * CELL;
+      const r = CELL * 0.18;
+      ctx.fillStyle = "rgba(220, 40, 40, 0.55)";
+      ctx.fillRect(px - r, py - r, r * 2, r * 2);
+    }
   }
   // Draw joseki_ocd target points (green circles)
   if (activeRogueCard === "joseki_ocd" && gameState
@@ -4042,6 +4057,8 @@ function tryPlay(x, y) {
   }
   
   if (gameState.board[y][x] !== 0) return;
+  // Ko rule: prevent clicking on the ko-forbidden point
+  if (gameState.ko_point && gameState.ko_point[0] === x && gameState.ko_point[1] === y) return;
   commitPlay(x, y);
 }
 
@@ -4403,8 +4420,13 @@ function handleMessage(msg) {
     case "error":
       log(`⚠ ${translateServerEventMessage(msg.message)}`);
       setThinking(false);
+      // Revert optimistic board update on rejected moves (e.g. ko)
+      if (previousBoard && gameState) {
+        gameState.board = previousBoard.map(row => [...row]);
+      }
       if (gameState && !gameState.game_over)
-        isMyTurn = (gameState.current_player === myColor);
+        isMyTurn = twoPlayerMode || (gameState.current_player === myColor);
+      if (!animFrameId) render();
       break;
 
     case "level_set":
@@ -4535,8 +4557,9 @@ function updateUI() {
 
 function updateWinRate(wr) {
   const wrap = document.getElementById("winrate-bar-wrap");
-  if (wrap) wrap.style.display = showHints ? "" : "none";
-  if (!showHints) return;
+  const hintsAllowed = showHints && !isHintLockedByCard();
+  if (wrap) wrap.style.display = hintsAllowed ? "" : "none";
+  if (!hintsAllowed) return;
   const rawBlack = Math.max(0, Math.min(100, wr * 100));
   const rawWhite = 100 - rawBlack;
   const b = rawBlack.toFixed(1);
@@ -4555,7 +4578,19 @@ function updateWinRate(wr) {
 
 function refreshHintVisibility() {
   const wrap = document.getElementById("winrate-bar-wrap");
-  if (wrap) wrap.style.display = showHints ? "" : "none";
+  const locked = isHintLockedByCard();
+  if (locked && showHints) {
+    showHints = false;
+    const toggle = document.getElementById("hint-toggle");
+    if (toggle) toggle.className = "toggle";
+  }
+  if (wrap) wrap.style.display = showHints && !locked ? "" : "none";
+}
+
+function isHintLockedByCard() {
+  if (activeRogueCard === "quickthink") return true;
+  if (Array.isArray(gameState?.challenge_cards) && gameState.challenge_cards.includes("quickthink")) return true;
+  return false;
 }
 
 function setThinking(v) {
@@ -4812,6 +4847,14 @@ function toggleTerritory() {
 }
 
 document.getElementById("hint-toggle").addEventListener("click", () => {
+  if (isHintLockedByCard()) {
+    showHints = false;
+    document.getElementById("hint-toggle").className = "toggle";
+    refreshHintVisibility();
+    log(ui("⚡ 快速思考已禁用推荐点位", "⚡ Quick Think disables hints."));
+    render();
+    return;
+  }
   showHints = !showHints;
   document.getElementById("hint-toggle").className = "toggle" + (showHints ? " on" : "");
   refreshHintVisibility();

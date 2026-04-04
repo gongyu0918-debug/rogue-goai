@@ -124,16 +124,16 @@ CPU_MAX_VISITS = 250      # Hard cap for older CPU mode (prefer stable replies o
 # Rogue mode tuning: keep the cards impactful without turning every game into
 # a scripted auto-win. These are intentionally a bit generous to emphasize the
 # "fun modifier" feel over perfect balance.
-ROGUE_DICE_PASS_CHANCE = 0.14
-ROGUE_SLIP_CHANCE = 0.20
-ROGUE_MIRROR_CHANCE = 0.24
+ROGUE_DICE_PASS_CHANCE = 0.06
+ROGUE_SLIP_CHANCE = 0.10
+ROGUE_MIRROR_CHANCE = 0.08
 ROGUE_NERF_FACTOR = 0.12
 ROGUE_EROSION_SHIFT = 4.0
 ROGUE_TENGEN_AI_MOVES = 3
 ROGUE_FOG_MASK_RADIUS = 1
 ROGUE_FOG_AI_MOVES = 6
-ROGUE_BLACKHOLE_AI_MOVES = 10
-ROGUE_GOLDEN_CORNER_AI_MOVES = 10
+ROGUE_BLACKHOLE_AI_MOVES = 999
+ROGUE_GOLDEN_CORNER_AI_MOVES = 12
 ROGUE_GRAVITY_AI_MOVES = 5
 ROGUE_LOWLINE_AI_MOVES = 6
 ROGUE_SHADOW_AI_MOVE_INDEXES = {1, 2}
@@ -145,19 +145,19 @@ ROGUE_FOOLISH_FILL_COUNT = 2
 ULTIMATE_FOOLISH_FILL_COUNT = 20
 ULTIMATE_FOOLISH_CHAIN_DELAY = 1.0
 ROGUE_HANDICAP_REQUIRED_PASSES = 1
-ROGUE_HANDICAP_BONUS_INTERVAL = 6
-ROGUE_HANDICAP_MAX_BONUSES = 3
+ROGUE_HANDICAP_BONUS_INTERVAL = 10
+ROGUE_HANDICAP_MAX_BONUSES = 2
 ROGUE_JOSEKI_TARGET_COUNT = 5
 ROGUE_JOSEKI_REQUIRED_HITS = 3
 ROGUE_GODHAND_FILL_COUNT = 2
 ROGUE_GODHAND_RADIUS = 1
 ROGUE_CORNER_HELPER_STONES = 2
 ROGUE_SANRENSEI_REQUIRED_STARS = 2
-ROGUE_SANRENSEI_OPENING_MOVES = 4
-ROGUE_SANRENSEI_BONUS_STONES = 2
+ROGUE_SANRENSEI_OPENING_MOVES = 2
+ROGUE_SANRENSEI_BONUS_STONES = 1
 ROGUE_NO_REGRET_CHANCE = 0.08
-ROGUE_QUICKTHINK_FIRST_SECONDS = 5
-ROGUE_QUICKTHINK_SECOND_SECONDS = 3
+ROGUE_QUICKTHINK_FIRST_SECONDS = 3
+ROGUE_QUICKTHINK_SECOND_SECONDS = 1
 
 # Ultimate mode tuning: prioritize spectacle and reliable payoff.
 ULTIMATE_CHAIN_EXTRA_TURN_CHANCE = 0.65
@@ -504,34 +504,34 @@ ROGUE_CARDS = {
 
 ROGUE_CARDS = {
     "tengen": {"name": "天元", "desc": "开局 3 手，AI 会优先靠近天元与星位落子", "icon": "●"},
-    "dice": {"name": "掷骰", "desc": "AI 每手有 14% 概率直接虚手", "icon": "🎲"},
+    "dice": {"name": "掷骰", "desc": "AI 每手有 6% 概率直接虚手", "icon": "🎲"},
     "erosion": {"name": "蚕食", "desc": "每提 1 子，贴目向有利方偏移 4 目", "icon": "🌑"},
     "puppet": {"name": "傀儡术", "desc": "选定一点，强制 AI 在此落子（限 1 次）", "icon": "🎁", "uses": 1},
-    "seal": {"name": "封印术", "desc": "指定 3 个禁着点，AI 前 8 手都不能下在这些点", "icon": "🔀"},
+    "seal": {"name": "封印术", "desc": "指定 3 个禁着点，整局 AI 都不能下在这些点", "icon": "🔀"},
     "twin": {"name": "连击", "desc": "本回合可连续落两手（限 1 次）", "icon": "✦", "uses": 1},
     "nerf": {"name": "弱化", "desc": "AI 搜索算力被压到很低，多数时候只能靠浅层判断", "icon": "📲"},
     "komi_relief": {"name": "贴目减半", "desc": "贴目会朝你有利的方向调整 7 目", "icon": "✘️"},
     "time_press": {"name": "限时压制", "desc": "AI 每手最多思考 0.06 秒，基本来不及算深", "icon": "⏱️"},
     "lowline": {"name": "低空飞行", "desc": "AI 前 6 手偏向二三路低位", "icon": "🦊"},
     "suboptimal": {"name": "次优之选", "desc": "AI 前 10 手更容易从后几名的候选点里随机挑一手", "icon": "🚍"},
-    "mirror": {"name": "镜像", "desc": "AI 有 24% 概率模仿你的上一手", "icon": "🪞"},
-    "slip": {"name": "手滑了", "desc": "AI 有 20% 概率手滑到相邻的点位", "icon": "😴"},
-    "blackhole": {"name": "黑洞", "desc": "棋盘中心 13 路区域对 AI 前 10 手禁入", "icon": "🕳️"},
+    "mirror": {"name": "镜像", "desc": "AI 有 8% 概率按棋盘对称位置镜像模仿你的上一手", "icon": "🪞"},
+    "slip": {"name": "手滑了", "desc": "AI 有 10% 概率手滑到相邻的点位", "icon": "😴"},
+    "blackhole": {"name": "黑洞", "desc": "棋盘中心 13 路区域对 AI 整局禁入", "icon": "🕳️"},
     "exchange": {"name": "乾坤挪移", "desc": "强制 AI 虚手，你继续行棋（限 1 次）", "icon": "📧", "uses": 1},
-    "fog": {"name": "战争迷雾", "desc": "AI 前 6 手每手前会刷新一个 3×3 禁区遮罩", "icon": "🌫️"},
+    "fog": {"name": "战争迷雾", "desc": "AI 前 6 手每手前会刷新一个 3×3 禁区遮罩；之后每回合随机生成 1 个禁着点", "icon": "🌫️"},
     "gravity": {"name": "星位引力", "desc": "AI 前 5 手被星位磁场牵引", "icon": "🌠"},
-    "golden_corner": {"name": "黄金角", "desc": "随机封锁一角 4×4 区域，AI 前 10 手禁入", "icon": "🥇"},
-    "sansan": {"name": "三三开局", "desc": "开局前 2 手强制 AI 去抢四个三三点中的任意点，之后 2 手暂时避开角上 4×4 区域", "icon": "◣"},
+    "golden_corner": {"name": "黄金角", "desc": "随机封锁一角 5×5 区域，AI 前 12 手禁入", "icon": "🥇"},
+    "sansan": {"name": "三三开局", "desc": "强制 AI 在开局前 2 手去抢四个三三点中的位置，也就是开局硬走三三；之后 2 手暂时避开角上 4×4 区域", "icon": "◣"},
     "shadow": {"name": "影子", "desc": "AI 前 2 手有较高概率紧跟自己的上一手", "icon": "👁"},
     "sprout": {"name": "萌芽", "desc": "每次提子后，都会在附近自动长出 1 颗己棋", "icon": "🌱"},
     "joseki_ocd": {"name": "定式强迫症", "desc": "开局亮出 5 个目标点，只要下中 3 个，剩下的 2 个会自动补成你的棋子", "icon": "📻"},
-    "handicap_quest": {"name": "让子任务", "desc": "先虚手 1 次，之后每满 6 手奖励 AI 虚手一次，最多触发 3 次", "icon": "🎵"},
+    "handicap_quest": {"name": "让子任务", "desc": "先虚手 1 次，之后每满 10 手奖励 AI 虚手一次，最多触发 2 次", "icon": "🎵"},
     "god_hand": {"name": "神之一手", "desc": "踩中隐藏菱形区，周围 3×3 内随机爆出 2 颗己棋，只会落在空点", "icon": "✨"},
-    "sansan_trap": {"name": "三三陷阱", "desc": "只要对手的第 1 手正好落在四个三三点之一，就会在那手棋周围反生 3 颗我方棋", "icon": "🪤"},
+    "sansan_trap": {"name": "三三陷阱", "desc": "只有对手第 1 手正好下在四个三三点之一时才会触发，并在那手棋周围反生 3 颗我方棋", "icon": "🪤"},
     "corner_helper": {"name": "守角辅助", "desc": "任一角的 5×5 区域里有 2 颗己子时，就会在那个角补 2 颗援军", "icon": "🏯"},
-    "sanrensei": {"name": "三连星", "desc": "前 4 手里只要有 2 手落在星位，就会额外生成 2 颗己棋", "icon": "⭐"},
+    "sanrensei": {"name": "三连星", "desc": "若你前 2 手都落在星位，会自动补出第 3 颗星位棋，凑成三连星", "icon": "⭐"},
     "no_regret": {"name": "永不悔棋", "desc": "禁用悔棋，但每手 8% 概率白送一子", "icon": "🚫"},
-    "quickthink": {"name": "快速思考", "desc": "5 秒内落子可追加 3 秒连击窗口", "icon": "⚡"},
+    "quickthink": {"name": "快速思考", "desc": "3 秒内落子可追加 1 秒连击窗口；选中后禁用推荐点位与悔棋", "icon": "⚡"},
     "foolish_wisdom": {"name": "大智若愚", "desc": "摆出愚形，附近 5×5 内随机长出 2 颗己棋", "icon": "🧠"},
     "five_in_row": {"name": "五子连珠", "desc": "这是五子棋，不是围棋。每当我方横、竖、斜正好连成 5 颗同色棋，就会优先在首尾补子；若首尾被堵住，则改在两端附近补子", "icon": "🎯"},
     "coach_mode": {"name": "代练上号", "desc": "主动技能：后 30 手由更强的 AI 代打；若下完后胜率仍低于 50%，则额外再代打 10 手", "icon": "🎗"},
@@ -1338,6 +1338,8 @@ class GoGame:
         self.ai_observer: bool = False
         self.ai_style: str = "balanced"
         self.last_analysis: dict = {"winrate": 0.5, "score": 0.0, "top_moves": [], "ownership": []}
+        # Ko rule: (x, y, color_value) that is forbidden on the NEXT move
+        self.ko_point: Optional[tuple[int, int, int]] = None
         self._history: list[dict] = []
         self.reset_history()
 
@@ -1370,6 +1372,13 @@ class GoGame:
                     return True
         return False
 
+    def is_ko(self, x, y, color) -> bool:
+        """Return True if placing *color* at (x, y) would violate the ko rule."""
+        if self.ko_point is None:
+            return False
+        cv = 1 if color == "B" else 2
+        return self.ko_point == (x, y, cv)
+
     def place_stone(self, x, y, color):
         cv = 1 if color == "B" else 2
         ov = 3 - cv
@@ -1377,14 +1386,35 @@ class GoGame:
             return 0
         self.board[y][x] = cv
         captured = 0
+        captured_single: Optional[tuple[int, int]] = None
         for nx, ny in self.neighbors(x, y):
             if self.board[ny][nx] == ov:
                 grp = self.get_group(nx, ny)
                 if not self.has_liberty(grp):
                     for gx, gy in grp:
                         self.board[gy][gx] = 0
+                    if len(grp) == 1 and captured == 0:
+                        captured_single = next(iter(grp))
                     captured += len(grp)
         self.captures[color] = self.captures.get(color, 0) + captured
+        # Update ko point: if exactly 1 stone was captured and the
+        # capturing stone itself has exactly 1 liberty (the captured
+        # position), then the opponent cannot immediately recapture.
+        if captured == 1 and captured_single is not None:
+            own_grp = self.get_group(x, y)
+            if len(own_grp) == 1:
+                liberties = [
+                    (lx, ly) for lx, ly in self.neighbors(x, y)
+                    if self.board[ly][lx] == 0
+                ]
+                if len(liberties) == 1 and liberties[0] == captured_single:
+                    self.ko_point = (captured_single[0], captured_single[1], ov)
+                else:
+                    self.ko_point = None
+            else:
+                self.ko_point = None
+        else:
+            self.ko_point = None
         return captured
 
     def _snapshot_state(self) -> dict:
@@ -1432,6 +1462,7 @@ class GoGame:
             "player_color": self.player_color,
             "ai_color": self.ai_color,
             "captures": self.captures,
+            "ko_point": [self.ko_point[0], self.ko_point[1]] if self.ko_point else None,
             "move_number": len(self.moves),
             "game_over": self.game_over,
             "winner": self.winner,
@@ -1450,7 +1481,7 @@ class GoGame:
             "ai_rogue_seal_points": [[x, y] for x, y in self.ai_rogue_seal_points],
             "rogue_joseki_targets": [[x, y] for x, y in self.rogue_joseki_targets],
             "rogue_joseki_done": self.rogue_joseki_done,
-            "rogue_undo_disabled": self.rogue_card == "no_regret",
+            "rogue_undo_disabled": self.rogue_card in {"no_regret", "quickthink"},
             "rogue_coach_moves_left": self.rogue_coach_moves_left,
             "rogue_quickthink_stage": self.rogue_quickthink_stage,
             "rogue_quickthink_seconds": (
@@ -2487,6 +2518,10 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                             await send_error("该位置已有棋子")
                             continue
 
+                        if game.is_ko(x, y, color):
+                            await send_error("打劫禁着：不能立即提回")
+                            continue
+
                         was_double_pending = game.ultimate_double_pending
                         _record_ultimate_player_action(game)
                         gtp = coord_to_gtp(x, y, game.size)
@@ -2564,6 +2599,10 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
 
                     if game.board[y][x] != 0:
                         await send_error("该位置已有棋子")
+                        continue
+
+                    if game.is_ko(x, y, color):
+                        await send_error("打劫禁着：不能立即提回")
                         continue
 
                     player_forbidden = _get_ai_rogue_forbidden_points(game)
@@ -2707,7 +2746,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                         game = active_games.get(game_id)
                     if not game or not game.moves:
                         continue
-                    if game.rogue_card == "no_regret":
+                    if game.rogue_card in {"no_regret", "quickthink"}:
                         await send_error("这张卡会禁用悔棋")
                         continue
 
@@ -2753,6 +2792,9 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                     if not game:
                         game = active_games.get(game_id)
                     if not game or game.game_over or not engine.ready:
+                        continue
+                    if _rogue_has(game, "quickthink"):
+                        await send_error("快速思考已禁用推荐点位，请自行判断局面")
                         continue
                     if game.challenge_beta:
                         if _challenge_remaining(game, "hint") <= 0:
@@ -3164,11 +3206,11 @@ def _get_blackhole_points(size: int) -> list[tuple[int, int]]:
     return pts
 
 
-def _get_golden_corner_points(size: int, corner: int) -> list[tuple[int, int]]:
-    """Return 4x4 forbidden zone for a corner (0=TL, 1=TR, 2=BL, 3=BR)."""
+def _get_golden_corner_points(size: int, corner: int, span: int = 5) -> list[tuple[int, int]]:
+    """Return a corner forbidden zone (0=TL, 1=TR, 2=BL, 3=BR)."""
     pts = []
-    for dy in range(4):
-        for dx in range(4):
+    for dy in range(span):
+        for dx in range(span):
             if corner == 0:
                 pts.append((dx, dy))
             elif corner == 1:
@@ -3519,6 +3561,18 @@ def _pick_fog_mask(size: int, rng: random.Random) -> list[tuple[int, int]]:
     cx = rng.randint(0, size - 1)
     cy = rng.randint(0, size - 1)
     return _get_square_points(cx, cy, ROGUE_FOG_MASK_RADIUS, size)
+
+
+def _pick_fog_point(game, rng: random.Random) -> list[tuple[int, int]]:
+    candidates = [
+        (x, y)
+        for y in range(game.size)
+        for x in range(game.size)
+        if game.board[y][x] == 0
+    ]
+    if not candidates:
+        return []
+    return [rng.choice(candidates)]
 
 
 def _shape_key(points: list[tuple[int, int]] | tuple[tuple[int, int], ...]) -> tuple[tuple[int, int], ...]:
@@ -4110,7 +4164,11 @@ def _refresh_ai_rogue_player_turn(game: GoGame):
     if game.ai_rogue_card == "fog":
         if game.current_player == game.player_color:
             rng = random.Random(time.time_ns())
-            game.ai_rogue_seal_points = _pick_fog_mask(game.size, rng)
+            player_move_count = sum(1 for c, m in game.moves if c == game.player_color and m.upper() != "PASS")
+            if player_move_count < ROGUE_FOG_AI_MOVES:
+                game.ai_rogue_seal_points = _pick_fog_mask(game.size, rng)
+            else:
+                game.ai_rogue_seal_points = _pick_fog_point(game, rng)
         else:
             game.ai_rogue_seal_points = []
 
@@ -4205,7 +4263,7 @@ async def _activate_rogue_card(game: GoGame, send_fn, card_id: str):
         game.rogue_seal_points = _get_golden_corner_points(game.size, corner)
         corner_names = ["左上角", "右上角", "左下角", "右下角"]
         await send_fn({"type": "rogue_event",
-                       "msg": f"黄金角已封锁 {corner_names[corner]} 的 4x4 区域"})
+                       "msg": f"黄金角已封锁 {corner_names[corner]} 的 5x5 区域"})
     elif card_id == "joseki_ocd":
         game.rogue_joseki_targets = _pick_joseki_targets(
             game.size, ROGUE_JOSEKI_TARGET_COUNT)
@@ -4424,9 +4482,11 @@ async def _apply_player_rogue_move_effects(game: GoGame, send_fn,
     if _rogue_has(game, "sanrensei") and not game.rogue_sanrensei_done:
         player_moves = _player_non_pass_coords(game, color, limit=ROGUE_SANRENSEI_OPENING_MOVES)
         star_set = set(_get_star_points(game.size))
-        star_count = sum(1 for pt in player_moves if pt in star_set)
-        if len(player_moves) >= ROGUE_SANRENSEI_REQUIRED_STARS and star_count >= ROGUE_SANRENSEI_REQUIRED_STARS:
-            choices = [pt for pt in star_set if game.board[pt[1]][pt[0]] == 0]
+        first_moves = player_moves[:ROGUE_SANRENSEI_REQUIRED_STARS]
+        if len(first_moves) >= ROGUE_SANRENSEI_REQUIRED_STARS and all(pt in star_set for pt in first_moves):
+            choices = [pt for pt in first_moves if game.board[pt[1]][pt[0]] == 0]
+            if len(choices) < ROGUE_SANRENSEI_BONUS_STONES:
+                choices.extend([pt for pt in star_set if game.board[pt[1]][pt[0]] == 0 and pt not in choices])
             random.shuffle(choices)
             changed = _spawn_bonus_points(game, choices[:ROGUE_SANRENSEI_BONUS_STONES], color)
             if changed and _challenge_should_bonus_derivative(game):
@@ -4437,7 +4497,7 @@ async def _apply_player_rogue_move_effects(game: GoGame, send_fn,
             if changed and engine.ready:
                 await _sync_board_to_katago(game)
             await send_fn({"type": "rogue_event",
-                           "msg": f"✦ 三连星发动，额外点亮 {len(changed)} 个星位"})
+                           "msg": f"✦ 三连星发动，自动补出 {len(changed)} 颗星位棋"})
 
     if _rogue_has(game, "no_regret") and random.random() < ROGUE_NO_REGRET_CHANCE:
         bonus = await _pick_second_best_point(game, color)
@@ -5135,7 +5195,8 @@ async def _ultimate_ai_move(game: GoGame, send_fn,
             import time as _time
             rng = random.Random(_time.time_ns())
             valid = [(sx, sy) for sy in range(game.size) for sx in range(game.size)
-                     if game.board[sy][sx] == 0 and (sx, sy) not in forbidden]
+                     if game.board[sy][sx] == 0 and (sx, sy) not in forbidden
+                     and not game.is_ko(sx, sy, color)]
             if valid:
                 bx, by = rng.choice(valid)
                 gtp_move = coord_to_gtp(bx, by, game.size)
@@ -5155,7 +5216,8 @@ async def _ultimate_ai_move(game: GoGame, send_fn,
             import time as _time
             rng = random.Random(_time.time_ns())
             empties = [(sx, sy) for sy in range(game.size) for sx in range(game.size)
-                       if game.board[sy][sx] == 0]
+                       if game.board[sy][sx] == 0
+                       and not game.is_ko(sx, sy, color)]
             if empties:
                 x, y = rng.choice(empties)
                 gtp_move = coord_to_gtp(x, y, game.size)
@@ -5314,14 +5376,17 @@ async def _ai_move(game: GoGame, send_fn):
         time_limit = min(ROGUE_TIME_PRESS_MAX_TIME, time_limit)
         visits = min(visits, ROGUE_TIME_PRESS_MAX_VISITS)
 
-    if "fog" in rogue_cards and ai_move_count < ROGUE_FOG_AI_MOVES:
+    if "fog" in rogue_cards:
         rng = random.Random(time.time_ns())
-        game.rogue_seal_points = _challenge_zone_points(game, _pick_fog_mask(game.size, rng))
+        if ai_move_count < ROGUE_FOG_AI_MOVES:
+            game.rogue_seal_points = _challenge_zone_points(game, _pick_fog_mask(game.size, rng))
+            fog_msg = "🌫 战争迷雾刷新：3×3 禁区本回合对 AI 禁止落子"
+        else:
+            game.rogue_seal_points = _challenge_zone_points(game, _pick_fog_point(game, rng))
+            fog_msg = "🌫 战争迷雾残留：本回合随机封锁 1 个 AI 禁着点"
         await send_fn({"type": "game_state", **game.to_state()})
-        await send_fn({"type": "rogue_event",
-                       "msg": "🌫 战争迷雾刷新：高亮禁区本回合对 AI 禁止落子"})
-    elif "fog" in rogue_cards:
-        game.rogue_seal_points = []
+        if game.rogue_seal_points:
+            await send_fn({"type": "rogue_event", "msg": fog_msg})
 
     if "tengen" in rogue_cards and ai_move_count < ROGUE_TENGEN_AI_MOVES:
         if ai_move_count == 0:
@@ -5436,9 +5501,9 @@ async def _ai_move(game: GoGame, send_fn):
             return
 
     forbidden = []
-    if "seal" in rogue_cards and game.rogue_seal_points and ai_move_count < 8:
+    if "seal" in rogue_cards and game.rogue_seal_points:
         forbidden = game.rogue_seal_points
-    elif "fog" in rogue_cards and game.rogue_seal_points and ai_move_count < ROGUE_FOG_AI_MOVES:
+    elif "fog" in rogue_cards and game.rogue_seal_points:
         forbidden = game.rogue_seal_points
     elif "blackhole" in rogue_cards and ai_move_count < ROGUE_BLACKHOLE_AI_MOVES:
         forbidden = _challenge_zone_points(game, _get_blackhole_points(game.size))
