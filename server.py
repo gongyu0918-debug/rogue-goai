@@ -756,11 +756,7 @@ ULTIMATE_CARDS = {
         "desc": "这是五子棋，不是围棋。每当我方横、竖、斜正好连成 5 颗同色棋，就会随机清除对方 30 颗棋子，并在全盘随机补下 30 颗己棋；该效果可连锁触发",
         "icon": "🎯",
     },
-    "capture_foul": {
-        "name": "提子犯规",
-        "desc": "若对手提子数量超过 5 颗，则 100% 触发“提子未放在棋盒”，被惩罚方立刻罚 50 目；每次触发后重新计数，之后仍可重复触发",
-        "icon": "🧺",
-    },
+    "capture_foul": {"name": "提子犯规", "desc": "若对手提子或技能消除棋子累计超过 5 颗，则 100% 触发\u201c提子未放在棋盒\u201d，被惩罚方立刻罚 50 目；每次触发后重新计数，之后仍可重复触发", "icon": "🧺"},
     "last_stand": {
         "name": "起死回生",
         "desc": "当我方胜率跌到 30% 以下时：全盘随机清除对方 30 颗棋子，并随机补下 30 颗己棋",
@@ -2543,11 +2539,18 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                             continue
 
                         board_modified = False
+                        opp_val = 2 if color == "B" else 1
+                        opp_before = _count_stones(game, opp_val)
                         if p_card:
                             board_modified = await _apply_ultimate_effect(game, send, x, y, color, p_card)
                         pending_modified = await _resolve_pending_ultimate_shadow_links(game, send)
                         if board_modified or pending_modified:
                             await _sync_board_to_katago(game)
+                            # Card effects that removed opponent stones count
+                            # toward capture-foul progress (offender = this player)
+                            effect_removed = max(0, opp_before - _count_stones(game, opp_val))
+                            if effect_removed > 0:
+                                await _check_capture_foul(game, send, color, effect_removed, ultimate=True)
 
                         chain_bonus = (
                             p_card == "chain"
@@ -3399,16 +3402,32 @@ def _apply_score_penalty(game: GoGame, offender: str, amount: float) -> None:
         game.komi -= amount
 
 
+def _count_stones(game: GoGame, color_val: int) -> int:
+    """Count how many stones of *color_val* (1=B, 2=W) are on the board."""
+    return sum(cell == color_val for row in game.board for cell in row)
+
+
 async def _check_capture_foul(game: GoGame, send_fn, offender: str, captured: int, *, ultimate: bool) -> None:
+    """Track capture-foul progress and penalise when threshold is met.
+
+    The card only punishes the *opponent* of the card holder:
+      - Rogue: player picks the card → only the AI is punished.
+      - Ultimate: whoever picked the card → only the other side is punished.
+    ``offender`` is the colour that just captured stones.
+    """
     if captured <= 0:
         return
     if ultimate:
-        active = (
-            game.ultimate
-            and (game.ultimate_player_card == "capture_foul" or game.ultimate_ai_card == "capture_foul")
-        )
-        if not active:
+        # Determine which side(s) are protected by this card
+        player_has = game.ultimate and game.ultimate_player_card == "capture_foul"
+        ai_has = game.ultimate and game.ultimate_ai_card == "capture_foul"
+        if not (player_has or ai_has):
             return
+        # Only punish the opponent of the card holder
+        if player_has and offender != game.ai_color:
+            return  # player holds card → only AI gets punished
+        if ai_has and offender != game.player_color:
+            return  # AI holds card → only player gets punished
         progress = game.ultimate_capture_foul_progress
         progress[offender] += captured
         if progress[offender] < ULTIMATE_CAPTURE_FOUL_THRESHOLD:
@@ -3424,6 +3443,9 @@ async def _check_capture_foul(game: GoGame, send_fn, offender: str, captured: in
         return
 
     if game.rogue_card != "capture_foul":
+        return
+    # Rogue: player picks the card → only AI (opponent) is punished
+    if offender != game.ai_color:
         return
     progress = game.rogue_capture_foul_progress
     progress[offender] += captured
@@ -5243,6 +5265,8 @@ async def _ultimate_ai_move(game: GoGame, send_fn,
                     "y": coord[1] if coord else None})
 
     board_modified = False
+    opp_val = 1 if color == "W" else 2
+    opp_before = _count_stones(game, opp_val)
     if ai_card and coord and gtp_move.upper() != "PASS":
         board_modified = await _apply_ultimate_effect(
             game, send_fn, coord[0], coord[1], color, ai_card)
@@ -5252,6 +5276,10 @@ async def _ultimate_ai_move(game: GoGame, send_fn,
         # Sync immediately so the engine does not continue from a stale
         # pre-effect position on the player's next move.
         await _sync_board_to_katago(game)
+        # Card effects that removed opponent stones count toward capture-foul
+        effect_removed = max(0, opp_before - _count_stones(game, opp_val))
+        if effect_removed > 0:
+            await _check_capture_foul(game, send_fn, color, effect_removed, ultimate=True)
 
     chain_bonus = (
         ai_card == "chain"

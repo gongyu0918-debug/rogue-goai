@@ -1734,7 +1734,7 @@ const ULTIMATE_CARD_I18N = {
   quickthink: { name: "Speed Storm", desc: "Place unlimited stones for 5 seconds \u2014 then the AI reads the board. The whole burst counts as 1 move." },
   foolish_wisdom: { name: "Fool's Chain", desc: "Ugly-shape chain reaction spawns up to 20 stones until it stops." },
   five_in_row: { name: "Five in a Row Burst", desc: "This is Gomoku, not Go. Whenever your stones form exactly 5 in a row, remove 30 enemy stones and drop 30 friendly stones across the board. This effect can chain." },
-  capture_foul: { name: "Capture Foul", desc: "Whenever the opponent captures more than 5 stones, the foul triggers with 100% certainty. The offender immediately loses 50 points, then the counter resets and can trigger again." },
+  capture_foul: { name: "Capture Foul", desc: "Whenever the opponent captures or removes more than 5 stones (including card effects), the foul triggers with 100% certainty. The offender immediately loses 50 points, then the counter resets and can trigger again." },
   last_stand: { name: "Last Stand", desc: "If your winrate drops below 30%, clear 30 enemy stones and add 30 friendly stones across the entire board." },
 };
 
@@ -4242,6 +4242,7 @@ function handleMessage(msg) {
       isMyTurn = twoPlayerMode ? !msg.game_over : (msg.current_player === myColor);
       activeAiRogueCard = msg.ai_rogue_card || activeAiRogueCard || null;
       aiRogueSeals = msg.ai_rogue_seal_points || [];
+      if (msg.rogue_seal_points) rogueSeals = msg.rogue_seal_points;
 
       // Detect new stone and captures for animation
       if (oldBoard) {
