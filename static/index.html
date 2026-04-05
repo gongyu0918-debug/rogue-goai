@@ -2732,6 +2732,8 @@ function syncCardTurnTimer() {
     if (cardTurnKey !== key) {
       log(ui(`⚡ 快速思考：${seconds} 秒内完成这一手`, `⚡ Quick Thinking: finish this move within ${seconds} seconds.`));
       startCardTurnTimer(seconds, key, ui("快棋", "Fast"), () => {
+        // Safety: do not auto-pass if it's no longer the player's turn
+        if (!isMyTurn || (gameState && gameState.current_player !== myColor)) return;
         log(ui("⚡ 快速思考超时，自动虚手", "⚡ Quick Thinking timed out. Auto-pass."));
         sendWS({ action: "pass" });
         if (!twoPlayerMode) {
@@ -2749,6 +2751,8 @@ function syncCardTurnTimer() {
     if (cardTurnKey !== key) {
       log(ui(`⚡ 大招快速思考：${seconds} 秒自由落子开始`, `⚡ Ultimate Quick Thinking: free placement begins for ${seconds} seconds.`));
       startCardTurnTimer(seconds, key, ui("自由落子", "Free"), () => {
+        // Safety: do not end quickthink if it's no longer the player's turn
+        if (!isMyTurn || (gameState && gameState.current_player !== myColor)) return;
         log(ui("⚡ 自由落子时间结束，AI 开始读盘", "⚡ Free placement ended. The AI is reading the board."));
         sendWS({ action: "ultimate_quickthink_end" });
         if (!twoPlayerMode) {

@@ -1375,11 +1375,13 @@ class GoGame:
         cv = 1 if color == "B" else 2
         return self.ko_point == (x, y, cv)
 
-    def place_stone(self, x, y, color):
+    def place_stone(self, x, y, color, *, skip_ko=False):
         cv = 1 if color == "B" else 2
         ov = 3 - cv
         if self.board[y][x] != 0:
             return 0
+        if not skip_ko and self.is_ko(x, y, color):
+            return -1  # ko violation
         self.board[y][x] = cv
         captured = 0
         captured_single: Optional[tuple[int, int]] = None
@@ -1446,7 +1448,7 @@ class GoGame:
                 continue
             coord = gtp_to_coord(gtp, self.size)
             if coord:
-                self.place_stone(coord[0], coord[1], color)
+                self.place_stone(coord[0], coord[1], color, skip_ko=True)
 
     def to_state(self) -> dict:
         return {
@@ -5248,6 +5250,11 @@ async def _ultimate_ai_move(game: GoGame, send_fn,
                 gtp_move = "pass"
                 coord = None
 
+    # Ko guard: if the AI move violates ko, force a pass
+    if gtp_move.upper() != "PASS" and coord and game.is_ko(coord[0], coord[1], color):
+        gtp_move = "pass"
+        coord = None
+
     if allow_double_bonus:
         _record_ultimate_turn(game)
     game.moves.append((color, gtp_move))
@@ -5354,7 +5361,7 @@ async def _ai_move(game: GoGame, send_fn):
             lc = gtp_to_coord(last_gtp, game.size)
             if lc:
                 mx, my = _mirror_coord(lc[0], lc[1], game.size)
-                if game.board[my][mx] == 0:
+                if game.board[my][mx] == 0 and not game.is_ko(mx, my, color):
                     m_gtp = coord_to_gtp(mx, my, game.size)
                     resp = await run_in_executor(
                         engine.send_command, f"play {color} {m_gtp}")
@@ -5434,7 +5441,7 @@ async def _ai_move(game: GoGame, send_fn):
                 msg = None
         if target:
             tx, ty = target
-            if game.board[ty][tx] == 0:
+            if game.board[ty][tx] == 0 and not game.is_ko(tx, ty, color):
                 t_gtp = coord_to_gtp(tx, ty, game.size)
                 resp = await run_in_executor(
                     engine.send_command, f"play {color} {t_gtp}")
@@ -5596,13 +5603,20 @@ async def _ai_move(game: GoGame, send_fn):
             nearby = [
                 (nx, ny)
                 for nx, ny in _adjacent_points(original_coord[0], original_coord[1], game.size)
-                if game.board[ny][nx] == 0
+                if game.board[ny][nx] == 0 and not game.is_ko(nx, ny, color)
             ]
             if nearby:
                 sx, sy = random.choice(nearby)
                 gtp_move = coord_to_gtp(sx, sy, game.size)
                 needs_sync = True
                 slip_msg = f"手滑了触发，AI 原本想下 {original_gtp}，结果滑到 {gtp_move}"
+
+    # Ko guard: if the AI move violates ko, force a pass
+    if gtp_move.upper() not in ("PASS", "RESIGN"):
+        _pre_coord = gtp_to_coord(gtp_move, game.size)
+        if _pre_coord and game.is_ko(_pre_coord[0], _pre_coord[1], color):
+            gtp_move = "pass"
+            slip_msg = None
 
     game.moves.append((color, gtp_move))
 
@@ -5848,9 +5862,14 @@ async def _finish_ai_move(game, send_fn, color, card, gtp_move, rogue_msg=None):
                             "score": None, "reason": "ai_resign"})
             return
 
+    coord = gtp_to_coord(gtp_move, game.size)
+    # Ko guard: if the AI move violates ko, force a pass
+    if coord and gtp_move.upper() != "PASS" and game.is_ko(coord[0], coord[1], color):
+        gtp_move = "pass"
+        coord = None
+
     game.moves.append((color, gtp_move))
     captured = 0
-    coord = gtp_to_coord(gtp_move, game.size)
     if gtp_move.upper() != "PASS":
         if coord:
             captured = game.place_stone(coord[0], coord[1], color)
@@ -5940,6 +5959,10 @@ async def _run_coach_turn_if_needed(game: GoGame, send_fn):
     if gtp_move.upper() == "RESIGN":
         gtp_move = "pass"
     coord = gtp_to_coord(gtp_move, game.size)
+    # Ko guard
+    if coord and gtp_move.upper() != "PASS" and game.is_ko(coord[0], coord[1], color):
+        gtp_move = "pass"
+        coord = None
     captured = 0
     game.moves.append((color, gtp_move))
     if gtp_move.upper() != "PASS" and coord:
