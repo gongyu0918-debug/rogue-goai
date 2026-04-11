@@ -655,6 +655,55 @@ async def smoke_place_stone_does_not_overwrite():
     assert game.board[2][2] == 1
 
 
+async def smoke_ko_recapture_blocked():
+    game = make_game(size=5)
+    game.board = [
+        [0, 1, 2, 0, 0],
+        [1, 2, 0, 2, 0],
+        [0, 1, 2, 0, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+    ]
+    captured = game.place_stone(2, 1, "B")
+    assert captured == 1
+    assert game.board[1][1] == 0
+    assert game.ko_point == (1, 1, 2)
+    recapture = game.place_stone(1, 1, "W")
+    assert recapture == -1
+    assert game.board[1][1] == 0
+    assert game.board[1][2] == 1
+
+
+async def smoke_suicide_illegal():
+    game = make_game(size=5)
+    game.board[1][2] = 2
+    game.board[2][1] = 2
+    game.board[2][3] = 2
+    game.board[3][2] = 2
+    before = copy.deepcopy(game.board)
+    before_captures = dict(game.captures)
+    captured = game.place_stone(2, 2, "B")
+    assert captured == -2
+    assert game.board == before
+    assert game.captures == before_captures
+
+
+async def smoke_magic_effects_clear_ko():
+    game = make_game(size=5)
+    game.ko_point = (2, 2, 1)
+    changed = s._spawn_bonus_points(game, [(1, 1)], "B")
+    assert changed == [(1, 1)]
+    assert game.ko_point is None
+
+    game = make_game(size=5)
+    game.board[0][0] = 2
+    game.board[1][0] = 2
+    game.ko_point = (1, 1, 2)
+    cleared = s._clear_random_enemy_stones(game, "B", 1, random.Random(0))
+    assert len(cleared) == 1
+    assert game.ko_point is None
+
+
 async def smoke_batch_bonus_persists_after_followup_move():
     game = make_game(size=5)
     game.board[0][0] = 2
@@ -1281,6 +1330,9 @@ async def main():
         await smoke_foolish_wisdom_rogue()
         await smoke_bonus_spawn_safety()
         await smoke_place_stone_does_not_overwrite()
+        await smoke_ko_recapture_blocked()
+        await smoke_suicide_illegal()
+        await smoke_magic_effects_clear_ko()
         await smoke_batch_bonus_persists_after_followup_move()
         await smoke_undo_preserves_bonus_stones()
         await smoke_bonus_turn_does_not_grant_extra_ai_move()

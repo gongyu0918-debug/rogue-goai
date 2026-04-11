@@ -1376,6 +1376,19 @@ class GoGame:
         cv = 1 if color == "B" else 2
         return self.ko_point == (x, y, cv)
 
+    def is_legal_move(self, x, y, color, *, skip_ko=False) -> bool:
+        """Check whether a move is legal without mutating persistent state."""
+        if not (0 <= x < self.size and 0 <= y < self.size):
+            return False
+        board_before = [row[:] for row in self.board]
+        captures_before = dict(self.captures)
+        ko_before = self.ko_point
+        result = self.place_stone(x, y, color, skip_ko=skip_ko)
+        self.board = board_before
+        self.captures = captures_before
+        self.ko_point = ko_before
+        return result >= 0
+
     def place_stone(self, x, y, color, *, skip_ko=False):
         cv = 1 if color == "B" else 2
         ov = 3 - cv
@@ -1383,6 +1396,8 @@ class GoGame:
             return 0
         if not skip_ko and self.is_ko(x, y, color):
             return -1  # ko violation
+        prev_captures = dict(self.captures)
+        prev_ko_point = self.ko_point
         self.board[y][x] = cv
         captured = 0
         captured_single: Optional[tuple[int, int]] = None
@@ -1396,11 +1411,16 @@ class GoGame:
                         captured_single = next(iter(grp))
                     captured += len(grp)
         self.captures[color] = self.captures.get(color, 0) + captured
+        own_grp = self.get_group(x, y)
+        if not own_grp or not self.has_liberty(own_grp):
+            self.board[y][x] = 0
+            self.captures = prev_captures
+            self.ko_point = prev_ko_point
+            return -2  # suicide / self-capture
         # Update ko point: if exactly 1 stone was captured and the
         # capturing stone itself has exactly 1 liberty (the captured
         # position), then the opponent cannot immediately recapture.
         if captured == 1 and captured_single is not None:
-            own_grp = self.get_group(x, y)
             if len(own_grp) == 1:
                 liberties = [
                     (lx, ly) for lx, ly in self.neighbors(x, y)
@@ -2521,11 +2541,17 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                             await send_error("打劫禁着：不能立即提回")
                             continue
 
+                        gtp = coord_to_gtp(x, y, game.size)
+                        captured = game.place_stone(x, y, color)
+                        if captured == -1:
+                            await send_error("鎵撳姭绂佺潃锛氫笉鑳界珛鍗虫彁鍥?")
+                            continue
+                        if captured == -2:
+                            await send_error("杩欐墜灞炰簬鑷潃绂佺潃锛屼笉鑳借繖鏍蜂笅")
+                            continue
                         was_double_pending = game.ultimate_double_pending
                         _record_ultimate_player_action(game)
-                        gtp = coord_to_gtp(x, y, game.size)
                         game.moves.append((color, gtp))
-                        captured = game.place_stone(x, y, color)
                         game.passed[color] = False
                         await _check_capture_foul(game, send, color, captured, ultimate=True)
 
@@ -2623,8 +2649,18 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                             await send_error(f"无效落子: {gtp}")
                             continue
 
-                    game.moves.append((color, gtp))
                     captured = game.place_stone(x, y, color)
+                    if captured == -1:
+                        if engine.ready:
+                            await run_in_executor(engine.send_command, "undo")
+                        await send_error("鎵撳姭绂佺潃锛氫笉鑳界珛鍗虫彁鍥?")
+                        continue
+                    if captured == -2:
+                        if engine.ready:
+                            await run_in_executor(engine.send_command, "undo")
+                        await send_error("杩欐墜灞炰簬鑷潃绂佺潃锛屼笉鑳借繖鏍蜂笅")
+                        continue
+                    game.moves.append((color, gtp))
                     game.passed[color] = False
                     game.current_player = "W" if color == "B" else "B"
                     await _check_capture_foul(game, send, color, captured, ultimate=False)
@@ -3147,6 +3183,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                     if not game:
                         continue
                     if engine.ready:
+                        await _sync_board_to_katago(game)
                         resp = await run_in_executor(
                             engine.send_command, "final_score")
                         score_str = resp.replace("=", "").strip()
@@ -3345,6 +3382,7 @@ def _apply_magic_points(
     frontier_list = list(frontier)
     _remove_dead_groups(game, frontier_list, ov)
     _remove_dead_groups(game, frontier_list, cv)
+    game.ko_point = None
     return [(x, y) for x, y in touched if game.board[y][x] == cv]
 
 
@@ -3370,7 +3408,9 @@ def _try_spawn_bonus_stone(game: GoGame, x: int, y: int, color: str) -> bool:
     own_group = game.get_group(x, y)
     if not own_group or not game.has_liberty(own_group):
         game.board[y][x] = 0
+        game.ko_point = None
         return False
+    game.ko_point = None
     return True
 
 
@@ -3831,6 +3871,8 @@ def _clear_random_enemy_stones(
     cleared = enemies[:count]
     for x, y in cleared:
         game.board[y][x] = 0
+    if cleared:
+        game.ko_point = None
     return cleared
 
 
@@ -4067,6 +4109,8 @@ async def _resolve_pending_ultimate_shadow_links(game: GoGame, send_fn) -> bool:
                 ),
             })
     game.ultimate_shadow_clone_links = pending
+    if modified:
+        game.ko_point = None
     return modified
 
 
@@ -5225,7 +5269,7 @@ async def _ultimate_ai_move(game: GoGame, send_fn,
             rng = random.Random(_time.time_ns())
             valid = [(sx, sy) for sy in range(game.size) for sx in range(game.size)
                      if game.board[sy][sx] == 0 and (sx, sy) not in forbidden
-                     and not game.is_ko(sx, sy, color)]
+                     and game.is_legal_move(sx, sy, color)]
             if valid:
                 bx, by = rng.choice(valid)
                 gtp_move = coord_to_gtp(bx, by, game.size)
@@ -5246,7 +5290,7 @@ async def _ultimate_ai_move(game: GoGame, send_fn,
             rng = random.Random(_time.time_ns())
             empties = [(sx, sy) for sy in range(game.size) for sx in range(game.size)
                        if game.board[sy][sx] == 0
-                       and not game.is_ko(sx, sy, color)]
+                       and game.is_legal_move(sx, sy, color)]
             if empties:
                 x, y = rng.choice(empties)
                 gtp_move = coord_to_gtp(x, y, game.size)
@@ -5614,7 +5658,7 @@ async def _ai_move(game: GoGame, send_fn):
             nearby = [
                 (nx, ny)
                 for nx, ny in _adjacent_points(original_coord[0], original_coord[1], game.size)
-                if game.board[ny][nx] == 0 and not game.is_ko(nx, ny, color)
+                if game.board[ny][nx] == 0 and game.is_legal_move(nx, ny, color)
             ]
             if nearby:
                 sx, sy = random.choice(nearby)
@@ -5893,7 +5937,7 @@ async def _ai_retry_avoiding_ko(game, color):
                 (x, y)
                 for y in range(game.size) for x in range(game.size)
                 if game.board[y][x] == 0
-                and not game.is_ko(x, y, color)
+                and game.is_legal_move(x, y, color)
             ]
             random.shuffle(empties)
             for ax, ay in empties:

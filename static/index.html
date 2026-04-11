@@ -6,14 +6,32 @@
 <title>GoAI | Rogue Go Arena</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg-0: #07090d;
+  --bg-1: #10141c;
+  --bg-2: #171d28;
+  --panel-0: rgba(12, 15, 22, 0.88);
+  --panel-1: rgba(19, 24, 33, 0.94);
+  --panel-border: rgba(255,255,255,.08);
+  --gold-0: #a9812a;
+  --gold-1: #d4af37;
+  --gold-2: #f3dd9a;
+  --blue-0: #7ebdff;
+  --ink-0: #eef3f7;
+  --ink-1: #b7c2cf;
+  --ink-2: #8e9aa9;
+  --shadow-deep: 0 28px 80px rgba(0,0,0,.42);
+  --shadow-soft: 0 16px 34px rgba(0,0,0,.22);
+}
 body {
-  font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", sans-serif;
+  font-family: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
   background:
-    radial-gradient(circle at top, rgba(212, 175, 55, 0.12), transparent 38%),
-    radial-gradient(circle at 18% 22%, rgba(56, 109, 184, 0.18), transparent 28%),
-    linear-gradient(180deg, #0b0d11 0%, #11161d 42%, #090b0f 100%);
+    radial-gradient(circle at top, rgba(212, 175, 55, 0.14), transparent 36%),
+    radial-gradient(circle at 18% 22%, rgba(56, 109, 184, 0.16), transparent 28%),
+    radial-gradient(circle at 84% 18%, rgba(42, 72, 118, 0.18), transparent 24%),
+    linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 42%, #080a0f 100%);
   background-attachment: fixed;
-  color: #edf1f5;
+  color: var(--ink-0);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -92,54 +110,56 @@ body::after {
 }
 header {
   width: 100%;
-  background: linear-gradient(180deg, rgba(17,20,25,0.94), rgba(12,14,18,0.92));
+  background:
+    linear-gradient(180deg, rgba(18,22,30,0.96), rgba(9,12,17,0.94)),
+    radial-gradient(circle at top right, rgba(212,175,55,.09), transparent 30%);
   padding: 16px 28px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  box-shadow: 0 18px 40px rgba(0,0,0,.42);
+  box-shadow: 0 24px 44px rgba(0,0,0,.38);
   flex-shrink: 0;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.16);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.12);
   position: relative;
   overflow: hidden;
 }
 header::before {
   content: "";
   position: absolute;
-  inset: auto -10% -120px auto;
-  width: 340px;
-  height: 220px;
-  background: radial-gradient(circle, rgba(212,175,55,0.16), transparent 65%);
+  inset: auto -8% -132px auto;
+  width: 380px;
+  height: 240px;
+  background: radial-gradient(circle, rgba(212,175,55,0.14), transparent 66%);
   pointer-events: none;
 }
 #header-main {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   min-width: 0;
 }
 .title-stack {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
 }
 .brand-kicker {
-  font-size: .72rem;
-  letter-spacing: .34em;
+  font-size: .68rem;
+  letter-spacing: .38em;
   text-transform: uppercase;
-  color: rgba(212,175,55,0.72);
+  color: rgba(212,175,55,0.76);
   font-weight: 700;
 }
 header h1 {
-  font-size: 1.58rem;
-  color: #f4e2a3;
-  letter-spacing: .08em;
-  text-shadow: 0 0 16px rgba(212, 175, 55, 0.16);
+  font-size: 1.68rem;
+  color: #f7e8b4;
+  letter-spacing: .06em;
+  text-shadow: 0 0 18px rgba(212, 175, 55, 0.14);
   font-weight: 700;
-  font-family: "Georgia", "Times New Roman", "Songti SC", serif;
+  font-family: "Noto Serif SC", "Georgia", "Songti SC", serif;
 }
 #status-dot {
   width: 11px;
@@ -151,19 +171,19 @@ header h1 {
   box-shadow: 0 0 10px rgba(231,76,60,.55);
 }
 #status-dot.ready { background: #2ecc71; box-shadow: 0 0 14px rgba(46,204,113,.6); }
-#status-text { font-size: .82rem; color: #93a0af; }
+#status-text { font-size: .8rem; color: var(--ink-2); }
 #network-badge {
   max-width: min(100%, 520px);
-  padding: 9px 16px;
+  padding: 10px 16px;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-  border: 1px solid rgba(255,255,255,.10);
-  font-size: .78rem;
-  color: #b8c3d1;
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+  border: 1px solid rgba(255,255,255,.08);
+  font-size: .76rem;
+  color: var(--ink-1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 12px 24px rgba(0,0,0,.12);
 }
 .header-actions {
   display: flex;
@@ -173,8 +193,8 @@ header h1 {
   justify-content: flex-end;
 }
 .lang-chip {
-  border: 1px solid rgba(212, 175, 55, 0.42);
-  background: linear-gradient(180deg, rgba(212, 175, 55, 0.18), rgba(212,175,55,0.08));
+  border: 1px solid rgba(212, 175, 55, 0.36);
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.16), rgba(212,175,55,0.06));
   color: #ffe9a8;
   border-radius: 999px;
   padding: 8px 13px;
@@ -190,11 +210,11 @@ header h1 {
 }
 .main-layout {
   display: flex;
-  gap: 30px;
-  padding: 28px 24px 34px;
+  gap: 28px;
+  padding: 24px 24px 36px;
   align-items: flex-start;
   width: 100%;
-  max-width: 1420px;
+  max-width: 1500px;
 }
 /* Win Rate Bar */
 #winrate-bar-wrap { width: 100%; margin-bottom: 8px; }
@@ -257,15 +277,16 @@ header h1 {
   flex: 0 1 700px;
   width: min(100%, 700px);
   min-width: 0;
-  padding: 18px;
-  border-radius: 28px;
+  padding: 18px 18px 16px;
+  border-radius: 30px;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015)),
-    linear-gradient(180deg, rgba(13,16,22,.92), rgba(8,10,14,.95));
-  border: 1px solid rgba(255,255,255,.08);
+    linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.012)),
+    radial-gradient(circle at top, rgba(212,175,55,.08), transparent 42%),
+    linear-gradient(180deg, rgba(13,16,22,.95), rgba(8,10,14,.98));
+  border: 1px solid rgba(255,255,255,.07);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.05),
-    0 30px 60px rgba(0,0,0,.34),
+    0 34px 70px rgba(0,0,0,.36),
     0 0 0 1px rgba(212,175,55,.04);
   animation: boardHeroPulse 7s ease-in-out infinite;
 }
@@ -273,8 +294,9 @@ header h1 {
   content: "";
   position: absolute;
   inset: 12px;
-  border-radius: 22px;
+  border-radius: 24px;
   border: 1px solid rgba(212,175,55,.08);
+  box-shadow: inset 0 0 0 1px rgba(126,189,255,.03);
   pointer-events: none;
 }
 #board-container.board-intro {
@@ -319,25 +341,31 @@ header h1 {
   margin-top: 18px;
   width: 100%;
   flex-wrap: wrap;
-  padding: 10px 12px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+  padding: 12px 14px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.012)),
+    rgba(7,9,13,.58);
   border: 1px solid rgba(255,255,255,.06);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 18px 34px rgba(0,0,0,.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 .board-toolbar button {
-  background: linear-gradient(180deg, #171b22, #0e1117);
+  background:
+    radial-gradient(circle at top, rgba(255,255,255,.08), transparent 42%),
+    linear-gradient(180deg, #171d26, #0d1117);
   border: 1px solid rgba(255,255,255,.08);
   color: #dce3eb;
-  border-radius: 16px;
-  width: 54px;
-  height: 54px;
+  border-radius: 18px;
+  width: 56px;
+  height: 56px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.28rem;
-  box-shadow: 0 8px 18px rgba(0,0,0,.22);
+  box-shadow: 0 12px 22px rgba(0,0,0,.24);
   transition: all .15s ease;
   flex: none;
   position: relative;
@@ -374,11 +402,11 @@ header h1 {
   border: 1px solid rgba(255,255,255,.08);
 }
 .board-toolbar button:hover:not(:disabled) {
-  background: linear-gradient(180deg, #222731, #161b23);
+  background: linear-gradient(180deg, #222834, #141920);
   color: #fff;
   border-color: #d4af37;
   transform: translateY(-2px);
-  box-shadow: 0 12px 26px rgba(212,175,55,.12);
+  box-shadow: 0 16px 32px rgba(212,175,55,.14);
 }
 .board-toolbar button:hover:not(:disabled)::after {
   opacity: 1;
@@ -416,11 +444,12 @@ header h1 {
   top: 0; right: -380px; /* Hidden by default */
   width: 390px; height: 100vh;
   background:
-    linear-gradient(180deg, rgba(17, 20, 25, 0.98), rgba(10, 13, 18, 0.98)),
-    radial-gradient(circle at top, rgba(212,175,55,.08), transparent 35%);
+    linear-gradient(180deg, rgba(15, 18, 25, 0.985), rgba(9, 12, 18, 0.985)),
+    radial-gradient(circle at top, rgba(212,175,55,.09), transparent 35%),
+    radial-gradient(circle at 78% 18%, rgba(126,189,255,.08), transparent 24%);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  box-shadow: -4px 0 24px rgba(0,0,0,0.8);
+  box-shadow: -12px 0 44px rgba(0,0,0,0.56);
   z-index: 1000;
   overflow-y: auto;
   transition: right 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -443,19 +472,20 @@ header h1 {
 
 .panel-card {
   background:
-    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015)),
-    rgba(24,26,32,.94);
-  border-radius: 16px;
-  padding: 18px;
+    linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012)),
+    rgba(20,23,31,.94);
+  border-radius: 18px;
+  padding: 18px 18px 16px;
   border: 1px solid rgba(255,255,255,.06);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 14px 28px rgba(0,0,0,.14);
 }
 .panel-card h3 {
-  font-size: .9rem; color: #d4af37;
+  font-size: .82rem; color: #d4af37;
   margin-bottom: 12px;
-  border-bottom: 1px solid rgba(255,255,255,.05);
+  border-bottom: 1px solid rgba(255,255,255,.04);
   padding-bottom: 8px;
-  letter-spacing: 1px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
 }
 .form-row { display: flex; gap: 8px; align-items: center; margin-bottom: 7px; }
 .form-row label { font-size: .78rem; color: #aaa; min-width: 48px; }
@@ -493,9 +523,9 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 .mode-row { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: nowrap; overflow-x: auto; }
 .mode-btn {
   flex: 1; padding: 10px 6px;
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 12px;
-  background: linear-gradient(180deg, #151920, #0f1319);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #151a23, #0d1218);
   color: #9ca8b5;
   font-size: .8rem; font-weight: 600;
   cursor: pointer;
@@ -506,7 +536,7 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
   background: linear-gradient(180deg, rgba(212,175,55,.22), rgba(212,175,55,.08));
   color: #ffe7a2;
   border-color: rgba(212,175,55,.55);
-  box-shadow: 0 10px 20px rgba(212,175,55,.12);
+  box-shadow: 0 14px 26px rgba(212,175,55,.14);
 }
 .mode-btn:hover:not(.active) { background: #1a1f28; color: #d2dae4; }
 
@@ -814,13 +844,13 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 .overlay-modal.show .modal-content .ultimate-card:nth-child(3) { animation-delay: .1s; }
 .modal-content {
   background:
-    radial-gradient(circle at top, rgba(212,175,55,.08), transparent 40%),
-    linear-gradient(180deg, #181c24, #10141b);
+    radial-gradient(circle at top, rgba(212,175,55,.10), transparent 40%),
+    linear-gradient(180deg, #171c25, #0e131b);
   border: 1px solid rgba(255,255,255,.08);
-  border-radius: 22px;
-  padding: 26px;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.7);
-  width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto;
+  border-radius: 26px;
+  padding: 28px;
+  box-shadow: 0 28px 70px rgba(0,0,0,0.62);
+  width: 90%; max-width: 420px; max-height: 90vh; overflow-y: auto;
   position: relative;
 }
 .modal-close {
@@ -860,16 +890,16 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 .rogue-card {
   width: auto;
   min-width: 0;
-  min-height: 208px;
-  padding: 18px 14px;
-  border-radius: 18px;
+  min-height: 224px;
+  padding: 20px 15px;
+  border-radius: 20px;
   cursor: pointer;
   background:
-    radial-gradient(circle at top, rgba(212,175,55,.16), transparent 34%),
+    radial-gradient(circle at top, rgba(212,175,55,.20), transparent 34%),
     linear-gradient(155deg, #172134, #121824 68%, #0b1018);
   border: 1px solid rgba(255,255,255,.08);
   text-align: center; transition: all 0.2s; user-select: none;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 16px 30px rgba(0,0,0,.24);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 20px 34px rgba(0,0,0,.24);
 }
 .rogue-card:hover { border-color: #d4af37; transform: translateY(-4px);
   box-shadow: 0 16px 34px rgba(212,175,55,0.18); }
@@ -889,16 +919,16 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 .ultimate-card {
   width: auto;
   min-width: 0;
-  min-height: 208px;
-  padding: 18px 14px;
-  border-radius: 18px;
+  min-height: 224px;
+  padding: 20px 15px;
+  border-radius: 20px;
   cursor: pointer;
   background:
     radial-gradient(circle at top, rgba(255,120,120,.22), transparent 32%),
     linear-gradient(155deg, #321015, #220816 65%, #13040c);
   border: 1px solid rgba(255,120,120,.28);
   text-align: center; transition: all 0.2s; user-select: none;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 18px 32px rgba(0,0,0,.26);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 20px 36px rgba(0,0,0,.28);
 }
 .ultimate-card:hover { border-color: #ff6666; transform: translateY(-4px) scale(1.03);
   box-shadow: 0 18px 34px rgba(255,68,68,0.24); }
