@@ -853,6 +853,26 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
   width: 90%; max-width: 420px; max-height: 90vh; overflow-y: auto;
   position: relative;
 }
+#setup-modal .modal-content {
+  width: min(92vw, 780px);
+  max-width: 780px;
+}
+#setup-modal .mode-btn {
+  min-width: 84px;
+  white-space: nowrap;
+}
+#setup-modal .setup-subtitle {
+  color: #8f9aa8;
+  font-size: .8rem;
+  margin-bottom: 18px;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  #setup-modal .setup-subtitle {
+    white-space: normal;
+  }
+}
 .modal-close {
   position: absolute; top: 16px; right: 16px; font-size: 1.4rem; color: #888;
   background: none; border: none; cursor: pointer;
@@ -1406,7 +1426,7 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
   <div class="modal-content">
     <button class="modal-close" onclick="closeSetupModal()" title="关闭">✕</button>
     <h2 style="color:#f4e2a3; margin-bottom:8px; font-size:1.36rem; margin-top:0; letter-spacing:.06em;">开始对弈</h2>
-    <p style="color:#8f9aa8; font-size:.82rem; margin-bottom:18px; line-height:1.6;">选择模式、难度与规则，让这一局围棋更像一次有变化的冒险。</p>
+    <p class="setup-subtitle">选择模式、难度与规则，让这一局围棋更像一场不断变化的冒险。</p>
 
     <div class="form-row"><label>开局</label>
       <div class="mode-row" style="flex:1; margin:0">
@@ -1415,7 +1435,7 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
         <div class="mode-btn" id="mode-guess"  onclick="setMode('guess')">猜先</div>
         <div class="mode-btn" id="mode-give"   onclick="setMode('give')">让先</div>
         <div class="mode-btn" id="mode-two"    onclick="setMode('two')">双人</div>
-        <div class="mode-btn" id="mode-challenge" onclick="setMode('challenge')">闯关β</div>
+        <div class="mode-btn" id="mode-challenge" onclick="setMode('challenge')">闯关</div>
       </div>
     </div>
 
@@ -3636,14 +3656,14 @@ function showRogueCards(cards, meta = {}) {
   const refreshBtn = document.getElementById("rogue-refresh-btn");
   if (rogueTitle) {
     rogueTitle.textContent = inChallenge
-      ? ui(`\u95ef\u5173\u6d4b\u8bd5 \u7b2c ${stage} \u5173`, `Challenge Beta - Stage ${stage}`)
+      ? ui(`\u95ef\u5173 \u7b2c ${stage} \u5173`, `Challenge - Stage ${stage}`)
       : ui("Rogue 模式", "Rogue Mode");
   }
   if (rogueSub) {
     rogueSub.textContent = inChallenge
       ? ui(
-          `\u6d4b\u8bd5\u7248\u95ef\u5173\u9009\u5361\uff1a\u7b2c ${stage} \u5173\uff0c\u5269\u4f59\u5237\u65b0 ${refreshRemaining} \u6b21\u3002\u540c\u7c7b\u5361\u66f4\u5bb9\u6613\u8fde\u51fa\uff0c\u5e76\u4f1a\u6fc0\u6d3b\u95ef\u5173\u5957\u88c5\u6548\u679c\u3002`,
-          `Beta challenge pick: Stage ${stage}, ${refreshRemaining} refreshes left. Matching card families chain more often and unlock challenge set bonuses.`
+          `\u95ef\u5173\u9009\u5361\uff1a\u7b2c ${stage} \u5173\uff0c\u5269\u4f59\u5237\u65b0 ${refreshRemaining} \u6b21\u3002\u540c\u7c7b\u5361\u66f4\u5bb9\u6613\u8fde\u51fa\uff0c\u5e76\u4f1a\u6fc0\u6d3b\u95ef\u5173\u5957\u88c5\u6548\u679c\u3002`,
+          `Challenge pick: Stage ${stage}, ${refreshRemaining} refreshes left. Matching card families chain more often and unlock challenge set bonuses.`
         )
       : (twoPlayerMode
         ? ui("\u8bf7\u9009\u62e9\u4e00\u5f20\u5171\u4eab\u89c4\u5219\u5361", "Choose one shared rule card")
@@ -4398,7 +4418,7 @@ function handleMessage(msg) {
           updateChallengeInfo();
           setTimeout(() => {
             showConfirmModal(
-              ui("\u5df2\u901a\u8fc7\u7b2c 1 \u5173\uff0c\u8fdb\u5165\u7b2c 2 \u5173\u6d4b\u8bd5\u3002\u4f60\u5c06\u6267\u767d\u5e76\u6309\u8ba9 2 \u5b50\u5f00\u5c40\uff0c\u540c\u65f6\u518d\u9009 1 \u5f20\u5361\u3002", "Stage 1 cleared. Start Stage 2 as White with a 2-stone handicap opening and one more card?"),
+              ui("\u5df2\u901a\u8fc7\u7b2c 1 \u5173\uff0c\u8fdb\u5165\u7b2c 2 \u5173\u3002\u4f60\u5c06\u6267\u767d\u5e76\u6309\u8ba9 2 \u5b50\u5f00\u5c40\uff0c\u540c\u65f6\u518d\u9009 1 \u5f20\u5361\u3002", "Stage 1 cleared. Start Stage 2 as White with a 2-stone handicap opening and one more card?"),
               () => {
                 closeOverlay();
                 document.getElementById("btn-new").click();
@@ -4409,7 +4429,7 @@ function handleMessage(msg) {
           challengeSession.cleared = true;
           challengeSession.active = true;
           updateChallengeInfo();
-          log(ui("\u95ef\u5173\u6d4b\u8bd5\u7248\u524d\u4e24\u5173\u5df2\u901a\u5173\u3002", "Challenge beta cleared."));
+          log(ui("\u95ef\u5173\u524d\u4e24\u5173\u5df2\u901a\u5173\u3002", "Challenge cleared."));
         }
       }
       break;
@@ -5017,17 +5037,6 @@ RANK_GROUPS.forEach(r => {
     if (!resp.ok) return;
     const gpu = await resp.json();
 
-    // Show GPU info near the rank selector
-    const gpuHint = document.createElement("div");
-    gpuHint.style.cssText = "font-size:11px;color:#aaa;margin-top:2px;padding:0 4px;";
-    if (gpu.cpu_mode) {
-      gpuHint.textContent = ui(`🖥 CPU模式 — 级位流畅，段位推理较慢`, `🖥 CPU mode — kyu play is smooth, dan-level thinking may be slower`);
-      gpuHint.style.color = "#ff9800";
-    } else {
-      gpuHint.textContent = ui(`🖥 ${gpu.name} (${gpu.vram_mb}MB) — ${gpu.tier_label}显卡`, `🖥 ${gpu.name} (${gpu.vram_mb}MB) — ${gpu.tier_label} GPU`);
-    }
-    selLevel.parentNode.appendChild(gpuHint);
-
     // Set default rank based on GPU tier
     if (gpu.default_rank) {
       selLevel.value = gpu.default_rank;
@@ -5241,7 +5250,7 @@ function setMode(mode) {
     hint.style.display = "block";
     hint.textContent = ui(
       "闯关测试版：玩家默认执白。第 1 关不让子并选 1 张卡，第 2 关按让 2 子模式开局并再叠加 1 张卡。",
-      "Challenge beta: you play White by default. Stage 1 starts even with 1 card, then Stage 2 uses a 2-stone handicap opening and adds a second card."
+      "Challenge: you play White by default. Stage 1 starts even with 1 card, then Stage 2 uses a 2-stone handicap opening and adds a second card."
     );
     document.getElementById("chk-ultimate").checked = false;
     document.getElementById("chk-rogue").checked = false;
