@@ -48,11 +48,8 @@ body::after {
   z-index: -1;
 }
 body::before {
-  background:
-    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(255,255,255,0.015) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(circle at center, black 22%, transparent 82%);
+  background: none;
+  mask-image: none;
 }
 body::after {
   background:
@@ -137,53 +134,40 @@ header::before {
 #header-main {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   min-width: 0;
 }
 .title-stack {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0;
   min-width: 0;
 }
 .brand-kicker {
-  font-size: .68rem;
-  letter-spacing: .38em;
+  font-size: 1.42rem;
+  letter-spacing: .16em;
   text-transform: uppercase;
-  color: rgba(212,175,55,0.76);
+  color: #f2df9e;
   font-weight: 700;
+  line-height: 1;
 }
 header h1 {
-  font-size: 1.68rem;
-  color: #f7e8b4;
-  letter-spacing: .06em;
-  text-shadow: 0 0 18px rgba(212, 175, 55, 0.14);
-  font-weight: 700;
-  font-family: "Noto Serif SC", "Georgia", "Songti SC", serif;
+  display: none;
 }
 #status-dot {
-  width: 11px;
-  height: 11px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
   background: #e74c3c;
   flex-shrink: 0;
   transition: background .3s;
   box-shadow: 0 0 10px rgba(231,76,60,.55);
+  cursor: help;
 }
 #status-dot.ready { background: #2ecc71; box-shadow: 0 0 14px rgba(46,204,113,.6); }
-#status-text { font-size: .8rem; color: var(--ink-2); }
+#status-text { display: none !important; }
 #network-badge {
-  max-width: min(100%, 520px);
-  padding: 10px 16px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
-  border: 1px solid rgba(255,255,255,.08);
-  font-size: .76rem;
-  color: var(--ink-1);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 12px 24px rgba(0,0,0,.12);
+  display: none;
 }
 .header-actions {
   display: flex;
@@ -277,30 +261,18 @@ header h1 {
   flex: 0 1 700px;
   width: min(100%, 700px);
   min-width: 0;
-  padding: 18px 18px 16px;
-  border-radius: 30px;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.012)),
-    radial-gradient(circle at top, rgba(212,175,55,.08), transparent 42%),
-    linear-gradient(180deg, rgba(13,16,22,.95), rgba(8,10,14,.98));
-  border: 1px solid rgba(255,255,255,.07);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.05),
-    0 34px 70px rgba(0,0,0,.36),
-    0 0 0 1px rgba(212,175,55,.04);
-  animation: boardHeroPulse 7s ease-in-out infinite;
+  padding: 0 0 12px;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  animation: none;
 }
 #board-container::before {
-  content: "";
-  position: absolute;
-  inset: 12px;
-  border-radius: 24px;
-  border: 1px solid rgba(212,175,55,.08);
-  box-shadow: inset 0 0 0 1px rgba(126,189,255,.03);
-  pointer-events: none;
+  display: none;
 }
 #board-container.board-intro {
-  animation: driftFloat .7s cubic-bezier(.2,.82,.21,1) both, boardHeroPulse 7s ease-in-out .72s infinite;
+  animation: driftFloat .7s cubic-bezier(.2,.82,.21,1) both;
 }
 #board-container.board-intro #board-canvas {
   animation: driftFloat .76s cubic-bezier(.2,.82,.21,1) both;
@@ -309,27 +281,18 @@ header h1 {
   animation: toolbarRise .56s cubic-bezier(.18,.84,.24,1) .12s both;
 }
 #board-container.board-intro::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 28px;
-  background: linear-gradient(105deg, transparent 0%, rgba(255,255,255,.10) 48%, transparent 100%);
-  animation: sheenSweep .9s ease-out .06s both;
-  pointer-events: none;
+  display: none;
 }
 #board-canvas {
   display: block;
   cursor: crosshair;
-  border-radius: 14px;
-  border: 1px solid rgba(92,66,23,.24);
-  box-shadow:
-    0 16px 40px rgba(0,0,0,.45),
-    0 8px 16px rgba(0,0,0,.25),
-    inset 0 1px 0 rgba(255,255,255,.12);
+  border-radius: 0;
+  border: 0;
+  box-shadow: 0 22px 46px rgba(0,0,0,.34);
   touch-action: none;
   max-width: 100%;
   height: auto;
-  background: linear-gradient(180deg, rgba(245,210,145,.18), rgba(0,0,0,0));
+  background: transparent;
 }
 
 /* Icon Toolbar */
@@ -343,11 +306,9 @@ header h1 {
   flex-wrap: wrap;
   padding: 12px 14px;
   border-radius: 22px;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.012)),
-    rgba(7,9,13,.58);
-  border: 1px solid rgba(255,255,255,.06);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 18px 34px rgba(0,0,0,.22);
+  background: rgba(7,9,13,.58);
+  border: 0;
+  box-shadow: none;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -436,6 +397,32 @@ header h1 {
 }
 .board-toolbar button.skill-btn.skill-ready:not(:disabled) {
   animation: skillBob 1.9s ease-in-out infinite;
+}
+.board-toolbar button.skill-btn .skill-btn-icon {
+  position: relative;
+  z-index: 1;
+}
+.board-toolbar button.skill-btn .skill-use-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #f5e2a4, #d4af37);
+  color: #18130a;
+  font-size: .62rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 6px 12px rgba(0,0,0,.26);
+  z-index: 2;
+}
+.board-toolbar button.skill-btn.has-uses .skill-use-badge {
+  display: inline-flex;
 }
 
 /* Side Panel Drawer */
@@ -547,6 +534,53 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 
 /* Toggle */
 .toggle-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.curve-panel {
+  margin-top: 14px;
+  padding: 12px 12px 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.015));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+.curve-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.curve-title {
+  font-size: .82rem;
+  color: #f4e2a3;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.curve-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-1);
+  font-size: .72rem;
+}
+.curve-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+}
+.curve-dot.black { background: #9fb3d9; }
+.curve-dot.red { background: #ff6767; }
+.curve-dot.gold { background: #f3c85b; }
+#winrate-curve {
+  width: 100%;
+  height: 148px;
+  display: block;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(6,8,12,.86), rgba(14,18,24,.92));
+  border: 1px solid rgba(255,255,255,.06);
+}
 .toggle {
   width: 42px; height: 24px;
   background: #111216; border-radius: 12px;
@@ -738,12 +772,23 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 /* Sound toggle in header */
 #sound-toggle {
   cursor: pointer;
-  font-size: 1.1rem;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-size: 1rem;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #e7ca6b;
+  background: rgba(212,175,55,.10);
+  border: 1px solid rgba(212,175,55,.18);
+  border-radius: 50%;
   user-select: none;
 }
-#sound-toggle:hover { background: rgba(255,255,255,.1); }
+#sound-toggle:hover {
+  background: rgba(212,175,55,.16);
+  box-shadow: 0 0 18px rgba(212,175,55,.16);
+}
 
 @media (max-width: 980px) {
   header { padding: 12px 16px; }
@@ -867,6 +912,7 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
   margin-bottom: 18px;
   line-height: 1.45;
   white-space: nowrap;
+  display: none;
 }
 #setup-modal .setup-grid {
   display: grid;
@@ -877,8 +923,10 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 #setup-modal .setup-field {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 7px;
   padding: 14px 14px 12px;
+  margin-bottom: 0;
   border-radius: 18px;
   border: 1px solid rgba(255,255,255,.06);
   background:
@@ -894,6 +942,12 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 }
 #setup-modal .setup-field select {
   min-width: 0;
+}
+#setup-modal .setup-field-full {
+  grid-column: 1 / -1;
+}
+#mode-hint {
+  display: none !important;
 }
 @media (max-width: 720px) {
   #setup-modal .setup-subtitle {
@@ -1261,9 +1315,9 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 
 <header>
   <div id="header-main">
-    <div id="status-dot"></div>
+    <div id="status-dot" title="Connecting..." aria-label="Connecting..."></div>
     <div class="title-stack">
-      <span class="brand-kicker">GoAI</span>
+      <span class="brand-kicker">GOAI</span>
       <h1>围棋对弈场</h1>
       <span id="status-text">连接中…</span>
     </div>
@@ -1271,7 +1325,6 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
   </div>
   <div class="header-actions">
     <button id="lang-toggle" class="lang-chip" title="切换语言">EN</button>
-    <div id="network-badge">本机：http://localhost:8000</div>
   </div>
 </header>
 
@@ -1335,7 +1388,10 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
       <button id="btn-score" title="计算胜负" disabled>⚖️</button>
       <button id="btn-territory-toggle" title="形势分析" onclick="toggleTerritory()">👁️</button>
       <button id="btn-resign" title="认输" disabled>🏳️</button>
-      <button id="btn-skill" class="skill-btn" title="主动技能" style="display:none" disabled>✨</button>
+      <button id="btn-skill" class="skill-btn" title="主动技能" style="display:none" disabled>
+        <span class="skill-btn-icon">✨</span>
+        <span class="skill-use-badge" aria-hidden="true"></span>
+      </button>
       <button title="打开功能" onclick="document.getElementById('settings-drawer').classList.add('open')">⚙️</button>
     </div>
     
@@ -1381,6 +1437,16 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
       <div class="toggle-row">
         <div class="toggle on" id="territory-toggle"></div>
         <span class="toggle-label">形势判断</span>
+      </div>
+      <div class="curve-panel">
+        <div class="curve-head">
+          <span class="curve-title" id="curve-title">胜率曲线</span>
+          <span class="curve-legend">
+            <span class="curve-dot black"></span><span id="curve-label-winrate">白方胜率</span>
+            <span class="curve-dot gold"></span><span id="curve-label-score">目差</span>
+          </span>
+        </div>
+        <canvas id="winrate-curve" height="148"></canvas>
       </div>
       <div id="thinking-indicator-panel">
         <span class="spinner"></span>AI 思考中…
@@ -1458,22 +1524,21 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
     <h2 style="color:#f4e2a3; margin-bottom:8px; font-size:1.36rem; margin-top:0; letter-spacing:.06em;">开始对弈</h2>
     <p class="setup-subtitle">选择模式、难度与规则，让这一局围棋更像一场不断变化的冒险。</p>
 
-    <div class="form-row"><label>开局</label>
+    <div class="form-row"><label id="label-mode">开局</label>
       <div class="mode-row" style="flex:1; margin:0">
         <div class="mode-btn active" id="mode-normal" onclick="setMode('normal')">对局</div>
         <div class="mode-btn" id="mode-watch"  onclick="setMode('watch')">学习</div>
-        <div class="mode-btn" id="mode-guess"  onclick="setMode('guess')">猜先</div>
-        <div class="mode-btn" id="mode-give"   onclick="setMode('give')">让先</div>
         <div class="mode-btn" id="mode-two"    onclick="setMode('two')">双人</div>
         <div class="mode-btn" id="mode-challenge" onclick="setMode('challenge')">闯关</div>
       </div>
     </div>
 
-    <div class="form-row" id="row-color">
-      <label>我执</label>
+    <div class="form-row setup-field setup-field-full" id="row-color">
+      <label id="label-color">我执</label>
       <select id="sel-color">
         <option value="B" selected>黑棋（先手）</option>
         <option value="W">白棋（后手）</option>
+        <option value="R">随机（猜先）</option>
       </select>
     </div>
 
@@ -1481,7 +1546,7 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 
     <div class="setup-grid">
       <div class="form-row setup-field">
-        <label>棋盘</label>
+        <label id="label-board">棋盘</label>
         <select id="sel-size">
           <option value="19" selected>19×19 标准</option>
           <option value="13">13×13</option>
@@ -1489,20 +1554,27 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
         </select>
       </div>
       <div class="form-row setup-field">
-        <label>贴目</label>
+        <label id="label-komi">贴目</label>
         <select id="sel-komi">
           <option value="7.5" selected>7.5（中国规则）</option>
           <option value="6.5">6.5（日韩规则）</option>
-          <option value="0.5">0.5</option>
-          <option value="0">0（让先/让子棋）</option>
+          <option value="0">0（无贴目）</option>
         </select>
       </div>
-      <div class="form-row setup-field">
-        <label>对手</label>
+      <div class="form-row setup-field" id="row-level">
+        <label id="label-level">等级</label>
         <select id="sel-level"></select>
       </div>
+      <div class="form-row setup-field" id="row-level-black" style="display:none;">
+        <label id="label-level-black">黑棋等级</label>
+        <select id="sel-level-black"></select>
+      </div>
+      <div class="form-row setup-field" id="row-level-white" style="display:none;">
+        <label id="label-level-white">白棋等级</label>
+        <select id="sel-level-white"></select>
+      </div>
       <div class="form-row setup-field" id="row-style">
-        <label>AI风格</label>
+        <label id="label-style">AI行为</label>
         <select id="sel-ai-style">
           <option value="balanced" selected>均衡</option>
           <option value="territory">注重实地</option>
@@ -1511,25 +1583,45 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
           <option value="defense">注重防守</option>
         </select>
       </div>
-    </div>
-    <div class="form-row" id="row-handicap">
-      <label>让子</label>
-      <select id="sel-handicap">
-        <option value="0" selected>无让子</option>
-        <option value="2">让2子</option>
-        <option value="3">让3子</option>
-        <option value="4">让4子</option>
-        <option value="5">让5子</option>
-        <option value="6">让6子</option>
-        <option value="7">让7子</option>
-        <option value="8">让8子</option>
-        <option value="9">让9子</option>
-      </select>
+      <div class="form-row setup-field" id="row-style-black" style="display:none;">
+        <label id="label-style-black">黑棋风格</label>
+        <select id="sel-ai-style-black">
+          <option value="balanced" selected>均衡</option>
+          <option value="territory">注重实地</option>
+          <option value="influence">注重外势</option>
+          <option value="attack">注重进攻</option>
+          <option value="defense">注重防守</option>
+        </select>
+      </div>
+      <div class="form-row setup-field" id="row-style-white" style="display:none;">
+        <label id="label-style-white">白棋风格</label>
+        <select id="sel-ai-style-white">
+          <option value="balanced" selected>均衡</option>
+          <option value="territory">注重实地</option>
+          <option value="influence">注重外势</option>
+          <option value="attack">注重进攻</option>
+          <option value="defense">注重防守</option>
+        </select>
+      </div>
+      <div class="form-row setup-field" id="row-handicap">
+        <label id="label-handicap">让子</label>
+        <select id="sel-handicap">
+          <option value="0" selected>无让子</option>
+          <option value="2">让2子</option>
+          <option value="3">让3子</option>
+          <option value="4">让4子</option>
+          <option value="5">让5子</option>
+          <option value="6">让6子</option>
+          <option value="7">让7子</option>
+          <option value="8">让8子</option>
+          <option value="9">让9子</option>
+        </select>
+      </div>
     </div>
     <!-- Time Control -->
-    <div class="divider" style="margin:12px 0;"></div>
-    <div class="form-row">
-      <label>风格</label>
+    <div class="divider" style="margin:12px 0; display:none;"></div>
+    <div class="form-row setup-field" id="row-time">
+      <label id="label-time-mode">用时</label>
       <select id="sel-time-mode">
         <option value="none" selected>无限制</option>
         <option value="byoyomi">包干+读秒</option>
@@ -1538,7 +1630,7 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
     </div>
     <div id="time-settings" style="display:none">
       <div class="form-row">
-        <label>主时</label>
+        <label id="label-main-time">主时</label>
         <select id="sel-main-time">
           <option value="60">1分钟</option>
           <option value="180">3分钟</option>
@@ -1551,7 +1643,7 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
         </select>
       </div>
       <div class="form-row" id="row-byoyomi">
-        <label>读秒</label>
+        <label id="label-byoyomi">读秒</label>
         <select id="sel-byo-periods">
           <option value="3" selected>3次</option>
           <option value="5">5次</option>
@@ -1662,6 +1754,7 @@ const COLS = "ABCDEFGHJKLMNOPQRST";
 // ═══════════════════════════════════════════════════════════════════════════════
 let ws = null, gameState = null;
 let analysis = { winrate: 0.5, score: 0, top_moves: [], ownership: [] };
+let winrateHistory = [];
 let showHints = false, showTerritory = true, showMoveNumbers = false;
 let boardSize = 19, CELL = 32, PAD;
 let gameId = localStorage.getItem("goai_game_id") || Math.random().toString(36).slice(2);
@@ -1955,6 +2048,18 @@ function setTitle(selector, text) {
   if (el) el.title = text;
 }
 
+function setConnectionIndicator(ready, text) {
+  const dot = document.getElementById("status-dot");
+  const status = document.getElementById("status-text");
+  const label = text || (ready ? ui("已连接", "Connected") : ui("连接中…", "Connecting..."));
+  if (dot) {
+    dot.className = ready ? "ready" : "";
+    dot.title = label;
+    dot.setAttribute("aria-label", label);
+  }
+  if (status) status.textContent = label;
+}
+
 function setOptionText(selectId, pairs) {
   const el = document.getElementById(selectId);
   if (!el) return;
@@ -1965,27 +2070,20 @@ function setOptionText(selectId, pairs) {
 }
 
 function ensureLanguageControl() {
-  if (document.getElementById("lang-select")) return;
-  const drawer = document.getElementById("settings-drawer");
-  if (!drawer) return;
-  const panel = document.createElement("div");
-  panel.className = "panel-card";
-  panel.innerHTML = `
-    <h3 id="lang-panel-title">Language</h3>
-    <div class="form-row">
-      <label id="lang-panel-label">Language</label>
-      <select id="lang-select">
-        <option value="zh">简体中文</option>
-        <option value="en">English</option>
-      </select>
-    </div>
+  const panel = document.getElementById("lang-panel")
+    || document.getElementById("lang-panel-title")?.closest(".panel-card")
+    || document.getElementById("lang-select")?.closest(".panel-card");
+  if (panel) panel.remove();
+}
+
+function rebuildCurveLegend() {
+  const legend = document.querySelector(".curve-legend");
+  if (!legend) return;
+  legend.innerHTML = `
+    <span class="curve-dot black"></span><span id="curve-label-black-winrate">${ui("黑方胜率", "Black Winrate")}</span>
+    <span class="curve-dot red"></span><span id="curve-label-white-winrate">${ui("白方胜率", "White Winrate")}</span>
+    <span class="curve-dot gold"></span><span id="curve-label-score">${ui("目差", "Score Lead")}</span>
   `;
-  drawer.insertBefore(panel, drawer.firstChild.nextSibling);
-  const sel = document.getElementById("lang-select");
-  sel.value = currentLang;
-  sel.addEventListener("change", (e) => {
-    setLanguage(e.target.value);
-  });
 }
 
 function applyLanguage() {
@@ -1993,18 +2091,16 @@ function applyLanguage() {
   document.title = ui("GoAI | 围棋对弈场", "GoAI | Rogue Go Arena");
 
   ensureLanguageControl();
-  const langSelect = document.getElementById("lang-select");
-  if (langSelect) langSelect.value = currentLang;
+  rebuildCurveLegend();
   const langToggle = document.getElementById("lang-toggle");
   if (langToggle) {
     langToggle.textContent = currentLang === "en" ? "中文" : "EN";
     langToggle.title = ui("切换到英文界面", "Switch to Chinese");
   }
-  setText("#lang-panel-title", ui("语言", "Language"));
-  setText("#lang-panel-label", ui("语言", "Language"));
 
   setText("#header-main h1", ui("围棋对弈场", "Rogue Go Arena"));
   setTitle("#sound-toggle", ui("音效开关", "Sound"));
+  setConnectionIndicator(!!ws && ws.readyState === WebSocket.OPEN);
   setText("#thinking-indicator", ui("AI 思考中…", "AI is thinking..."));
   setText("#thinking-indicator-panel", ui("AI 思考中…", "AI is thinking..."));
 
@@ -2073,24 +2169,24 @@ function applyLanguage() {
 
   const setupTitle = document.querySelector("#setup-modal h2");
   if (setupTitle) setupTitle.textContent = ui("开始对弈", "Start Game");
-  const setupLabels = document.querySelectorAll("#setup-modal .form-row > label");
-  const setupTexts = [
-    ui("开局", "Mode"),
-    ui("我执", "Color"),
-    ui("棋盘", "Board"),
-    ui("让子", "Handicap"),
-    ui("贴目", "Komi"),
-    ui("对手", "Opponent"),
-    ui("风格", "Style"),
-    ui("主时", "Main Time"),
-    ui("读秒", "Byo-yomi")
-  ];
-  setupLabels.forEach((el, idx) => { if (setupTexts[idx]) el.textContent = setupTexts[idx]; });
-  setText("#mode-normal", ui("对局", "Normal"));
+  setText("#label-mode", ui("开局", "Mode"));
+  setText("#label-color", ui("我执", "Color"));
+  setText("#label-board", ui("棋盘", "Board"));
+  setText("#label-komi", ui("贴目", "Komi"));
+  setText("#label-level", ui("等级", "Rank"));
+  setText("#label-level-black", ui("黑棋等级", "Black Rank"));
+  setText("#label-level-white", ui("白棋等级", "White Rank"));
+  setText("#label-style", ui("AI行为", "AI Behavior"));
+  setText("#label-style-black", ui("黑棋风格", "Black Style"));
+  setText("#label-style-white", ui("白棋风格", "White Style"));
+  setText("#label-handicap", ui("让子", "Handicap"));
+  setText("#label-time-mode", ui("用时", "Time"));
+  setText("#label-main-time", ui("主时", "Main Time"));
+  setText("#label-byoyomi", ui("读秒", "Byo-yomi"));
+  setText("#mode-normal", ui("对局", "Game"));
   setText("#mode-watch", ui("学习", "Study"));
-  setText("#mode-guess", ui("猜先", "Guess Color"));
-  setText("#mode-give", ui("让先", "Take Black"));
   setText("#mode-two", ui("双人", "Two Players"));
+  setText("#mode-challenge", ui("闯关", "Challenge"));
   setText("#btn-new", ui("确认开始", "Start"));
   setText("#confirm-msg", ui("确认执行此操作？", "Confirm this action?"));
   const confirmBtns = document.querySelectorAll("#confirm-modal .btn-row button");
@@ -2119,8 +2215,19 @@ function applyLanguage() {
   ]);
   setOptionText("sel-color", [
     ["B", "黑棋（先手）", "Black (First)"],
-    ["W", "白棋（后手）", "White (Second)"]
+    ["W", "白棋（后手）", "White (Second)"],
+    ["R", "随机（猜先）", "Random (Guess)"]
   ]);
+  const aiStyleOptions = [
+    ["balanced", "均衡", "Balanced"],
+    ["territory", "注重实地", "Territory"],
+    ["influence", "注重外势", "Influence"],
+    ["attack", "注重进攻", "Attack"],
+    ["defense", "注重防守", "Defense"]
+  ];
+  setOptionText("sel-ai-style", aiStyleOptions);
+  setOptionText("sel-ai-style-black", aiStyleOptions);
+  setOptionText("sel-ai-style-white", aiStyleOptions);
   setOptionText("sel-time-mode", [
     ["none", "无限制", "No Limit"],
     ["byoyomi", "包干+读秒", "Main + Byo-yomi"],
@@ -2128,8 +2235,10 @@ function applyLanguage() {
   ]);
   setText("#wr-black-label", `${ui("黑", "Black")} 50.0%`);
   setText("#wr-white-label", `${ui("白", "White")} 50.0%`);
-  setText("#status-text", ui("连接中…", "Connecting..."));
-  updateNetworkBadge(window.__goaiNetworkStatus);
+  setText("#curve-title", ui("胜率曲线", "Winrate Curve"));
+  setText("#curve-label-winrate", ui("白方胜率", "White Winrate"));
+  setText("#curve-label-score", ui("目差", "Score Lead"));
+  setConnectionIndicator(!!ws && ws.readyState === WebSocket.OPEN);
   if (document.getElementById("rogue-overlay").classList.contains("show") && rogueOfferCards.length) {
     showRogueCards(rogueOfferCards);
   }
@@ -2139,7 +2248,9 @@ function applyLanguage() {
   if (activeRogueCard) updateRogueBar();
   if (ultimateMode) updateUltimateBar();
   if (gameState) updateUI();
+  refreshSetupModeHint();
   updateVariantOptionRows();
+  drawWinrateCurve();
 }
 
 // Review mode state
@@ -3108,30 +3219,15 @@ const mainLayout = document.querySelector(".main-layout");
 const sidePanel = document.querySelector(".side-panel");
 let boardRecoveryTimer = null;
 let boardWatchdogTimer = null;
+let boardRenderSize = 0;
+let boardRenderDpr = 1;
 
 function updateNetworkBadge(status) {
   window.__goaiNetworkStatus = status || null;
-  const badge = document.getElementById("network-badge");
-  if (!badge) return;
-  const local = status?.access_urls?.local?.[0] || `${location.protocol}//${location.host}`;
-  const lan = status?.access_urls?.lan?.[0];
-  badge.textContent = lan
-    ? ui(`本机：${local}  |  手机：${lan}`, `Local: ${local}  |  LAN: ${lan}`)
-    : ui(`本机：${local}`, `Local: ${local}`);
-  badge.title = lan
-    ? ui(
-        `本机访问：${local}\n局域网访问：${status.access_urls.lan.join("\n")}`,
-        `Local: ${local}\nLAN: ${status.access_urls.lan.join("\n")}`
-      )
-    : ui(`本机访问：${local}`, `Local: ${local}`);
 }
 
 async function refreshNetworkInfo() {
-  try {
-    const resp = await fetch("/status", { cache: "no-store" });
-    if (!resp.ok) return;
-    updateNetworkBadge(await resp.json());
-  } catch (_) {}
+  return null;
 }
 
 function resizeBoard(size) {
@@ -3157,10 +3253,15 @@ function resizeBoard(size) {
   CELL = Math.max(compact ? 16 : 22, Math.min(CELL, compact ? 30 : 38));
   PAD = Math.floor(CELL * padRatio);
   const total = Math.max(compact ? 280 : 360, PAD * 2 + CELL * (size - 1));
-  canvas.width = total;
-  canvas.height = total;
+  boardRenderSize = total;
+  boardRenderDpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
+  canvas.width = Math.floor(total * boardRenderDpr);
+  canvas.height = Math.floor(total * boardRenderDpr);
   canvas.style.width = `${total}px`;
   canvas.style.height = `${total}px`;
+  ctx.setTransform(boardRenderDpr, 0, 0, boardRenderDpr, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
 }
 
 function boardLooksReady() {
@@ -3168,8 +3269,7 @@ function boardLooksReady() {
   const rect = canvas.getBoundingClientRect();
   const containerRect = boardContainer.getBoundingClientRect();
   return (
-    canvas.width >= 200 &&
-    canvas.height >= 200 &&
+    boardRenderSize >= 200 &&
     rect.width >= 180 &&
     rect.height >= 180 &&
     containerRect.width >= 180
@@ -3195,10 +3295,11 @@ function ensureBoardReady(delay = 250) {
 
 let _boardCacheParams = "";
 let _offScreenBoard = null;
+let _stoneSpriteCache = new Map();
 
-// ─── Clean flat board (no texture, high clarity) ──────────────────────────────
+// ─── Board rendering ───────────────────────────────────────────────────────────
 function drawBoard() {
-  const size = boardSize, W = canvas.width;
+  const size = boardSize, W = boardRenderSize || Math.round(canvas.width / boardRenderDpr);
   const currentParams = `${size}_${W}`;
   
   if (_boardCacheParams === currentParams && _offScreenBoard) {
@@ -3211,30 +3312,83 @@ function drawBoard() {
   _offScreenBoard.width = W;
   _offScreenBoard.height = W;
   const bCtx = _offScreenBoard.getContext("2d");
+  bCtx.imageSmoothingEnabled = true;
+  if ("imageSmoothingQuality" in bCtx) bCtx.imageSmoothingQuality = "high";
 
-  // Solid warm golden-yellow background
-  bCtx.fillStyle = "#DCB35C";
+  const woodGrad = bCtx.createLinearGradient(0, 0, 0, W);
+  woodGrad.addColorStop(0, "#c89547");
+  woodGrad.addColorStop(0.45, "#d6a85a");
+  woodGrad.addColorStop(1, "#b67d38");
+  bCtx.fillStyle = woodGrad;
   bCtx.fillRect(0, 0, W, W);
 
-  // Subtle edge shadow for depth
-  const edgeGrad = bCtx.createRadialGradient(W/2, W/2, W*0.35, W/2, W/2, W*0.72);
-  edgeGrad.addColorStop(0, "rgba(0,0,0,0)");
-  edgeGrad.addColorStop(1, "rgba(0,0,0,0.08)");
+  let grainSeed = size * 131 + W * 17;
+  const grainRand = () => {
+    grainSeed = (grainSeed * 1664525 + 1013904223) >>> 0;
+    return grainSeed / 4294967296;
+  };
+  bCtx.lineCap = "round";
+  for (let i = 0; i < 28; i++) {
+    const startY = grainRand() * W;
+    const driftA = (grainRand() - 0.5) * W * 0.16;
+    const driftB = (grainRand() - 0.5) * W * 0.14;
+    const endY = startY + (grainRand() - 0.5) * W * 0.12;
+    bCtx.strokeStyle = `rgba(88, 52, 19, ${0.022 + grainRand() * 0.028})`;
+    bCtx.lineWidth = Math.max(1.1, W * (0.0014 + grainRand() * 0.0016));
+    bCtx.beginPath();
+    bCtx.moveTo(-W * 0.08, startY);
+    bCtx.bezierCurveTo(W * 0.24, startY + driftA, W * 0.72, startY + driftB, W * 1.08, endY);
+    bCtx.stroke();
+  }
+  for (let i = 0; i < 20; i++) {
+    const startY = grainRand() * W;
+    const driftA = (grainRand() - 0.5) * W * 0.12;
+    const driftB = (grainRand() - 0.5) * W * 0.1;
+    const endY = startY + (grainRand() - 0.5) * W * 0.08;
+    bCtx.strokeStyle = `rgba(255, 231, 186, ${0.01 + grainRand() * 0.018})`;
+    bCtx.lineWidth = Math.max(0.8, W * (0.0008 + grainRand() * 0.001));
+    bCtx.beginPath();
+    bCtx.moveTo(-W * 0.06, startY);
+    bCtx.bezierCurveTo(W * 0.28, startY + driftA, W * 0.68, startY + driftB, W * 1.04, endY);
+    bCtx.stroke();
+  }
+  for (let i = 0; i < 7; i++) {
+    const knotX = W * (0.12 + grainRand() * 0.76);
+    const knotY = W * (0.12 + grainRand() * 0.76);
+    const knotR = W * (0.015 + grainRand() * 0.026);
+    const knot = bCtx.createRadialGradient(knotX - knotR * 0.24, knotY - knotR * 0.18, knotR * 0.1, knotX, knotY, knotR);
+    knot.addColorStop(0, `rgba(102, 58, 20, ${0.12 + grainRand() * 0.08})`);
+    knot.addColorStop(0.45, `rgba(132, 78, 30, ${0.06 + grainRand() * 0.05})`);
+    knot.addColorStop(1, "rgba(132, 78, 30, 0)");
+    bCtx.fillStyle = knot;
+    bCtx.beginPath();
+    bCtx.ellipse(knotX, knotY, knotR * (1.2 + grainRand() * 0.5), knotR * (0.7 + grainRand() * 0.25), grainRand() * Math.PI, 0, Math.PI * 2);
+    bCtx.fill();
+  }
+
+  const edgeGrad = bCtx.createRadialGradient(W/2, W/2, W*0.24, W/2, W/2, W*0.76);
+  edgeGrad.addColorStop(0, "rgba(255,255,255,0)");
+  edgeGrad.addColorStop(0.68, "rgba(0,0,0,0.05)");
+  edgeGrad.addColorStop(1, "rgba(0,0,0,0.16)");
   bCtx.fillStyle = edgeGrad;
   bCtx.fillRect(0, 0, W, W);
 
-  // Grid lines - crisp and dark
-  bCtx.strokeStyle = "rgba(30, 15, 0, 0.9)";
-  bCtx.lineWidth = 1;
+  const frameGrad = bCtx.createLinearGradient(0, 0, W, W);
+  frameGrad.addColorStop(0, "rgba(255, 237, 190, 0.15)");
+  frameGrad.addColorStop(1, "rgba(72, 38, 9, 0.24)");
+  bCtx.fillStyle = frameGrad;
+  bCtx.fillRect(0, 0, W, W);
+
+  bCtx.strokeStyle = "rgba(32, 18, 4, 0.78)";
+  bCtx.lineWidth = 1.18;
   for (let i = 0; i < size; i++) {
     const p = PAD + i * CELL;
     bCtx.beginPath(); bCtx.moveTo(p, PAD); bCtx.lineTo(p, PAD + (size-1)*CELL); bCtx.stroke();
     bCtx.beginPath(); bCtx.moveTo(PAD, p); bCtx.lineTo(PAD + (size-1)*CELL, p); bCtx.stroke();
   }
 
-  // Outer border
   bCtx.strokeStyle = "rgba(20, 10, 0, 0.95)";
-  bCtx.lineWidth = 2;
+  bCtx.lineWidth = 2.3;
   bCtx.strokeRect(PAD - 1, PAD - 1, (size-1)*CELL + 2, (size-1)*CELL + 2);
 
   // Star points
@@ -3268,108 +3422,134 @@ function getStarPoints(size) {
   return [];
 }
 
-// ─── Highly Realistic 3D Stone rendering ──────────────────────────────────────────
+function getStoneSprite(color, radius) {
+  const spriteScale = Math.max(5, Math.ceil(boardRenderDpr * 4));
+  const spriteRadius = Math.max(18, Math.round(radius * spriteScale));
+  const key = `${color}_${spriteRadius}_${spriteScale}`;
+  if (_stoneSpriteCache.has(key)) return _stoneSpriteCache.get(key);
+
+  const pad = Math.ceil(spriteRadius * 0.48);
+  const size = spriteRadius * 2 + pad * 2;
+  const surface = document.createElement("canvas");
+  surface.width = size;
+  surface.height = size;
+  const sctx = surface.getContext("2d");
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = spriteRadius;
+  sctx.imageSmoothingEnabled = true;
+  if ("imageSmoothingQuality" in sctx) sctx.imageSmoothingQuality = "high";
+
+  sctx.save();
+  sctx.shadowColor = "rgba(0,0,0,0.55)";
+  sctx.shadowBlur = r * 0.45;
+  sctx.shadowOffsetX = r * 0.18;
+  sctx.shadowOffsetY = r * 0.22;
+  sctx.beginPath();
+  sctx.arc(cx, cy, r, 0, Math.PI * 2);
+  if (color === "B") {
+    const fill = sctx.createRadialGradient(cx - r * 0.34, cy - r * 0.36, r * 0.08, cx + r * 0.16, cy + r * 0.2, r * 1.12);
+    fill.addColorStop(0, "#363a3f");
+    fill.addColorStop(0.22, "#171b1f");
+    fill.addColorStop(0.72, "#07090d");
+    fill.addColorStop(1, "#010203");
+    sctx.fillStyle = fill;
+  } else {
+    const fill = sctx.createRadialGradient(cx - r * 0.34, cy - r * 0.36, r * 0.08, cx + r * 0.16, cy + r * 0.2, r * 1.12);
+    fill.addColorStop(0, "#ffffff");
+    fill.addColorStop(0.28, "#fcfcfb");
+    fill.addColorStop(0.72, "#ddd8cc");
+    fill.addColorStop(1, "#afa999");
+    sctx.fillStyle = fill;
+  }
+  sctx.fill();
+  sctx.restore();
+
+  sctx.save();
+  sctx.beginPath();
+  sctx.arc(cx, cy, r, 0, Math.PI * 2);
+  sctx.clip();
+  if (color === "W") {
+    sctx.strokeStyle = "rgba(166, 173, 183, 0.2)";
+    sctx.lineWidth = Math.max(1, r * 0.028);
+    for (let i = -4; i <= 4; i++) {
+      sctx.beginPath();
+      sctx.moveTo(cx - r * 0.94, cy + i * r * 0.14 - r * 0.34);
+      sctx.quadraticCurveTo(cx - r * 0.14, cy + i * r * 0.12, cx + r * 0.9, cy + i * r * 0.16 + r * 0.34);
+      sctx.stroke();
+    }
+    sctx.strokeStyle = "rgba(255,255,255,0.16)";
+    sctx.lineWidth = Math.max(1, r * 0.014);
+    for (let i = -3; i <= 3; i++) {
+      sctx.beginPath();
+      sctx.moveTo(cx - r * 0.82, cy + i * r * 0.16 - r * 0.18);
+      sctx.quadraticCurveTo(cx + r * 0.04, cy + i * r * 0.1, cx + r * 0.72, cy + i * r * 0.16 + r * 0.2);
+      sctx.stroke();
+    }
+  } else {
+    const boardBounce = sctx.createRadialGradient(cx + r * 0.2, cy + r * 0.22, r * 0.16, cx + r * 0.22, cy + r * 0.22, r * 0.92);
+    boardBounce.addColorStop(0, "rgba(182, 131, 80, 0.015)");
+    boardBounce.addColorStop(1, "rgba(182, 131, 80, 0.1)");
+    sctx.fillStyle = boardBounce;
+    sctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+    const glossyBand = sctx.createLinearGradient(cx - r * 0.5, cy - r * 0.65, cx + r * 0.5, cy + r * 0.78);
+    glossyBand.addColorStop(0, "rgba(255,255,255,0.08)");
+    glossyBand.addColorStop(0.24, "rgba(255,255,255,0.025)");
+    glossyBand.addColorStop(0.52, "rgba(255,255,255,0)");
+    glossyBand.addColorStop(1, "rgba(0,0,0,0.1)");
+    sctx.fillStyle = glossyBand;
+    sctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  }
+  sctx.strokeStyle = color === "B" ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.75)";
+  sctx.lineWidth = Math.max(1.4, r * 0.04);
+  sctx.beginPath();
+  sctx.arc(cx, cy, r - sctx.lineWidth / 2, 0, Math.PI * 2);
+  sctx.stroke();
+
+  const highlight = sctx.createRadialGradient(cx - r * 0.38, cy - r * 0.44, r * 0.02, cx - r * 0.34, cy - r * 0.38, r * 0.7);
+  if (color === "B") {
+    highlight.addColorStop(0, "rgba(255,255,255,0.18)");
+    highlight.addColorStop(0.5, "rgba(255,255,255,0.055)");
+    highlight.addColorStop(1, "rgba(255,255,255,0)");
+  } else {
+    highlight.addColorStop(0, "rgba(255,255,255,0.98)");
+    highlight.addColorStop(0.5, "rgba(255,255,255,0.45)");
+    highlight.addColorStop(1, "rgba(255,255,255,0)");
+  }
+  sctx.fillStyle = highlight;
+  sctx.beginPath();
+  sctx.ellipse(cx - r * 0.3, cy - r * 0.34, r * 0.34, r * 0.22, -Math.PI / 4, 0, Math.PI * 2);
+  sctx.fill();
+
+  if (color === "B") {
+    sctx.fillStyle = "rgba(255,255,255,0.028)";
+    sctx.beginPath();
+    sctx.ellipse(cx + r * 0.06, cy - r * 0.08, r * 0.6, r * 0.34, -Math.PI / 6, 0, Math.PI * 2);
+    sctx.fill();
+  } else {
+    sctx.fillStyle = "rgba(160, 168, 180, 0.08)";
+    sctx.beginPath();
+    sctx.ellipse(cx + r * 0.1, cy + r * 0.14, r * 0.44, r * 0.2, Math.PI / 8, 0, Math.PI * 2);
+    sctx.fill();
+  }
+  sctx.restore();
+
+  const sprite = { canvas: surface, size, scale: spriteScale };
+  _stoneSpriteCache.set(key, sprite);
+  return sprite;
+}
+
 function drawStone(x, y, color, scale) {
   scale = scale || 1;
   const cx = PAD + x * CELL, cy = PAD + y * CELL;
-  const r = CELL * .47 * scale; // Slightly larger for that premium tight feel
+  const r = CELL * .47 * scale;
   if (r <= 0) return;
-
+  const sprite = getStoneSprite(color, r);
+  const drawSize = sprite.size / sprite.scale;
   ctx.save();
-  
-  // High quality dynamic drop shadow
-  // Shadow shifts slightly to bottom-right mimicking a light source from top-left
-  ctx.shadowColor = "rgba(0,0,0,0.55)";
-  ctx.shadowBlur = CELL * .25;
-  ctx.shadowOffsetX = CELL * .08;
-  ctx.shadowOffsetY = CELL * .12;
-
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  
-  if (color === "B") {
-    // Yunzi (云子) Slate Black Stone style - slight green/blue tint in the dark
-    const g = ctx.createRadialGradient(
-      cx - r * .35, cy - r * .35, r * .05,
-      cx + r * .1, cy + r * .1, r * 1.1
-    );
-    g.addColorStop(0, "#4a5054");   // Specular base
-    g.addColorStop(0.3, "#1a1c1e"); // Main body
-    g.addColorStop(0.8, "#0a0b0c"); // Deep shadows
-    g.addColorStop(1, "#000000");   // Edge
-    ctx.fillStyle = g;
-  } else {
-    // Clamshell (蛤碁石) White Stone style - slight warm ivory tone with inner glow
-    const g = ctx.createRadialGradient(
-      cx - r * .35, cy - r * .35, r * .05,
-      cx + r * .1, cy + r * .1, r * 1.1
-    );
-    g.addColorStop(0, "#ffffff");
-    g.addColorStop(0.4, "#fdfcf9");
-    g.addColorStop(0.8, "#e2ddcf"); // Ivory shadow
-    g.addColorStop(1, "#b5b0a3");   // Edge rim
-    ctx.fillStyle = g;
-  }
-  ctx.fill();
-  
-  // Turn off shadow for the rest of drawing
-  ctx.shadowColor = "transparent";
-
-  // Realistic edge reflection / rim light
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.lineWidth = 0.5;
-  if (color === "B") {
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
-  } else {
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
-  }
-  ctx.stroke();
-
-  // Primary Specular Reflection (Light source from top left)
-  // We use a stretched ellipse for the highlight to simulate curvature
-  if (scale > 0.5) {
-    ctx.save();
-    const hx = cx - r * .35, hy = cy - r * .35;
-    const hr = r * .3;
-    
-    // Scale context to draw an oval
-    ctx.translate(hx, hy);
-    ctx.rotate(Math.PI / 4); // Rotate highlight
-    ctx.scale(1, 0.6); // Compress Y to make it an ellipse
-
-    const hg = ctx.createRadialGradient(0, 0, 0, 0, 0, hr);
-    if (color === "B") {
-      hg.addColorStop(0, "rgba(255,255,255,0.3)");
-      hg.addColorStop(0.5, "rgba(255,255,255,0.08)");
-      hg.addColorStop(1, "rgba(255,255,255,0)");
-    } else {
-      hg.addColorStop(0, "rgba(255,255,255,0.9)");
-      hg.addColorStop(0.6, "rgba(255,255,255,0.4)");
-      hg.addColorStop(1, "rgba(255,255,255,0)");
-    }
-    
-    ctx.beginPath();
-    ctx.arc(0, 0, hr, 0, Math.PI * 2);
-    ctx.fillStyle = hg;
-    ctx.fill();
-    ctx.restore();
-    
-    // Secondary ambient reflection (bounce light from the board, bottom right)
-    if (color === "B") {
-      const bx = cx + r * .2, by = cy + r * .2;
-      const bRad = r * .7;
-      const bg_bounce = ctx.createRadialGradient(bx, by, r * .3, bx, by, bRad);
-      bg_bounce.addColorStop(0, "rgba(180, 130, 80, 0.0)");
-      bg_bounce.addColorStop(1, "rgba(180, 130, 80, 0.12)"); // Wood color reflection
-      
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2); // Clip to stone
-      ctx.fillStyle = bg_bounce;
-      ctx.fill();
-    }
-  }
-
+  ctx.imageSmoothingEnabled = true;
+  if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(sprite.canvas, cx - drawSize / 2, cy - drawSize / 2, drawSize, drawSize);
   ctx.restore();
 }
 
@@ -3649,8 +3829,9 @@ function updateFinetuneUI() {
   const internalX = PAD + fineTunePos.x * CELL;
   const internalY = PAD + fineTunePos.y * CELL;
   
-  const displayX = (internalX / canvas.width) * rect.width;
-  const displayY = (internalY / canvas.height) * rect.height;
+  const logicalSize = boardRenderSize || Math.round(canvas.width / boardRenderDpr);
+  const displayX = (internalX / logicalSize) * rect.width;
+  const displayY = (internalY / logicalSize) * rect.height;
   
   const offsetX = displayX + (rect.left - cCont.left);
   const offsetY = displayY + (rect.top - cCont.top);
@@ -3780,16 +3961,16 @@ function updateRogueBar() {
 
 function getRogueSkillConfig() {
   if (activeRogueCard === "puppet") {
-    return { key: "puppet", icon: "P", uses: rogueUses.puppet || 0, title: "Active Skill: Puppet" };
+    return { key: "puppet", icon: "P", uses: rogueUses.puppet || 0, title: ui("主动技能：傀儡术", "Active Skill: Puppet") };
   }
   if (activeRogueCard === "twin") {
-    return { key: "twin", icon: "2", uses: rogueUses.twin || 0, title: "Active Skill: Combo" };
+    return { key: "twin", icon: "2", uses: rogueUses.twin || 0, title: ui("主动技能：连击", "Active Skill: Combo") };
   }
   if (activeRogueCard === "exchange") {
-    return { key: "exchange", icon: "<>", uses: rogueUses.exchange || 0, title: "Active Skill: Turn Steal" };
+    return { key: "exchange", icon: "<>", uses: rogueUses.exchange || 0, title: ui("主动技能：乾坤挪移", "Active Skill: Turn Steal") };
   }
   if (activeRogueCard === "coach_mode") {
-    return { key: "coach_mode", icon: "AI", uses: rogueUses.coach_mode || 0, title: "Active Skill: Coach Mode" };
+    return { key: "coach_mode", icon: "AI", uses: rogueUses.coach_mode || 0, title: ui("主动技能：代练上号", "Active Skill: Coach Mode") };
   }
   return null;
 }
@@ -3797,22 +3978,28 @@ function getRogueSkillConfig() {
 function updateRogueSkillButton() {
   const btn = document.getElementById("btn-skill");
   if (!btn) return;
+  const iconEl = btn.querySelector(".skill-btn-icon");
+  const usesEl = btn.querySelector(".skill-use-badge");
   const cfg = getRogueSkillConfig();
   if (!cfg) {
     btn.style.display = "none";
     btn.disabled = true;
-    btn.textContent = "*";
-    btn.title = "Active Skill";
+    if (iconEl) iconEl.textContent = "✨";
+    if (usesEl) usesEl.textContent = "";
+    btn.title = ui("主动技能", "Active Skill");
     btn.dataset.skill = "";
     btn.classList.remove("skill-ready");
+    btn.classList.remove("has-uses");
     return;
   }
   btn.style.display = "";
   btn.dataset.skill = cfg.key;
-  btn.textContent = cfg.icon;
-  btn.title = `${cfg.title} (${cfg.uses})`;
+  if (iconEl) iconEl.textContent = cfg.icon;
+  if (usesEl) usesEl.textContent = String(cfg.uses);
+  btn.title = `${cfg.title} · ${ui("剩余", "Uses")} ${cfg.uses}`;
   btn.disabled = cfg.uses <= 0;
   btn.classList.toggle("skill-ready", cfg.uses > 0);
+  btn.classList.toggle("has-uses", cfg.uses > 0);
 }
 
 function updateRogueBar() {
@@ -4074,7 +4261,8 @@ document.getElementById("btn-skill").addEventListener("click", () => {
 });
 
 function render() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(boardRenderDpr, 0, 0, boardRenderDpr, 0, 0);
+  ctx.clearRect(0, 0, boardRenderSize, boardRenderSize);
   drawBoard();
   drawTerritory();
   drawStones();
@@ -4113,8 +4301,9 @@ function render() {
 // ─── Board input ──────────────────────────────────────────────────────────────
 function boardXY(e) {
   const rect = canvas.getBoundingClientRect();
-  const sx = canvas.width / rect.width;
-  const sy = canvas.height / rect.height;
+  const logicalSize = boardRenderSize || Math.round(canvas.width / boardRenderDpr);
+  const sx = logicalSize / rect.width;
+  const sy = logicalSize / rect.height;
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
   const x = Math.round(((clientX - rect.left) * sx - PAD) / CELL);
@@ -4216,8 +4405,9 @@ canvas.addEventListener("touchend", e => {
   if (!e.changedTouches || !e.changedTouches[0]) return;
   const touch = e.changedTouches[0];
   const rect = canvas.getBoundingClientRect();
-  const sx = canvas.width / rect.width;
-  const sy = canvas.height / rect.height;
+  const logicalSize = boardRenderSize || Math.round(canvas.width / boardRenderDpr);
+  const sx = logicalSize / rect.width;
+  const sy = logicalSize / rect.height;
   const x = Math.round(((touch.clientX - rect.left) * sx - PAD) / CELL);
   const y = Math.round(((touch.clientY - rect.top) * sy - PAD) / CELL);
   if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) return;
@@ -4265,20 +4455,18 @@ function connect() {
   const wsUrl = `${wsScheme}://${location.host}/ws/${gameId}`;
   ws = new WebSocket(wsUrl);
   ws.onopen = () => {
-    document.getElementById("status-dot").className = "ready";
-    document.getElementById("status-text").textContent = "已连接";
+    setConnectionIndicator(true, "已连接");
     log("已连接");
     refreshNetworkInfo();
     if (!gameState) sendWS({ action: "reconnect" });
   };
   ws.onclose = () => {
-    document.getElementById("status-dot").className = "";
     if (intentionalClose) { intentionalClose = false; return; }
-    document.getElementById("status-text").textContent = "连接断开，重连中…";
+    setConnectionIndicator(false, "连接断开，重连中…");
     setTimeout(connect, 2000);
   };
   ws.onmessage = e => handleMessage(JSON.parse(e.data));
-  ws.onerror   = () => { document.getElementById("status-text").textContent = "连接错误"; };
+  ws.onerror   = () => { setConnectionIndicator(false, "连接错误"); };
 }
 
 function sendWS(data) {
@@ -4300,6 +4488,7 @@ function handleMessage(msg) {
       lastAiMove = null;
       previousBoard = null;
       analysis = { winrate: 0.5, score: 0, top_moves: [], ownership: [] };
+      resetWinrateHistory();
       isMyTurn = msg.ai_observer ? false : (twoPlayerMode ? true : (msg.current_player === myColor));
       reviewMode = false; sgfLoadedMode = false;
       resizeBoard(msg.size);
@@ -4311,7 +4500,12 @@ function handleMessage(msg) {
       initTimers();
       if (timerMode !== "none") startTimerFor(msg.current_player);
       triggerBoardIntro();
-      if (twoPlayerMode) {
+      if (msg.ai_observer) {
+        log(ui(
+          `学习模式开始 — 黑 ${RANK_LABELS[msg.ai_level_black] || msg.ai_level_black} / 白 ${RANK_LABELS[msg.ai_level_white] || msg.ai_level_white}`,
+          `Study mode started — Black ${RANK_LABELS[msg.ai_level_black] || msg.ai_level_black} / White ${RANK_LABELS[msg.ai_level_white] || msg.ai_level_white}`
+        ));
+      } else if (twoPlayerMode) {
         log(ui("双人对局开始 — 黑棋先行", "Two-player game started — Black moves first"));
       } else {
         log(ui(`新对局 — 我执${myColor==="B"?"黑":"白"}棋，AI：${RANK_LABELS[msg.level]||msg.level}`,
@@ -4377,6 +4571,7 @@ function handleMessage(msg) {
     case "analysis": {
       analysis = msg;
       updateWinRate(msg.winrate);
+      if (!reviewMode) pushWinratePoint(msg.winrate, msg.score);
       const sc = msg.score;
       // Chinese rules (komi 7.5): use 子; Japanese rules (komi 6.5): use 目
       const unit = (gameState && gameState.komi === 7.5) ? "子" : "目";
@@ -4474,6 +4669,7 @@ function handleMessage(msg) {
       aiColor  = msg.ai_color;
       lastAiMove = null;
       previousBoard = msg.board ? msg.board.map(row => [...row]) : null;
+      resetWinrateHistory();
       isMyTurn = twoPlayerMode ? !msg.game_over : (msg.current_player === myColor);
       // Restore rogue state
       activeRogueCard = msg.rogue_card || null;
@@ -4638,7 +4834,9 @@ function updateUI() {
   document.getElementById("info-cap-b").textContent = gameState.captures?.B || 0;
   document.getElementById("info-cap-w").textContent = gameState.captures?.W || 0;
   document.getElementById("info-level").textContent =
-    twoPlayerMode ? "双人" : (RANK_LABELS[gameState.level] || gameState.level || "—");
+    gameState.ai_observer
+      ? `${ui("黑", "Black")} ${RANK_LABELS[gameState.ai_level_black] || gameState.ai_level_black || "—"} / ${ui("白", "White")} ${RANK_LABELS[gameState.ai_level_white] || gameState.ai_level_white || "—"}`
+      : (twoPlayerMode ? "双人" : (RANK_LABELS[gameState.level] || gameState.level || "—"));
 }
 
 function updateWinRate(wr) {
@@ -4651,8 +4849,8 @@ function updateWinRate(wr) {
   const b = rawBlack.toFixed(1);
   const w = rawWhite.toFixed(1);
   document.getElementById("wr-black").style.width = rawBlack + "%";
-  document.getElementById("wr-black-label").textContent = `黑 ${b}%`;
-  document.getElementById("wr-white-label").textContent = `白 ${w}%`;
+  document.getElementById("wr-black-label").textContent = `${ui("黑", "Black")} ${b}%`;
+  document.getElementById("wr-white-label").textContent = `${ui("白", "White")} ${w}%`;
   // Score button only available when one side >= 80%
   const btnScore = document.getElementById("btn-score");
   if (btnScore && gameState && !gameState.game_over) {
@@ -4660,6 +4858,156 @@ function updateWinRate(wr) {
     btnScore.disabled = !canScore;
     btnScore.title = canScore ? "计算胜负" : "胜率需≥80%才可计算胜负";
   }
+}
+
+function resetWinrateHistory() {
+  winrateHistory = [];
+  drawWinrateCurve();
+}
+
+function pushWinratePoint(winrate, score) {
+  const move = gameState?.move_number || 0;
+  const prev = winrateHistory[winrateHistory.length - 1];
+  if (prev && prev.move === move && Math.abs(prev.winrate - winrate) < 0.0005 && Math.abs(prev.score - score) < 0.05) {
+    return;
+  }
+  winrateHistory.push({ move, winrate, score });
+  if (winrateHistory.length > 400) winrateHistory.shift();
+  drawWinrateCurve();
+}
+
+function drawWinrateCurve() {
+  const canvasEl = document.getElementById("winrate-curve");
+  if (!canvasEl) return;
+  const width = Math.max(220, Math.floor(canvasEl.clientWidth || 320));
+  const height = Math.max(120, Math.floor(canvasEl.clientHeight || 148));
+  const dpr = window.devicePixelRatio || 1;
+  if (canvasEl.width !== Math.floor(width * dpr) || canvasEl.height !== Math.floor(height * dpr)) {
+    canvasEl.width = Math.floor(width * dpr);
+    canvasEl.height = Math.floor(height * dpr);
+  }
+  const c = canvasEl.getContext("2d");
+  if (!c) return;
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.clearRect(0, 0, width, height);
+
+  const pad = { left: 28, right: 16, top: 14, bottom: 22 };
+  const plotX = pad.left;
+  const plotY = pad.top;
+  const plotW = Math.max(10, width - pad.left - pad.right);
+  const plotH = Math.max(10, height - pad.top - pad.bottom);
+
+  c.fillStyle = "rgba(10, 12, 18, 0.92)";
+  c.fillRect(0, 0, width, height);
+  c.strokeStyle = "rgba(255,255,255,0.08)";
+  c.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = plotY + (plotH / 4) * i;
+    c.beginPath();
+    c.moveTo(plotX, y);
+    c.lineTo(plotX + plotW, y);
+    c.stroke();
+  }
+  c.strokeStyle = "rgba(255,255,255,0.12)";
+  c.beginPath();
+  c.moveTo(plotX, plotY);
+  c.lineTo(plotX, plotY + plotH);
+  c.lineTo(plotX + plotW, plotY + plotH);
+  c.stroke();
+
+  c.fillStyle = "rgba(255,255,255,0.55)";
+  c.font = '11px "Segoe UI", "Microsoft YaHei", sans-serif';
+  c.textAlign = "right";
+  c.textBaseline = "middle";
+  for (let i = 0; i <= 4; i++) {
+    const label = 100 - i * 25;
+    const y = plotY + (plotH / 4) * i;
+    c.fillText(String(label), plotX - 6, y);
+  }
+
+  if (!winrateHistory.length) {
+    c.fillStyle = "rgba(255,255,255,0.42)";
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.fillText(ui("对局开始后显示胜率曲线", "Winrate history appears after analysis starts."), width / 2, height / 2);
+    return;
+  }
+
+  const scoreCap = Math.max(10, ...winrateHistory.map(point => Math.abs(point.score)));
+  const stepX = winrateHistory.length === 1 ? 0 : plotW / (winrateHistory.length - 1);
+  const mapWinrateY = value => plotY + (1 - Math.max(0, Math.min(1, value))) * plotH;
+  const mapBlackWinrateY = value => mapWinrateY(1 - value);
+  const mapScoreY = value => plotY + (0.5 - Math.max(-scoreCap, Math.min(scoreCap, value)) / (scoreCap * 2)) * plotH;
+
+  c.lineWidth = 1.4;
+  c.strokeStyle = "rgba(243, 200, 91, 0.92)";
+  c.beginPath();
+  winrateHistory.forEach((point, index) => {
+    const x = plotX + stepX * index;
+    const y = mapScoreY(point.score);
+    if (index === 0) c.moveTo(x, y);
+    else c.lineTo(x, y);
+  });
+  c.stroke();
+
+  c.lineWidth = 1.7;
+  c.strokeStyle = "rgba(159, 179, 217, 0.96)";
+  c.beginPath();
+  winrateHistory.forEach((point, index) => {
+    const x = plotX + stepX * index;
+    const y = mapBlackWinrateY(point.winrate);
+    if (index === 0) c.moveTo(x, y);
+    else c.lineTo(x, y);
+  });
+  c.stroke();
+
+  c.lineWidth = 1.8;
+  c.strokeStyle = "rgba(255, 103, 103, 0.96)";
+  c.beginPath();
+  winrateHistory.forEach((point, index) => {
+    const x = plotX + stepX * index;
+    const y = mapWinrateY(point.winrate);
+    if (index === 0) c.moveTo(x, y);
+    else c.lineTo(x, y);
+  });
+  c.stroke();
+
+  const latest = winrateHistory[winrateHistory.length - 1];
+  const latestX = plotX + stepX * Math.max(0, winrateHistory.length - 1);
+  c.fillStyle = "rgba(255,255,255,0.78)";
+  c.textAlign = "left";
+  c.textBaseline = "bottom";
+  c.fillText(
+    ui(`第 ${latest.move} 手 · 白胜率 ${(latest.winrate * 100).toFixed(1)}% · 目差 ${latest.score.toFixed(1)}`,
+       `Move ${latest.move} · White ${(latest.winrate * 100).toFixed(1)}% · Score ${latest.score.toFixed(1)}`),
+    plotX,
+    plotY - 3
+  );
+  c.fillStyle = "#ff6767";
+  c.beginPath();
+  c.arc(latestX, mapWinrateY(latest.winrate), 3.2, 0, Math.PI * 2);
+  c.fill();
+  const latestBlack = (1 - latest.winrate) * 100;
+  const latestWhite = latest.winrate * 100;
+  c.fillStyle = "rgba(10, 12, 18, 0.95)";
+  c.fillRect(plotX - 4, 0, Math.min(plotW + 8, width - plotX + 4), plotY + 2);
+  c.fillStyle = "rgba(255,255,255,0.78)";
+  c.textAlign = "left";
+  c.textBaseline = "bottom";
+  c.fillText(
+    ui(`第 ${latest.move} 手 · 黑方胜率 ${latestBlack.toFixed(1)}% · 白方胜率 ${latestWhite.toFixed(1)}% · 目差 ${latest.score.toFixed(1)}`,
+       `Move ${latest.move} · Black ${latestBlack.toFixed(1)}% · White ${latestWhite.toFixed(1)}% · Score ${latest.score.toFixed(1)}`),
+    plotX,
+    plotY - 3
+  );
+  c.fillStyle = "#9fb3d9";
+  c.beginPath();
+  c.arc(latestX, mapBlackWinrateY(latest.winrate), 3.1, 0, Math.PI * 2);
+  c.fill();
+  c.fillStyle = "#f3c85b";
+  c.beginPath();
+  c.arc(latestX, mapScoreY(latest.score), 2.9, 0, Math.PI * 2);
+  c.fill();
 }
 
 function refreshHintVisibility() {
@@ -4792,21 +5140,24 @@ function newGameFromOverlay() {
 document.getElementById("btn-new").addEventListener("click", () => {
   let playerColor = document.getElementById("sel-color").value;
   let komi = parseFloat(document.getElementById("sel-komi").value);
+  const handicap = parseInt(document.getElementById("sel-handicap").value);
   const isTwoPlayer = (startMode === "two");
   const isAiWatch = (startMode === "watch");
   const isChallenge = (startMode === "challenge");
+  const aiStyle = document.getElementById("sel-ai-style")?.value || "balanced";
+  const aiStyleBlack = document.getElementById("sel-ai-style-black")?.value || aiStyle;
+  const aiStyleWhite = document.getElementById("sel-ai-style-white")?.value || aiStyle;
+  const aiLevelDefault = document.getElementById("sel-level").value;
+  const aiLevelBlack = document.getElementById("sel-level-black")?.value || aiLevelDefault;
+  const aiLevelWhite = document.getElementById("sel-level-white")?.value || aiLevelDefault;
 
   if (isChallenge && (!challengeSession.active || challengeSession.cleared)) {
     resetChallengeSession();
   }
 
-  if (startMode === "guess") {
+  if (startMode === "normal" && playerColor === "R") {
     playerColor = Math.random() < 0.5 ? "B" : "W";
-    log(ui(`猜先结果：你执${playerColor==="B"?"黑":"白"}棋`, `Guess Color result: you play ${playerColor==="B"?"Black":"White"}`));
-  } else if (startMode === "give") {
-    playerColor = "B";
-    komi = 0;
-    log(ui("让先：你执黑，贴目0", "Take Black: you play Black, komi is set to 0"));
+    log(ui(`随机结果：你执${playerColor==="B"?"黑":"白"}棋`, `Random result: you play ${playerColor==="B"?"Black":"White"}`));
   } else if (isTwoPlayer || isAiWatch) {
     playerColor = "B";
   } else if (isChallenge) {
@@ -4823,6 +5174,7 @@ document.getElementById("btn-new").addEventListener("click", () => {
   twoPlayerMode = isTwoPlayer;
   gameState = null;
   analysis = { winrate: 0.5, score: 0, top_moves: [], ownership: [] };
+  resetWinrateHistory();
   lastAiMove = null;
   previousBoard = null;
   animations = [];
@@ -4856,12 +5208,16 @@ document.getElementById("btn-new").addEventListener("click", () => {
         action: "new_game",
         size:         parseInt(document.getElementById("sel-size").value),
         komi:         komi,
-        handicap:     parseInt(document.getElementById("sel-handicap").value),
+        handicap:     handicap,
         player_color: playerColor,
-        level:        document.getElementById("sel-level").value,
+        level:        isAiWatch ? aiLevelBlack : aiLevelDefault,
+        ai_level_black: aiLevelBlack,
+        ai_level_white: aiLevelWhite,
         two_player:   isTwoPlayer,
         ai_observer:  isAiWatch,
-        ai_style:     document.getElementById("sel-ai-style").value,
+        ai_style:     aiStyle,
+        ai_style_black: aiStyleBlack,
+        ai_style_white: aiStyleWhite,
         rogue:        isChallenge ? true : (!!document.getElementById("chk-rogue").checked && !document.getElementById("chk-ultimate").checked),
         ai_rogue:     isChallenge ? false : (!!document.getElementById("chk-ai-rogue").checked && !isTwoPlayer),
         ultimate:     isChallenge ? false : !!document.getElementById("chk-ultimate").checked,
@@ -4965,6 +5321,12 @@ document.getElementById("sel-level").addEventListener("change", e => {
     sendWS({ action: "set_level", level: e.target.value });
 });
 
+document.getElementById("sel-handicap").addEventListener("change", e => {
+  if (parseInt(e.target.value, 10) > 0) {
+    document.getElementById("sel-komi").value = "0";
+  }
+});
+
 // Sound toggle
 document.getElementById("sound-toggle").addEventListener("click", () => {
   soundEnabled = !soundEnabled;
@@ -5044,22 +5406,30 @@ const RANK_ORDER = ["18k","17k","16k","15k","14k","13k","12k","11k","10k",
   "a1d","a2d","a3d","a4d","a5d","a6d","a7d","a8d","a9d",
   "p1d","p2d","p3d","p4d","p5d","p6d","p7d","p8d","p9d"];
 
-const selLevel = document.getElementById("sel-level");
-RANK_GROUPS.forEach(r => {
-  if (r.separator) {
+function populateRankSelect(selectEl, defaultRank = "a3d") {
+  if (!selectEl) return;
+  selectEl.innerHTML = "";
+  RANK_GROUPS.forEach(r => {
     const opt = document.createElement("option");
-    opt.disabled = true;
-    opt.textContent = r.label;
-    opt.style.color = "#888";
-    selLevel.appendChild(opt);
-  } else {
-    const opt = document.createElement("option");
-    opt.value = r.id;
-    opt.textContent = r.label;
-    if (r.id === "a3d") opt.selected = true;
-    selLevel.appendChild(opt);
-  }
-});
+    if (r.separator) {
+      opt.disabled = true;
+      opt.textContent = r.label;
+      opt.style.color = "#888";
+    } else {
+      opt.value = r.id;
+      opt.textContent = r.label;
+      if (r.id === defaultRank) opt.selected = true;
+    }
+    selectEl.appendChild(opt);
+  });
+}
+
+const rankSelects = [
+  document.getElementById("sel-level"),
+  document.getElementById("sel-level-black"),
+  document.getElementById("sel-level-white"),
+].filter(Boolean);
+rankSelects.forEach(selectEl => populateRankSelect(selectEl));
 
 // Fetch GPU info and adjust rank selector
 (async function detectGPU() {
@@ -5070,22 +5440,25 @@ RANK_GROUPS.forEach(r => {
 
     // Set default rank based on GPU tier
     if (gpu.default_rank) {
-      selLevel.value = gpu.default_rank;
+      rankSelects.forEach(selectEl => { selectEl.value = gpu.default_rank; });
     }
 
     // Mark slow ranks with warning
     const slowIdx = RANK_ORDER.indexOf(gpu.slow_from);
     if (slowIdx >= 0) {
-      for (const opt of selLevel.options) {
-        if (opt.disabled) continue;
-        const rIdx = RANK_ORDER.indexOf(opt.value);
-        if (rIdx >= slowIdx) {
-          opt.textContent = currentLang === "en"
-            ? ("⚠️ " + opt.textContent + " (slower)")
-            : ("⚠️ " + opt.textContent + " (推理较慢)");
-          opt.style.color = "#ff9800";
+      rankSelects.forEach(selectEl => {
+        for (const opt of selectEl.options) {
+          if (opt.disabled) continue;
+          const rIdx = RANK_ORDER.indexOf(opt.value);
+          if (rIdx >= slowIdx && !opt.dataset.slowMarked) {
+            opt.textContent = currentLang === "en"
+              ? ("⚠️ " + opt.textContent + " (slower)")
+              : ("⚠️ " + opt.textContent + " (推理较慢)");
+            opt.style.color = "#ff9800";
+            opt.dataset.slowMarked = "1";
+          }
         }
-      }
+      });
     }
   } catch(e) { /* GPU detection unavailable */ }
 })();
@@ -5094,39 +5467,48 @@ RANK_GROUPS.forEach(r => {
 // INIT
 // ═══════════════════════════════════════════════════════════════════════════════
 function updateNetworkBadge(status) {
-  const badge = document.getElementById("network-badge");
-  if (!badge) return;
-  const local = status?.access_urls?.local?.[0] || `${location.protocol}//${location.host}`;
-  const lan = status?.access_urls?.lan?.[0];
-  badge.textContent = lan
-    ? ui(`本机：${local}  |  手机：${lan}`, `Local: ${local}  |  LAN: ${lan}`)
-    : ui(`本机：${local}`, `Local: ${local}`);
-  badge.title = lan
-    ? ui(`本机访问：${local}\n局域网访问：${status.access_urls.lan.join("\n")}`, `Local: ${local}\nLAN: ${status.access_urls.lan.join("\n")}`)
-    : ui(`本机访问：${local}`, `Local: ${local}`);
+  window.__goaiNetworkStatus = status || null;
 }
 
 function updateVariantOptionRows() {
   const rogueRow = document.getElementById("rogue-row");
   const aiRogueRow = document.getElementById("ai-rogue-row");
   const ultimateRow = document.getElementById("ultimate-row");
+  const levelRow = document.getElementById("row-level");
+  const levelRowBlack = document.getElementById("row-level-black");
+  const levelRowWhite = document.getElementById("row-level-white");
   const styleRow = document.getElementById("row-style");
+  const styleRowBlack = document.getElementById("row-style-black");
+  const styleRowWhite = document.getElementById("row-style-white");
+  const rowColor = document.getElementById("row-color");
+  const rowHandicap = document.getElementById("row-handicap");
   const isTwo = startMode === "two";
   const isWatch = startMode === "watch";
+  const isChallenge = startMode === "challenge";
   const rogueChecked = !!document.getElementById("chk-rogue")?.checked;
   const ultimateChecked = !!document.getElementById("chk-ultimate")?.checked;
-  if (rogueRow) rogueRow.style.display = isWatch ? "none" : "";
-  if (ultimateRow) ultimateRow.style.display = (isTwo || isWatch) ? "none" : "";
-  if (styleRow) styleRow.style.display = isTwo ? "none" : "";
+  if (rowColor) rowColor.style.display = startMode === "normal" ? "flex" : "none";
+  if (rowHandicap) rowHandicap.style.display = (isWatch || isChallenge) ? "none" : "flex";
+  if (rogueRow) rogueRow.style.display = (isWatch || isChallenge) ? "none" : "";
+  if (ultimateRow) ultimateRow.style.display = (isTwo || isWatch || isChallenge) ? "none" : "";
+  if (levelRow) levelRow.style.display = isWatch ? "none" : "flex";
+  if (levelRowBlack) levelRowBlack.style.display = isWatch ? "flex" : "none";
+  if (levelRowWhite) levelRowWhite.style.display = isWatch ? "flex" : "none";
+  if (styleRow) styleRow.style.display = (!isTwo && !isWatch && !isChallenge) ? "flex" : "none";
+  if (styleRowBlack) styleRowBlack.style.display = isWatch ? "flex" : "none";
+  if (styleRowWhite) styleRowWhite.style.display = isWatch ? "flex" : "none";
   if (aiRogueRow) {
-    aiRogueRow.style.display = (!isTwo && !isWatch && rogueChecked && !ultimateChecked) ? "" : "none";
+    aiRogueRow.style.display = (!isTwo && !isWatch && !isChallenge && rogueChecked && !ultimateChecked) ? "" : "none";
   }
-  if (isTwo || isWatch) {
+  if (isWatch || isChallenge) {
+    document.getElementById("chk-rogue").checked = false;
     document.getElementById("chk-ultimate").checked = false;
     document.getElementById("chk-ai-rogue").checked = false;
-    if (isWatch) document.getElementById("chk-rogue").checked = false;
+  } else if (isTwo) {
+    document.getElementById("chk-ultimate").checked = false;
+    document.getElementById("chk-ai-rogue").checked = false;
   }
-  if (!rogueChecked) {
+  if (!document.getElementById("chk-rogue").checked) {
     document.getElementById("chk-ai-rogue").checked = false;
   }
 }
@@ -5233,60 +5615,45 @@ function setButtons(active) {
   }
 }
 
+function refreshSetupModeHint() {
+  const hint = document.getElementById("mode-hint");
+  if (!hint) return;
+  hint.style.display = "block";
+  if (startMode === "watch") {
+    hint.textContent = ui(
+      "学习：黑白双方都由 AI 对弈，可分别调整黑棋与白棋的等级和棋风。",
+      "Study: both sides are AI, with separate rank and style controls for Black and White."
+    );
+    return;
+  }
+  if (startMode === "two") {
+    hint.textContent = ui(
+      "双人：黑白双方均由玩家落子，可保留让子设置，也可启用共享 Rogue 规则卡。",
+      "Two Players: both sides are human, with handicap support and optional shared Rogue rules."
+    );
+    return;
+  }
+  if (startMode === "challenge") {
+    hint.textContent = ui(
+      "闯关：测试版默认执白，按当前关卡自动套用让子与卡组限制。",
+      "Challenge: beta mode defaults you to White and applies stage handicap and loadout rules automatically."
+    );
+    return;
+  }
+  hint.textContent = ui(
+    "对局：可手选黑白或随机猜先；选择让子时会自动把贴目设为 0，仍可手动改回 6.5 或 7.5。",
+    "Game: choose Black, White, or random color; handicap auto-sets komi to 0, but you can still change it back to 6.5 or 7.5."
+  );
+}
+
 function setMode(mode) {
   startMode = mode;
   document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
   document.getElementById("mode-" + mode).classList.add("active");
 
-  const rowColor    = document.getElementById("row-color");
-  const rowHandicap = document.getElementById("row-handicap");
-  const hint        = document.getElementById("mode-hint");
-  const komiSel     = document.getElementById("sel-komi");
-  const rowStyle    = document.getElementById("row-style");
-
-  rowColor.style.display = "flex";
-  rowHandicap.style.display = "flex";
-  if (rowStyle) rowStyle.style.display = "flex";
-  hint.style.display = "none";
-  updateVariantOptionRows();
-
-  if (mode === "guess") {
-    rowColor.style.display = "none";
-    hint.style.display = "block";
-    hint.textContent = ui("猜先：随机决定执黑 / 执白", "Guess Color: randomly decide Black or White");
-  } else if (mode === "give") {
-    rowColor.style.display = "none";
-    rowHandicap.style.display = "none";
-    hint.style.display = "block";
-    hint.textContent = ui("让先：你执黑，AI执白，贴目自动设为 0", "Take Black: you play Black, AI plays White, komi is set to 0");
-    komiSel.value = "0";
-  } else if (mode === "two") {
-    rowColor.style.display = "none";
-    rowHandicap.style.display = "flex";
-    hint.style.display = "block";
-    hint.textContent = ui("双人：黑白双方均由人落子，可启用共享 Rogue 规则卡；大招模式仍仅限单人对 AI", "Two Players: both sides are human, shared Rogue rule cards are available; Ultimate mode remains single-player only");
-    document.getElementById("chk-ultimate").checked = false;
-  } else if (mode === "watch") {
-    rowColor.style.display = "none";
-    rowHandicap.style.display = "none";
-    if (rowStyle) rowStyle.style.display = "flex";
-    hint.style.display = "block";
-    hint.textContent = ui("学习：黑白双方都由 AI 对弈，你只负责旁观和复盘", "Study: both Black and White are played by AI while you spectate");
-    document.getElementById("chk-ultimate").checked = false;
-    document.getElementById("chk-rogue").checked = false;
-  } else if (mode === "challenge") {
-    rowColor.style.display = "none";
-    rowHandicap.style.display = "none";
-    if (rowStyle) rowStyle.style.display = "none";
-    hint.style.display = "block";
-    hint.textContent = ui(
-      "闯关测试版：玩家默认执白。第 1 关不让子并选 1 张卡，第 2 关按让 2 子模式开局并再叠加 1 张卡。",
-      "Challenge: you play White by default. Stage 1 starts even with 1 card, then Stage 2 uses a 2-stone handicap opening and adds a second card."
-    );
-    document.getElementById("chk-ultimate").checked = false;
-    document.getElementById("chk-rogue").checked = false;
-    document.getElementById("chk-ai-rogue").checked = false;
-  }
+  const hint = document.getElementById("mode-hint");
+  if (hint) hint.style.display = "block";
+  refreshSetupModeHint();
   updateVariantOptionRows();
 }
 
@@ -5295,20 +5662,18 @@ function connect() {
   const wsUrl = `${wsScheme}://${location.host}/ws/${gameId}`;
   ws = new WebSocket(wsUrl);
   ws.onopen = () => {
-    document.getElementById("status-dot").className = "ready";
-    document.getElementById("status-text").textContent = ui("已连接", "Connected");
+    setConnectionIndicator(true, ui("已连接", "Connected"));
     log(ui("已连接", "Connected"));
     refreshNetworkInfo();
     if (!gameState) sendWS({ action: "reconnect" });
   };
   ws.onclose = () => {
-    document.getElementById("status-dot").className = "";
     if (intentionalClose) { intentionalClose = false; return; }
-    document.getElementById("status-text").textContent = ui("连接断开，重连中…", "Disconnected, reconnecting...");
+    setConnectionIndicator(false, ui("连接断开，重连中…", "Disconnected, reconnecting..."));
     setTimeout(connect, 2000);
   };
   ws.onmessage = e => handleMessage(JSON.parse(e.data));
-  ws.onerror   = () => { document.getElementById("status-text").textContent = ui("连接错误", "Connection error"); };
+  ws.onerror   = () => { setConnectionIndicator(false, ui("连接错误", "Connection error")); };
 }
 
 function initBoard() {
@@ -5350,8 +5715,10 @@ if (typeof ResizeObserver !== "undefined" && boardContainer) {
 window.addEventListener("resize", () => {
   _boardCacheParams = "";
   _offScreenBoard = null;
+  _stoneSpriteCache = new Map();
   resizeBoard(reviewMode ? reviewBoardSize : boardSize);
   render();
+  drawWinrateCurve();
   ensureBoardReady(100);
 });
 

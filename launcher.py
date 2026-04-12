@@ -24,7 +24,7 @@ from tkinter import scrolledtext, messagebox
 from urllib.parse import urlencode
 
 SERVER_URL = "http://localhost:8000"
-EXPECTED_SERVER_REV = "20260331-card-fx-release"
+EXPECTED_SERVER_REV = "20260413-ui-review-release"
 KATAGO_REPO = "lightvector/KataGo"
 
 
@@ -234,17 +234,6 @@ class GoAILauncher:
             bg=BG3,
         ).pack(side="left")
 
-        # Server address
-        addr_box = tk.Frame(sf, bg=BG3, padx=10, pady=5)
-        addr_box.pack(side="right")
-        tk.Label(
-            addr_box,
-            text="Local: http://localhost:8000",
-            font=("Consolas", 10),
-            fg="#AFC7D9",
-            bg=BG3,
-        ).pack()
-
         # ── Primary Actions ──
         bf = tk.Frame(content, bg=BG)
         bf.pack(fill="x", pady=5)
@@ -280,7 +269,7 @@ class GoAILauncher:
         
         self._ai_enabled = tk.BooleanVar(value=True)
         self._ai_check = tk.Checkbutton(
-            mf, text="启动时加载 KataGo AI（老机器建议保持开启，纯双人时可关闭）",
+            mf, text="启动时加载 KataGo AI（纯双人时可关闭）",
             variable=self._ai_enabled, font=("Microsoft YaHei", 9),
             fg=TEXT, bg=BG, activeforeground=TEXT, activebackground=BG,
             selectcolor=BG3, cursor="hand2"

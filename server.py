@@ -43,7 +43,7 @@ USER_DATA_DIR = Path(os.environ.get("LOCALAPPDATA", str(BASE_DIR))) / "GoAI"
 USER_KATAGO_DIR = USER_DATA_DIR / "katago"
 USER_KATAGO_HOME = USER_KATAGO_DIR / "KataGoData"
 USER_RUNTIME_CONFIG_DIR = USER_KATAGO_DIR / "runtime"
-SERVER_REV = "20260331-card-fx-release"
+SERVER_REV = "20260413-ui-review-release"
 KATAGO_EXE = BASE_DIR / "katago" / "katago.exe"             # CUDA build (legacy/optional)
 KATAGO_CUDA_EXE = BASE_DIR / "katago" / "katago_cuda.exe"   # CUDA (downloaded upgrade)
 KATAGO_OPENCL_EXE = BASE_DIR / "katago" / "katago_opencl.exe"  # OpenCL (any GPU)
@@ -1343,6 +1343,10 @@ class GoGame:
         self.ultimate_shadow_clone_links: list[dict] = []
         self.ai_observer: bool = False
         self.ai_style: str = "balanced"
+        self.ai_level_black: str = level
+        self.ai_level_white: str = level
+        self.ai_style_black: str = "balanced"
+        self.ai_style_white: str = "balanced"
         self.last_analysis: dict = {"winrate": 0.5, "score": 0.0, "top_moves": [], "ownership": []}
         # Ko rule: (x, y, color_value) that is forbidden on the NEXT move
         self.ko_point: Optional[tuple[int, int, int]] = None
@@ -1500,6 +1504,10 @@ class GoGame:
             "two_player": self.two_player,
             "ai_observer": self.ai_observer,
             "ai_style": self.ai_style,
+            "ai_level_black": self.ai_level_black,
+            "ai_level_white": self.ai_level_white,
+            "ai_style_black": self.ai_style_black,
+            "ai_style_white": self.ai_style_white,
             "rogue_enabled": self.rogue_enabled,
             "rogue_card": self.rogue_card,
             "rogue_uses": self.rogue_uses,
@@ -2400,11 +2408,27 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                     ai_style = str(data.get("ai_style", "balanced"))
                     if ai_style not in AI_STYLE_OPTIONS:
                         ai_style = "balanced"
+                    ai_level_black = str(data.get("ai_level_black", level))
+                    if ai_level_black not in RANK_VISITS:
+                        ai_level_black = level
+                    ai_level_white = str(data.get("ai_level_white", level))
+                    if ai_level_white not in RANK_VISITS:
+                        ai_level_white = level
+                    ai_style_black = str(data.get("ai_style_black", ai_style))
+                    if ai_style_black not in AI_STYLE_OPTIONS:
+                        ai_style_black = ai_style
+                    ai_style_white = str(data.get("ai_style_white", ai_style))
+                    if ai_style_white not in AI_STYLE_OPTIONS:
+                        ai_style_white = ai_style
 
                     game = GoGame(size, komi, handicap, player_color, level,
                                   two_player)
                     game.ai_observer = ai_observer
                     game.ai_style = ai_style
+                    game.ai_level_black = ai_level_black
+                    game.ai_level_white = ai_level_white
+                    game.ai_style_black = ai_style_black
+                    game.ai_style_white = ai_style_white
                     game.rogue_enabled = rogue_enabled
                     game.ai_rogue_enabled = ai_rogue_enabled
                     game.challenge_beta = challenge_beta
@@ -2553,10 +2577,10 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                         gtp = coord_to_gtp(x, y, game.size)
                         captured = game.place_stone(x, y, color)
                         if captured == -1:
-                            await send_error("鎵撳姭绂佺潃锛氫笉鑳界珛鍗虫彁鍥?")
+                            await send_error("打劫禁着：不能立即提回")
                             continue
                         if captured == -2:
-                            await send_error("杩欐墜灞炰簬鑷潃绂佺潃锛屼笉鑳借繖鏍蜂笅")
+                            await send_error("这手属于自杀禁着，不能这样下")
                             continue
                         was_double_pending = game.ultimate_double_pending
                         _record_ultimate_player_action(game)
@@ -2662,12 +2686,12 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                     if captured == -1:
                         if engine.ready:
                             await run_in_executor(engine.send_command, "undo")
-                        await send_error("鎵撳姭绂佺潃锛氫笉鑳界珛鍗虫彁鍥?")
+                        await send_error("打劫禁着：不能立即提回")
                         continue
                     if captured == -2:
                         if engine.ready:
                             await run_in_executor(engine.send_command, "undo")
-                        await send_error("杩欐墜灞炰簬鑷潃绂佺潃锛屼笉鑳借繖鏍蜂笅")
+                        await send_error("这手属于自杀禁着，不能这样下")
                         continue
                     game.moves.append((color, gtp))
                     game.passed[color] = False
@@ -3087,7 +3111,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                         continue
                     if game.challenge_beta:
                         if _challenge_remaining(game, "coach") <= 0:
-                            await send_error("娴嬭瘯鐗堥棷鍏筹細浠ｄ笅娆℃暟宸茬敤瀹?")
+                            await send_error("测试版闯关：代下次数已用完")
                             continue
                         game.challenge_usage["coach"] += 1
                     if game.rogue_card != "coach_mode" or game.rogue_uses.get("coach_mode", 0) <= 0:
@@ -6089,11 +6113,14 @@ async def _finish_ai_move(game, send_fn, color, card, gtp_move, rogue_msg=None):
 
 async def _generate_ai_style_move(game: GoGame, color: str, visits: int, time_limit: float) -> str:
     await _sync_board_to_katago(game)
+    style = game.ai_style
+    if game.ai_observer:
+        style = game.ai_style_black if color == "B" else game.ai_style_white
     chosen = None
-    if game.ai_style != "balanced":
+    if style != "balanced":
         try:
             analysis = await do_analysis(game)
-            chosen = _choose_ai_style_move(game, color, analysis.get("top_moves", []), game.ai_style)
+            chosen = _choose_ai_style_move(game, color, analysis.get("top_moves", []), style)
         except Exception:
             chosen = None
     if chosen:
@@ -6166,7 +6193,8 @@ async def _run_ai_observer_loop(game: GoGame, send_fn):
     while not game.game_over and game.ai_observer and engine.ready:
         await _sync_board_to_katago(game)
         color = game.current_player
-        visits = get_game_visits(game.level, len(game.moves))
+        level = game.ai_level_black if color == "B" else game.ai_level_white
+        visits = get_game_visits(level, len(game.moves))
         time_limit = 4.0 if len(game.moves) < OPENING_MOVE_THRESHOLD else 8.0
         gtp_move = await _generate_ai_style_move(game, color, visits, time_limit)
         if _is_suspicious_ai_pass(game, gtp_move, color):
