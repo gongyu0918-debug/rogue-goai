@@ -791,6 +791,7 @@ class GoGame:
     def __init__(self, size: int = 19, komi: float = 7.5, handicap: int = 0,
                  player_color: str = "B", level: str = "a3d",
                  two_player: bool = False):
+        now = time.time()
         self.size = size
         self.komi = komi
         self.handicap = handicap
@@ -886,8 +887,13 @@ class GoGame:
         self.last_analysis: dict = {"winrate": 0.5, "score": 0.0, "top_moves": [], "ownership": []}
         # Ko rule: (x, y, color_value) that is forbidden on the NEXT move
         self.ko_point: Optional[tuple[int, int, int]] = None
+        self.created_at: float = now
+        self.updated_at: float = now
         self._history: list[dict] = []
         self.reset_history()
+
+    def touch(self):
+        self.updated_at = time.time()
 
     # ─── Board logic ─────────────────────────────────────────────────────────
     def neighbors(self, x, y):
@@ -988,7 +994,7 @@ class GoGame:
     def _snapshot_state(self) -> dict:
         return copy.deepcopy({
             k: v for k, v in self.__dict__.items()
-            if k != "_history"
+            if k not in {"_history", "created_at", "updated_at"}
         })
 
     def reset_history(self):
@@ -1005,8 +1011,11 @@ class GoGame:
             history.pop()
             steps -= 1
         state = copy.deepcopy(history[-1])
+        created_at = getattr(self, "created_at", time.time())
         self.__dict__.clear()
         self.__dict__.update(state)
+        self.created_at = created_at
+        self.updated_at = time.time()
         self._history = history
         return True
 
@@ -1130,6 +1139,7 @@ def generate_sgf(game: GoGame) -> str:
 app = FastAPI()
 engine = KataGoEngine()
 active_games: dict[str, GoGame] = {}
+ACTIVE_GAME_RETENTION_SECONDS = 24 * 60 * 60
 ENGINE_STATE_LOCK = threading.Lock()
 ENGINE_START_THREAD: Optional[threading.Thread] = None
 ENGINE_START_TOKEN = 0
@@ -1156,6 +1166,22 @@ def _engine_log(message: str):
             "message": stamped,
         })
     log(stamped)
+
+
+def _touch_game(game: Optional[GoGame]):
+    if game is not None:
+        game.touch()
+
+
+def _prune_active_games(now: Optional[float] = None):
+    current = time.time() if now is None else now
+    expired_ids = []
+    for game_id, game in list(active_games.items()):
+        updated_at = getattr(game, "updated_at", getattr(game, "created_at", current))
+        if current - updated_at > ACTIVE_GAME_RETENTION_SECONDS:
+            expired_ids.append(game_id)
+    for game_id in expired_ids:
+        active_games.pop(game_id, None)
 
 
 def _set_engine_state(**changes):
@@ -1694,9 +1720,11 @@ async def get_gpu_info():
 
 @app.get("/sgf/{game_id}")
 async def export_sgf(game_id: str):
+    _prune_active_games()
     game = active_games.get(game_id)
     if not game:
         return Response(content="Game not found", status_code=404)
+    _touch_game(game)
     sgf = generate_sgf(game)
     return Response(
         content=sgf,
@@ -1716,7 +1744,9 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
     websocket_closed = False
 
     # Restore existing game if this gameId is already known
+    _prune_active_games()
     game: Optional[GoGame] = active_games.get(game_id)
+    _touch_game(game)
 
     async def send(data: dict):
         nonlocal websocket_closed
@@ -1724,6 +1754,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
             raise WebSocketDisconnect(code=1006)
         try:
             await websocket.send_text(json.dumps(data))
+            _touch_game(game)
         except WebSocketDisconnect:
             websocket_closed = True
             raise
@@ -1827,6 +1858,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                         )
                         continue
 
+                    _prune_active_games()
                     size = int(data.get("size", 19))
                     komi = float(data.get("komi", 7.5))
                     handicap = int(data.get("handicap", 0))
