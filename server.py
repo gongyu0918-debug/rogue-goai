@@ -132,6 +132,7 @@ from app.data.cards import (
 from app.runtime.engine import KataGoEngine
 from app.runtime.game_store import ActiveGameStore
 from app.runtime.startup import EnginePaths, EngineStartupManager
+from app.runtime.ws_actions import WS_ACTION_HANDLERS, WebSocketActionContext
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(line_buffering=True)
@@ -1039,25 +1040,53 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
         except Exception as ex:
             print(f"[Analysis-bg] error: {ex}")
 
+    ws_action_context = WebSocketActionContext(
+        game_id=game_id,
+        game=game,
+        active_games=active_games,
+        engine=engine,
+        send=send,
+        send_error=send_error,
+        do_analysis=do_analysis,
+        do_analysis_bg=do_analysis_bg,
+        run_in_executor=run_in_executor,
+        GoGame=GoGame,
+        coord_to_gtp=coord_to_gtp,
+        get_game_visits=get_game_visits,
+        pick_challenge_beta_choices=pick_challenge_beta_choices,
+        pick_ai_rogue_card=pick_ai_rogue_card,
+        pick_ai_ultimate_card=pick_ai_ultimate_card,
+        apply_challenge_rogue_loadout=_apply_challenge_rogue_loadout,
+        activate_rogue_card=_activate_rogue_card,
+        activate_ai_rogue_card=_activate_ai_rogue_card,
+        ai_move=_ai_move,
+        ultimate_ai_move=_ultimate_ai_move,
+        ultimate_force_score=_ultimate_force_score,
+        run_coach_turn_if_needed=_run_coach_turn_if_needed,
+        sync_board_to_katago=_sync_board_to_katago,
+        challenge_remaining=_challenge_remaining,
+        challenge_zone_points=_challenge_zone_points,
+        rogue_has=_rogue_has,
+        finish_ultimate_quickthink_turn=_finish_ultimate_quickthink_turn,
+        pick_joseki_targets=_pick_joseki_targets,
+        random_hidden_center=_random_hidden_center,
+        diamond_points=_diamond_points,
+    )
+
     try:
         while True:
             data = json.loads(await websocket.receive_text())
             action = data.get("action")
             try:
-                # ── reconnect ────────────────────────────────────────────────
-                if action == "reconnect":
-                    saved = active_games.get(game_id, touch=True)
-                    if saved:
-                        game = saved
-                        await send({"type": "reconnected", **game.to_state()})
-                        if not game.game_over and engine.ready:
-                            analysis = await do_analysis(game)
-                            await send({"type": "analysis", **analysis})
-                    else:
-                        await send({"type": "reconnect_failed"})
+                ws_action_context.game = game
+                handler = WS_ACTION_HANDLERS.get(action)
+                if handler is not None:
+                    await handler(ws_action_context, data)
+                    game = ws_action_context.game
+                    continue
 
-                # ── new_game ──────────────────────────────────────────────────
-                elif action == "new_game":
+                if action == "new_game":
+
                     if not engine.ready and not data.get("two_player", False):
                         snapshot = _engine_state_snapshot()
                         await send({
@@ -1539,393 +1568,6 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                     if engine.ready:
                         analysis = await do_analysis(game)
                         await send({"type": "analysis", **analysis})
-
-                # ── resign ────────────────────────────────────────────────────
-                elif action == "resign":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game:
-                        continue
-                    game.game_over = True
-                    game.winner = game.ai_color if not game.two_player \
-                        else ("W" if game.current_player == "B" else "B")
-                    await send({
-                        "type": "game_over",
-                        "winner": game.winner,
-                        "score": None,
-                        "reason": "resign",
-                    })
-
-                # ── request_hint ──────────────────────────────────────────────
-                elif action == "request_hint":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game or game.game_over or not engine.ready:
-                        continue
-                    if _rogue_has(game, "quickthink"):
-                        await send_error("快速思考已禁用推荐点位，请自行判断局面")
-                        continue
-                    if game.challenge_beta:
-                        if _challenge_remaining(game, "hint") <= 0:
-                            await send_error("测试版闯关：推荐点次数已用完")
-                            continue
-                        game.challenge_usage["hint"] += 1
-                        await send({"type": "game_state", **game.to_state()})
-                    analysis = await do_analysis(game)
-                    await send({"type": "analysis", **analysis})
-
-                # ── set_level ─────────────────────────────────────────────────
-                elif action == "set_level":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game:
-                        continue
-                    level = data.get("level", "a3d")
-                    game.level = level
-                    if engine.ready:
-                        _m = "ultimate" if game.ultimate else ("rogue" if game.rogue_card else "normal")
-                        visits = get_game_visits(level, len(game.moves), mode=_m)
-                        await run_in_executor(engine.set_visits, visits)
-                    await send({"type": "level_set", "level": level})
-
-                # ── load_position (review / SGF analysis) ────────────────────
-                elif action == "load_position":
-                    size = int(data.get("size", 19))
-                    komi = float(data.get("komi", 7.5))
-                    moves_list = data.get("moves", [])
-
-                    if engine.ready:
-                        await run_in_executor(
-                            engine.send_command, f"boardsize {size}")
-                        await run_in_executor(
-                            engine.send_command, "clear_board")
-                        await run_in_executor(
-                            engine.send_command, f"komi {komi}")
-                        for move in moves_list:
-                            c, g = move[0], move[1]
-                            await run_in_executor(
-                                engine.send_command, f"play {c} {g}")
-
-                        next_color = "B" if len(moves_list) % 2 == 0 else "W"
-                        temp = GoGame(size, komi, 0, "B", "a3d")
-                        temp.current_player = next_color
-                        for move in moves_list:
-                            temp.moves.append((move[0], move[1]))
-                        temp.rebuild_board()
-
-                        result = await do_analysis(temp)
-                        await send({"type": "analysis", **result})
-
-                # ── time_expired ─────────────────────────────────────────────
-                elif action == "time_expired":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game or game.game_over:
-                        continue
-                    loser = data.get("color", "B")
-                    winner = "W" if loser == "B" else "B"
-                    game.game_over = True
-                    game.winner = winner
-                    await send({
-                        "type": "game_over",
-                        "winner": winner,
-                        "score": f"{winner}+T",
-                        "reason": "timeout",
-                    })
-
-                # ── rogue_select_card ─────────────────────────────────────────
-                elif action == "rogue_select_card":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game:
-                        continue
-                    card_id = data.get("card_id", "")
-                    if card_id not in ROGUE_CARDS:
-                        continue
-                    if game.challenge_beta:
-                        if card_id in game.challenge_cards or card_id not in game.challenge_offer_cards:
-                            continue
-                        game.challenge_cards.append(card_id)
-                        game.challenge_offer_cards = []
-                        await _apply_challenge_rogue_loadout(game, send)
-                        await send({
-                            "type": "rogue_card_selected",
-                            "card_id": card_id,
-                            "name": ROGUE_CARDS[card_id]["name"],
-                            "icon": ROGUE_CARDS[card_id]["icon"],
-                            "waiting_seal": False,
-                            **game.to_state(),
-                        })
-                    else:
-                        await _activate_rogue_card(game, send, card_id)
-                    if game.ai_rogue_enabled and not game.two_player and not game.challenge_beta:
-                        ai_card_id = pick_ai_rogue_card(exclude=[card_id])
-                        await _activate_ai_rogue_card(game, send, ai_card_id)
-                    game.reset_history()
-                    # If not seal (which needs setup), start AI move
-                    if card_id != "seal":
-                        if not game.two_player and engine.ready and game.ai_color == game.current_player:
-                            await _ai_move(game, send)
-                        if not game.game_over and engine.ready:
-                            asyncio.create_task(do_analysis_bg(game))
-
-                elif action == "challenge_refresh_offer":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game or not game.challenge_beta:
-                        continue
-                    if game.challenge_refreshes <= 0:
-                        await send_error("当前测试版闯关没有剩余刷新次数")
-                        continue
-                    pool = [card_id for card_id in CHALLENGE_BETA_POOL if card_id not in game.challenge_cards]
-                    if len(pool) < 3:
-                        await send_error("当前可刷新卡牌不足 3 张")
-                        continue
-                    game.challenge_refreshes -= 1
-                    choices = pick_challenge_beta_choices(game.challenge_cards, 3, pool=pool)
-                    game.challenge_offer_cards = choices
-                    cards_data = []
-                    for cid in choices:
-                        c = ROGUE_CARDS[cid]
-                        cards_data.append({
-                            "id": cid, "name": c["name"],
-                            "desc": c["desc"], "icon": c["icon"],
-                        })
-                    await send({
-                        "type": "rogue_offer",
-                        "cards": cards_data,
-                        "challenge_beta": True,
-                        "challenge_stage": game.challenge_stage,
-                        "refresh_remaining": game.challenge_refreshes,
-                    })
-
-                # ── rogue_seal_point ─────────────────────────────────────────
-                elif action == "rogue_seal_point":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game or not game.rogue_waiting_seal:
-                        continue
-                    x, y = int(data["x"]), int(data["y"])
-                    if (x, y) not in game.rogue_seal_points:
-                        game.rogue_seal_points.append((x, y))
-                    await send({"type": "rogue_seal_update",
-                                "points": [[px, py]
-                                           for px, py in game.rogue_seal_points],
-                                "remaining": ROGUE_SEAL_POINT_COUNT - len(game.rogue_seal_points)})
-                    if len(game.rogue_seal_points) >= ROGUE_SEAL_POINT_COUNT:
-                        if game.challenge_beta:
-                            game.rogue_seal_points = _challenge_zone_points(game, game.rogue_seal_points)
-                        game.rogue_waiting_seal = False
-                        game.reset_history()
-                        await send({"type": "rogue_seal_done"})
-                        if engine.ready and game.ai_color == game.current_player:
-                            await _ai_move(game, send)
-                        if not game.game_over and engine.ready:
-                            asyncio.create_task(do_analysis_bg(game))
-
-                # ── rogue_use_puppet ─────────────────────────────────────────
-                elif action == "rogue_use_puppet":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game or game.game_over or not engine.ready:
-                        continue
-                    if game.rogue_card != "puppet" or \
-                       game.rogue_uses.get("puppet", 0) <= 0:
-                        await send_error("傀儡术已用完")
-                        continue
-                    if game.current_player != game.player_color:
-                        await send_error("还没轮到你")
-                        continue
-                    x, y = int(data["x"]), int(data["y"])
-                    gtp = coord_to_gtp(x, y, game.size)
-                    ai_color = game.ai_color
-                    # Play the move for AI at player's chosen point
-                    resp = await run_in_executor(
-                        engine.send_command,
-                        f"play {ai_color} {gtp}")
-                    if "?" in resp:
-                        await send_error(f"该位置无法落子: {gtp}")
-                        continue
-                    game.rogue_uses["puppet"] -= 1
-                    game.moves.append((ai_color, gtp))
-                    game.place_stone(x, y, ai_color)
-                    game.passed[ai_color] = False
-                    game.current_player = game.player_color
-                    game.push_history()
-                    await send({"type": "game_state", **game.to_state()})
-                    await send({"type": "ai_move", "gtp": gtp,
-                                "color": ai_color, "x": x, "y": y})
-                    await send({"type": "rogue_event",
-                                "msg": f"🎭 傀儡术！你替 AI 落子于 {gtp}"})
-                    await send({"type": "rogue_uses_update",
-                                "uses": game.rogue_uses})
-                    if not game.game_over and engine.ready:
-                        asyncio.create_task(do_analysis_bg(game))
-
-                # ── rogue_use_twin ───────────────────────────────────────────
-                elif action == "rogue_use_twin":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game or game.game_over:
-                        continue
-                    if game.rogue_card != "twin" or \
-                       game.rogue_uses.get("twin", 0) <= 0:
-                        await send_error("双子星辰已用完")
-                        continue
-                    game.rogue_uses["twin"] -= 1
-                    game.rogue_skip_ai = True
-                    await send({"type": "rogue_event",
-                                "msg": f"⚡ 双子星辰激活！下一手后可连续落子"
-                                       f"（剩余 {game.rogue_uses.get('twin',0)} 次）"})
-                    await send({"type": "rogue_uses_update",
-                                "uses": game.rogue_uses})
-
-                # ── rogue_use_exchange ───────────────────────────────────────
-                elif action == "rogue_use_exchange":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game or game.game_over:
-                        continue
-                    if game.rogue_card != "exchange" or \
-                       game.rogue_uses.get("exchange", 0) <= 0:
-                        await send_error("乾坤挪移已用完")
-                        continue
-                    game.rogue_uses["exchange"] -= 1
-                    game.rogue_skip_ai = True
-                    await send({"type": "rogue_event",
-                                "msg": "🔄 乾坤挪移激活！AI 下次将被迫虚手"})
-                    await send({"type": "rogue_uses_update",
-                                "uses": game.rogue_uses})
-
-                # ── ultimate_select_card ──────────────────────────────────────
-                elif action == "rogue_use_coach":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game or game.game_over or not engine.ready:
-                        continue
-                    if game.challenge_beta:
-                        if _challenge_remaining(game, "coach") <= 0:
-                            await send_error("测试版闯关：代下次数已用完")
-                            continue
-                        game.challenge_usage["coach"] += 1
-                    if game.rogue_card != "coach_mode" or game.rogue_uses.get("coach_mode", 0) <= 0:
-                        await send_error("代练上号已经用完了")
-                        continue
-                    if game.current_player != game.player_color:
-                        await send_error("还没轮到你")
-                        continue
-                    game.rogue_uses["coach_mode"] -= 1
-                    game.rogue_coach_moves_left = ROGUE_COACH_BASE_TURNS
-                    game.rogue_coach_bonus_checked = False
-                    await send({"type": "rogue_event", "msg": f"🎓 代练上号启动：接下来 {ROGUE_COACH_BASE_TURNS} 手将由更强 AI 代打"})
-                    await send({"type": "rogue_uses_update", "uses": game.rogue_uses})
-                    await send({"type": "game_state", **game.to_state()})
-                    await _run_coach_turn_if_needed(game, send)
-                    if not game.game_over and engine.ready:
-                        asyncio.create_task(do_analysis_bg(game))
-
-                elif action == "ultimate_select_card":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game or not game.ultimate:
-                        continue
-                    card_id = data.get("card_id", "")
-                    if card_id not in ULTIMATE_CARDS:
-                        continue
-                    game.ultimate_player_card = card_id
-                    game.ultimate_joseki_targets = []
-                    game.ultimate_joseki_hits = 0
-                    game.ultimate_joseki_done = False
-                    game.ultimate_godhand_center = None
-                    game.ultimate_godhand_trigger = []
-                    game.ultimate_godhand_done = False
-                    game.ultimate_corner_helper_done = set()
-                    game.ultimate_sanrensei_done = False
-                    game.ultimate_five_in_row_seen = set()
-                    game.ultimate_last_stand_done = {"B": False, "W": False}
-                    _finish_ultimate_quickthink_turn(game)
-                    game.ultimate_fool_shapes = set()
-                    game.ultimate_shadow_clone_links = []
-                    if card_id == "joseki_burst":
-                        game.ultimate_joseki_targets = _pick_joseki_targets(
-                            game.size, ULTIMATE_JOSEKI_TARGET_COUNT)
-                    elif card_id == "god_hand":
-                        rng = random.Random(time.time_ns())
-                        game.ultimate_godhand_center = _random_hidden_center(game.size, 2, rng)
-                        game.ultimate_godhand_trigger = _diamond_points(
-                            game.ultimate_godhand_center[0],
-                            game.ultimate_godhand_center[1],
-                            2,
-                            game.size,
-                        )
-                    elif card_id == "quickthink" and game.current_player == game.player_color:
-                        game.ultimate_quickthink_token += 1
-                        game.ultimate_quickthink_active = True
-                    pdef = ULTIMATE_CARDS[card_id]
-                    ai_card_id = pick_ai_ultimate_card(exclude=[card_id])
-                    game.ultimate_ai_card = ai_card_id
-                    adef = ULTIMATE_CARDS[ai_card_id]
-                    game.reset_history()
-                    await send({"type": "ultimate_cards_selected",
-                                "player_card": card_id,
-                                "player_name": pdef["name"],
-                                "player_icon": pdef["icon"],
-                                "ai_card": ai_card_id,
-                                "ai_name": adef["name"],
-                                "ai_icon": adef["icon"],
-                                **game.to_state()})
-                    if card_id == "joseki_burst":
-                        pts = ", ".join(
-                            coord_to_gtp(px, py, game.size)
-                            for px, py in game.ultimate_joseki_targets
-                        )
-                        await send({"type": "rogue_event",
-                                    "msg": f"定式爆发已点亮目标点：{pts}。命中其中 3 个后会触发爆发"})
-                    if engine.ready and game.ai_color == game.current_player:
-                        await _ultimate_ai_move(game, send)
-                    if not game.game_over and engine.ready:
-                        asyncio.create_task(do_analysis_bg(game))
-
-                elif action == "ultimate_quickthink_end":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game or not game.ultimate:
-                        continue
-                    if game.ultimate_player_card != "quickthink" or not game.ultimate_quickthink_active:
-                        continue
-                    _finish_ultimate_quickthink_turn(game)
-                    game.current_player = game.ai_color
-                    await send({"type": "game_state", **game.to_state()})
-                    if game.ultimate_move_count >= 20:
-                        await _ultimate_force_score(game, send)
-                    elif engine.ready:
-                        await _ultimate_ai_move(game, send)
-                    if not game.game_over and engine.ready:
-                        asyncio.create_task(do_analysis_bg(game))
-
-                # ── score ─────────────────────────────────────────────────────
-                elif action == "score":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game:
-                        continue
-                    if engine.ready:
-                        await _sync_board_to_katago(game)
-                        resp = await run_in_executor(
-                            engine.send_command, "final_score")
-                        score_str = resp.replace("=", "").strip()
-                    else:
-                        score_str = "?"
-                    winner = ("B" if score_str.startswith("B") else
-                              "W" if score_str.startswith("W") else "draw")
-                    game.game_over = True
-                    game.winner = winner
-                    await send({
-                        "type": "game_over",
-                        "winner": winner,
-                        "score": score_str,
-                        "reason": "score",
-                    })
 
             except WebSocketDisconnect:
                 raise

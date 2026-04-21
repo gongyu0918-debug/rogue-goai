@@ -481,10 +481,15 @@ class EngineStartupManager:
         snapshot = self.snapshot()
         if started:
             self.log_fn("[Server] KataGo restart scheduled in background")
+            phase = snapshot.get("phase")
+            message = snapshot.get("message")
+            if phase in {None, "stopped"}:
+                phase = "initializing"
+                message = "KataGo 正在后台重启"
             return {
                 "ok": True,
-                "phase": snapshot.get("phase"),
-                "message": snapshot.get("message"),
+                "phase": phase,
+                "message": message,
             }
         return {
             "ok": False,
