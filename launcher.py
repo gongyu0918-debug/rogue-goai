@@ -2,6 +2,7 @@
 GoAI Launcher - Control panel for the KataGo Go AI server.
 """
 import csv
+import ctypes
 import glob
 import io
 import json
@@ -198,11 +199,10 @@ class GoAILauncher:
         self.root.configure(bg=BG)
 
         self._status_var = tk.StringVar(value="服务器未启")
-        self._status_hint_var = tk.StringVar(value="启动后会自动打开浏览器")
+        self._status_hint_var = tk.StringVar(value="")
         self._mode_var = tk.StringVar(value="等待启动")
         self._engine_var = tk.StringVar(value="尚未探测到引擎状态")
         self._address_var = tk.StringVar(value="http://localhost:8000")
-        self._log_caption_var = tk.StringVar(value="日志默认隐藏，不打扰首屏")
 
         ico = os.path.join(BASE_DIR, "goai.ico")
         if os.path.exists(ico):
@@ -217,8 +217,23 @@ class GoAILauncher:
         # Run environment checks after UI is ready
         self.root.after(200, self._check_environment)
 
-    def _make_card(self, parent, *, bg=PANEL):
-        return tk.Frame(
+    def _set_widget_alpha(self, widget: tk.Widget, alpha: int = 232):
+        if os.name != "nt":
+            return
+        try:
+            hwnd = widget.winfo_id()
+            GWL_EXSTYLE = -20
+            WS_EX_LAYERED = 0x00080000
+            LWA_ALPHA = 0x00000002
+            user32 = ctypes.windll.user32
+            style = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+            user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style | WS_EX_LAYERED)
+            user32.SetLayeredWindowAttributes(hwnd, 0, max(0, min(255, alpha)), LWA_ALPHA)
+        except Exception:
+            pass
+
+    def _make_card(self, parent, *, bg=PANEL, alpha: int = 228):
+        frame = tk.Frame(
             parent,
             bg=bg,
             bd=0,
@@ -226,6 +241,8 @@ class GoAILauncher:
             highlightbackground=BORDER,
             highlightcolor=BORDER,
         )
+        self.root.after(0, lambda w=frame, a=alpha: self._set_widget_alpha(w, a))
+        return frame
 
     def _apply_button_style(self, button: tk.Widget, variant: str, *, text: str | None = None, state: str | None = None):
         style = BUTTON_STYLES.get(variant, BUTTON_STYLES["neutral"])
@@ -276,18 +293,16 @@ class GoAILauncher:
         self._log_visible = visible
         if visible:
             self._summary_card.place_forget()
-            self._log_panel.place(x=28, y=386, width=664, height=214)
+            self._log_panel.place(x=28, y=376, width=664, height=224)
             if not self._log_body.winfo_manager():
-                self._log_body.pack(fill="both", expand=True, padx=14, pady=(0, 14))
-            self._log_caption_var.set("日志已展开，适合排查启动或引擎问题")
-            self._apply_button_style(self._log_toggle_btn, "neutral", text="隐藏日志")
+                self._log_body.pack(fill="both", expand=True, padx=14, pady=(56, 14))
+            self._apply_button_style(self._log_toggle_btn, "neutral", text="收起日志")
         else:
             if self._log_body.winfo_manager():
                 self._log_body.pack_forget()
-            self._summary_card.place(x=28, y=386, width=664, height=140)
-            self._log_panel.place(x=28, y=546, width=664, height=54)
-            self._log_caption_var.set("日志默认隐藏，不打扰首屏")
-            self._apply_button_style(self._log_toggle_btn, "neutral", text="展开日志")
+            self._summary_card.place(x=28, y=376, width=664, height=140)
+            self._log_panel.place(x=28, y=536, width=664, height=54)
+            self._apply_button_style(self._log_toggle_btn, "neutral", text="运行日志")
 
     def _toggle_log_panel(self):
         self._set_log_visibility(not self._log_visible)
@@ -306,7 +321,7 @@ class GoAILauncher:
             except Exception:
                 pass
 
-        hero = self._make_card(self.root)
+        hero = self._make_card(self.root, alpha=224)
         hero.place(x=28, y=24, width=664, height=178)
 
         tk.Label(
@@ -333,6 +348,7 @@ class GoAILauncher:
 
         status_box = tk.Frame(hero, bg=BG3, padx=12, pady=7)
         status_box.place(x=24, y=116)
+        self.root.after(0, lambda: self._set_widget_alpha(status_box, 236))
         self._dot_canvas = tk.Canvas(
             status_box,
             width=14,
@@ -418,8 +434,8 @@ class GoAILauncher:
         self._open_btn.grid(row=0, column=2, sticky="nsew", padx=(6, 0))
         self._open_btn.configure(state="disabled")
 
-        controls = self._make_card(self.root, bg=PANEL_ALT)
-        controls.place(x=28, y=220, width=664, height=148)
+        controls = self._make_card(self.root, bg=PANEL_ALT, alpha=224)
+        controls.place(x=28, y=220, width=664, height=126)
 
         tk.Label(
             controls,
@@ -428,13 +444,6 @@ class GoAILauncher:
             fg=TEXT,
             bg=PANEL_ALT,
         ).place(x=22, y=18)
-        tk.Label(
-            controls,
-            text="保留核心控制，把更多信息折进日志和状态摘要里。",
-            font=("Microsoft YaHei", 9),
-            fg=MUTED,
-            bg=PANEL_ALT,
-        ).place(x=22, y=44)
 
         self._ai_enabled = tk.BooleanVar(value=True)
         self._ai_check = tk.Checkbutton(
@@ -457,18 +466,10 @@ class GoAILauncher:
             width=20,
             anchor="w",
         )
-        self._ai_check.place(x=22, y=78, width=214, height=38)
-
-        tk.Label(
-            controls,
-            text="纯双人对局时可以关闭 AI，以更快进入棋盘。",
-            font=("Microsoft YaHei", 8),
-            fg=MUTED,
-            bg=PANEL_ALT,
-        ).place(x=24, y=122)
+        self._ai_check.place(x=22, y=56, width=214, height=38)
 
         action_strip = tk.Frame(controls, bg=PANEL_ALT)
-        action_strip.place(x=276, y=78, width=366, height=38)
+        action_strip.place(x=276, y=56, width=366, height=38)
         self._model_running = True
         self._stop_model_btn = self._make_button(
             action_strip,
@@ -491,26 +492,16 @@ class GoAILauncher:
             font_size=10,
         )
         self._upgrade_btn.pack(side="left")
-        self._upgrade_hint = tk.Label(
-            controls,
-            text="兼容性优先时建议保持默认，不强行升级",
-            font=("Microsoft YaHei", 8),
-            fg=MUTED,
-            bg=PANEL_ALT,
-            wraplength=360,
-            justify="left",
-        )
-        self._upgrade_hint.place(x=278, y=122)
+        self._upgrade_hint = None
 
         if _upgrade_installed():
             self._apply_button_style(self._upgrade_btn, "neutral", text="✓ 已安装升级包", state="disabled")
-            self._upgrade_hint.config(text="大模型与 CUDA 升级已就绪")
         else:
             self._apply_button_style(self._upgrade_btn, "primary")
             self._apply_upgrade_button_policy()
 
-        self._summary_card = self._make_card(self.root)
-        self._summary_card.place(x=28, y=386, width=664, height=140)
+        self._summary_card = self._make_card(self.root, alpha=224)
+        self._summary_card.place(x=28, y=376, width=664, height=140)
         tk.Label(
             self._summary_card,
             text="快速概览",
@@ -549,32 +540,16 @@ class GoAILauncher:
         add_row("引擎状态", self._engine_var)
         add_row("本机入口", self._address_var)
 
-        self._log_panel = self._make_card(self.root, bg=PANEL_ALT)
-        log_header = tk.Frame(self._log_panel, bg=PANEL_ALT)
-        log_header.pack(fill="x", padx=14, pady=10)
-        tk.Label(
-            log_header,
-            text="运行日志",
-            font=("Microsoft YaHei", 10, "bold"),
-            fg=TEXT,
-            bg=PANEL_ALT,
-        ).pack(side="left")
-        tk.Label(
-            log_header,
-            textvariable=self._log_caption_var,
-            font=("Microsoft YaHei", 8),
-            fg=MUTED,
-            bg=PANEL_ALT,
-        ).pack(side="left", padx=(10, 0))
+        self._log_panel = self._make_card(self.root, bg=PANEL_ALT, alpha=220)
         self._log_toggle_btn = self._make_button(
-            log_header,
-            text="展开日志",
+            self._log_panel,
+            text="运行日志",
             command=self._toggle_log_panel,
             variant="neutral",
-            width=9,
+            width=10,
             font_size=9,
         )
-        self._log_toggle_btn.pack(side="right")
+        self._log_toggle_btn.place(x=530, y=9, width=118, height=36)
 
         self._log_body = tk.Frame(self._log_panel, bg=PANEL_ALT)
         self._log = scrolledtext.ScrolledText(
@@ -599,7 +574,7 @@ class GoAILauncher:
             font=("Microsoft YaHei", 8),
             fg="#D7D0C4",
             bg=BG,
-        ).place(x=30, y=612)
+        ).place(x=30, y=606)
         self._quit_btn = self._make_button(
             self.root,
             text="退出",
@@ -608,7 +583,7 @@ class GoAILauncher:
             width=7,
             font_size=9,
         )
-        self._quit_btn.place(x=618, y=606, width=74, height=30)
+        self._quit_btn.place(x=618, y=600, width=74, height=30)
 
         self._set_log_visibility(False)
 
@@ -1108,7 +1083,6 @@ class GoAILauncher:
         else:
             self._apply_button_style(self._upgrade_btn, "disabled", text="升级不可用", state="disabled")
             self._upgrade_btn.config(cursor="arrow")
-            self._upgrade_hint.config(text="当前设备建议继续使用默认轻量模式，更稳妥")
 
     def _set_status(self, running: bool, text: str):
         def _do():
@@ -1326,12 +1300,6 @@ class GoAILauncher:
 
         local_urls = (status.get("access_urls") or {}).get("local") or [SERVER_URL]
         self._call_in_ui(lambda: self._address_var.set(local_urls[0]))
-        if phase == "ready":
-            self._call_in_ui(lambda: self._status_hint_var.set("浏览器入口已可用，可直接进入对局"))
-        elif phase == "initializing":
-            self._call_in_ui(lambda: self._status_hint_var.set("KataGo 正在初始化，首次启动会稍慢一些"))
-        elif phase in {"failed", "stopped"}:
-            self._call_in_ui(lambda: self._status_hint_var.set("当前可继续使用纯对弈模式"))
 
         if emit_log and signature != self._last_engine_signature:
             if phase == "initializing":
@@ -2050,8 +2018,7 @@ class GoAILauncher:
             )
         )
         if success:
-            self._call_in_ui(lambda: self._upgrade_hint.config(
-                text=f"升级文件已安装到 {os.path.join(BASE_DIR, 'katago')}"))
+            self._log_msg(f"升级文件已安装到 {os.path.join(BASE_DIR, 'katago')}", MUTED)
 
     def _resolve_large_model_url(self):
         req = urllib.request.Request(
