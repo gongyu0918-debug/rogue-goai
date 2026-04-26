@@ -15,6 +15,8 @@ from app.data.cards import (
     CHALLENGE_BETA_POOL,
     ROGUE_CARDS,
     ULTIMATE_CARDS,
+    get_rogue_card,
+    get_ultimate_card,
 )
 
 
@@ -169,13 +171,14 @@ async def handle_rogue_select_card(ctx: WebSocketActionContext, data: dict) -> N
             return
         game.challenge_cards.append(card_id)
         game.challenge_offer_cards = []
+        card_def = get_rogue_card(card_id)
         await ctx.apply_challenge_rogue_loadout(game, ctx.send)
         await ctx.send(
             {
                 "type": "rogue_card_selected",
                 "card_id": card_id,
-                "name": ROGUE_CARDS[card_id]["name"],
-                "icon": ROGUE_CARDS[card_id]["icon"],
+                "name": card_def["name"],
+                "icon": card_def["icon"],
                 "waiting_seal": False,
                 **game.to_state(),
             }
@@ -209,7 +212,7 @@ async def handle_challenge_refresh_offer(ctx: WebSocketActionContext, data: dict
     game.challenge_offer_cards = choices
     cards_data = []
     for cid in choices:
-        c = ROGUE_CARDS[cid]
+        c = get_rogue_card(cid)
         cards_data.append(
             {
                 "id": cid,
@@ -377,10 +380,10 @@ async def handle_ultimate_select_card(ctx: WebSocketActionContext, data: dict) -
     elif card_id == "quickthink" and game.current_player == game.player_color:
         game.ultimate_quickthink_token += 1
         game.ultimate_quickthink_active = True
-    pdef = ULTIMATE_CARDS[card_id]
+    pdef = get_ultimate_card(card_id)
     ai_card_id = ctx.pick_ai_ultimate_card(exclude=[card_id])
     game.ultimate_ai_card = ai_card_id
-    adef = ULTIMATE_CARDS[ai_card_id]
+    adef = get_ultimate_card(ai_card_id)
     game.reset_history()
     await ctx.send(
         {

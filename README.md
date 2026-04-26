@@ -1,237 +1,225 @@
-# GoAI
+<p align="center">
+  <img src="goai.png" width="96" alt="GoAI icon">
+</p>
 
-一个更像游戏、而不只是工具的围棋 AI 项目。`GoAI` 基于 `KataGo`，但目标不是做成纯分析面板，而是把围棋做成更容易上手、分享和反复游玩的 Roguelike 风格产品。
+<h1 align="center">GoAI · Rogue Go Arena</h1>
 
-`GoAI` is a Go / Weiqi project built on top of `KataGo`, but it is not trying to be just another serious engine frontend. The goal is to make Go feel playful, fast, surprising, and easy to share.
+<p align="center">
+  把围棋做成一局会构筑、会翻盘、会爆发的 Roguelike 对弈游戏。
+</p>
 
-## 核心特色
+<p align="center">
+  <img alt="Python 3.11" src="https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white">
+  <img alt="Windows first" src="https://img.shields.io/badge/Windows-first-0078D6?style=for-the-badge&logo=windows&logoColor=white">
+  <img alt="KataGo powered" src="https://img.shields.io/badge/KataGo-powered-D4AF37?style=for-the-badge">
+  <img alt="MIT license" src="https://img.shields.io/badge/License-MIT-111111?style=for-the-badge">
+</p>
 
-- `对局`：常规 AI 对弈，支持多个强度档位
-- `学习`：观看 AI 与 AI 对弈，适合复盘和找灵感
-- `双人`：本地双人对局
-- `Rogue 模式`：开局三选一卡牌，整局规则都会被改写
-- `Ultimate 模式`：双方各拿一张夸张大招，短局高爆发
-- `闯关β`：测试中的构筑闯关模式，卡牌可叠加并带有限次资源
-- 中英双语界面
-- Windows 优先，兼顾老电脑与驱动回退
+## 这是什么
 
-## Why It Feels Different
+GoAI 是一个基于 KataGo 的围棋游戏项目。它保留标准围棋对弈、AI 学习和本地双人玩法，同时加入 Rogue 卡牌、Ultimate 大招、闯关构筑、暗色木纹棋桌和 Windows 一键启动体验。
 
-普通围棋 AI 更像分析工具，`GoAI` 更像“围棋 + Roguelike 卡牌规则”的轻游戏：
+English: GoAI is a KataGo-powered Go / Weiqi game that blends classic AI play with roguelike cards, explosive ultimate skills, and a polished desktop-first board experience.
 
-- 有的卡会限制 AI 落点
-- 有的卡会奖励补子、爆发、连锁
-- 有的卡会奖励特殊形状、隐藏触发、陷阱反打
-- 大招模式强调短局翻盘和视觉演出
+## 一眼能看懂的亮点
 
-Most Go engine apps feel like training or analysis tools. `GoAI` is designed to feel more like a playful board game:
-
-- some cards nerf or mislead the AI
-- some cards spawn extra stones or trigger traps
-- some cards reward patterns, shape tricks, or hidden areas
-- Ultimate mode turns the board into a short explosive showdown
-
-## 主要模式
-
-### 1. 对局
-
-- 标准 AI 对弈
-- 适合正常下棋和练习
-
-### 2. 学习
-
-- 观看双方都是 AI 的对弈
-- 适合看布局、节奏和取舍
-
-### 3. 双人
-
-- 本地双人模式
-- 适合娱乐局和线下分享
-
-### 4. Rogue 模式
-
-- 开局三选一卡牌
-- 一张卡就能改变整局节奏
-- 偏“巧手、套路、节奏差、局部事件”
-
-### 5. Ultimate 模式
-
-- 双方各拿一张超规格大招
-- 节奏更快，局势更炸裂
-- 适合短时间高演出对局
-
-## Rogue 卡牌总表
-
-| 卡牌 | 效果 |
+| 体验 | 你会看到什么 |
 | --- | --- |
-| 天元 | 开局 3 手，AI 会优先靠近天元与星位落子 |
-| 掷骰 | AI 每手有 8% 概率直接虚手 |
-| 蚕食 | 每提 1 子，贴目向有利方偏移 4 目 |
-| 傀儡术 | 选定一点，强制 AI 在此落子（限 1 次） |
-| 封印术 | 指定 4 个禁着点，整局 AI 都不能下在这些点 |
-| 连击 | 本回合可连续落两手（限 1 次） |
-| 弱化 | AI 大约下降 8 段，搜索算力只剩约 5%，前 12 手也更容易误选备选点 |
-| 贴目减半 | 贴目会朝你有利的方向调整 7 目 |
-| 限时压制 | AI 大约下降 5 段，且每手最多思考 0.10 秒，前 10 手也更容易仓促误判 |
-| 低空飞行 | AI 前 6 手偏向二三路低位 |
-| 次优之选 | AI 前 8 手更容易从后几名的候选点里随机挑一手 |
-| 镜像 | AI 有 10% 概率按棋盘对称位置镜像模仿你的上一手 |
-| 手滑了 | AI 有 10% 概率手滑到相邻的点位 |
-| 黑洞 | 棋盘中心 13 子区域对 AI 前 6 手禁入 |
-| 乾坤挪移 | 强制 AI 虚手，你继续行棋（限 1 次） |
-| 战争迷雾 | AI 前 11 手每手前会刷新一个 3×3 禁区遮罩；之后每回合随机封锁 2 个 AI 禁着点 |
-| 星位引力 | AI 前 5 手被星位磁场牵引 |
-| 黄金角 | 随机封锁一角 4×4 区域，AI 前 10 手禁入 |
-| 三三开局 | 强制 AI 在开局前 2 手去抢四个三三点中的位置，也就是开局硬走三三；之后 2 手暂时避开角上 4×4 区域 |
-| 影子 | AI 前 2 手有较高概率紧跟自己的上一手 |
-| 萌芽 | 每次提子后，都会在附近自动长出 1 颗己棋 |
-| 定式强迫症 | 开局亮出 7 个目标点，只要下中 6 个，剩下的 1 个会自动补成你的棋子 |
-| 让子任务 | 先虚手 1 次，之后每满 8 手奖励 AI 虚手一次，最多触发 3 次 |
-| 神之一手 | 踩中隐藏菱形区，周围 3×3 内随机爆出 2 颗己棋，只会落在空点 |
-| 三三陷阱 | 只有对手第 1 手正好下在四个三三点之一时才会触发，并在那手棋周围反生 8 颗我方棋 |
-| 守角辅助 | 每个角各算一次：任一角的 5×5 区域里有 4 颗己子时，就会在那个角补 1 颗援军 |
-| 三连星 | 若你前 2 手都落在星位，会自动补出第 3 颗星位棋，并再长出 1 颗援军 |
-| 永不悔棋 | 禁用悔棋，但每手 8% 概率白送一子 |
-| 快速思考 | 3 秒内落子可追加 1 秒连击窗口；选中后禁用推荐点位与悔棋 |
-| 大智若愚 | 摆出愚形，附近 5×5 内随机长出 2 颗己棋 |
-| 五子连珠 | 这是五子棋，不是围棋。每当我方横、竖、斜正好连成 5 颗同色棋，就会优先在首尾补子；若首尾被堵住，则改在两端附近补子，并在连线附近再补 4 颗援军 |
-| 代练上号 | 主动技能：后 30 手由更强的 AI 代打；若下完后胜率仍低于 50%，则额外再代打 10 手 |
-| 提子犯规 | 若对手单次或累计提子达到 4 颗，就会触发“提子未放在棋盒”，被惩罚方罚 4 目，随后重新计数 |
-| 起死回生 | 当我方胜率跌到 26% 以下时，仅触发 1 次：在上一手周围 3×3 内随机消掉 1 颗敌子，并随机补 1 颗己棋（不会落在禁着点） |
+| Rogue 对局 | 开局三选一卡牌，整局规则被改写 |
+| Ultimate 大招 | 双方各拿一张高爆发技能，短局强演出 |
+| AI 也能 Rogue | 玩家和 AI 都能获得卡牌，局势更不可预测 |
+| 学习模式 | 观看 AI 自战，用来观察布局、节奏和取舍 |
+| 本地双人 | 面对面下棋，也能加入 Rogue 规则 |
+| 暗色木纹 UI | 正俯视棋桌、木质按钮、沉浸式棋盘背景 |
+| 自适应布局 | 适配窗口化、1080p、2K、4K 视图 |
+| 引擎回退 | CUDA、OpenCL、CPU 路径按可用环境自动选择 |
 
-## Ultimate 大招总表
+## 当前版本重点
 
-| 卡牌 | 效果 |
-| --- | --- |
-| 连珠棋 | 每手 65% 概率触发追加行动 |
-| 无限增殖 | 落子后 5×5 范围内爆出 5 颗同色棋 |
-| 双刀流 | 每回合固定连下 2 手，但整回合只计 1 手数 |
-| 狂野生长 | 4 颗己子向四周蔓延扩张 |
-| 排异反应 | 落点 5×5 内敌子被推开或摧毁 |
-| 绝对领地 | 落点周围 4 格形成禁入结界 |
-| 影分身 | 先生成一颗镜像棋；下一回合会按原落点和镜像点强制连成一整条线，就算两端棋子被提掉也照样连线 |
-| 瘟疫 | 3×3 内所有敌子转化为己方 |
-| 陨石雨 | 随机轰掉 5 颗对方棋子 |
-| 量子纠缠 | 全盘随机位置生成 5 颗同色棋 |
-| 吞噬 | 5×5 范围内敌子全部清空 |
-| 时空裂缝 | 85% 概率抹去对手最近 2 手 |
-| 天崩地裂 | 十字方向清除所有敌子 |
-| 磁力吸附 | 己方棋子飞速聚拢，碾碎路径上的敌子 |
-| 亡灵召唤 | 召唤 3 颗己棋 + 策反 2 颗敌棋 |
-| 万里长城 | 有 60% 概率发动：整行或整列筑起一面不可逾越的棋墙 |
-| 定式爆发 | 命中定式后补满目标，并额外爆出 50 颗同色棋 |
-| 神之一手 | 踩中 5×5 隐藏菱形，清空敌子并铺满 50 颗己棋 |
-| 守角要塞 | 四个角分别独立结算：某个角的 5×5 区域里有 2 颗己子时，就会封满该角 8×8 边界并清掉里面的敌子 |
-| 三连星爆发 | 前 3 手全落星位，引爆全盘星位势力 |
-| 极速风暴 | 5 秒内不限次数连续落子，结束后 AI 再读盘，整段只计 1 手数 |
-| 愚形连锁 | 检测到愚形就连锁生成，最多铺满 20 颗己棋 |
-| 五子连珠爆发 | 这是五子棋，不是围棋。每当我方横、竖、斜正好连成 5 颗同色棋，就会随机清除对方 30 颗棋子，并在全盘随机补下 30 颗己棋；该效果可连锁触发 |
-| 提子犯规 | 若对手提子数量超过 5 颗，则 100% 触发“提子未放在棋盒”，被惩罚方立刻罚 50 目；每次触发后重新计数，之后仍可重复触发 |
-| 起死回生 | 当我方胜率跌到 30% 以下时：全盘随机清除对方 30 颗棋子，并随机补下 30 颗己棋 |
+- 重做棋盘主界面：正俯视木纹棋桌，大棋盘优先，底部工具按钮贴近真实棋具风格。
+- 优化窗口化体验：初始窗口下棋盘会给底部 UI 留出安全区域。
+- 重做菜单和下拉控件：开始菜单、设置面板和顶栏统一暗色木纹视觉。
+- 重构卡牌数据：Rogue / Ultimate 卡牌集中到 `app/data/cards.py`，便于维护和测试。
+- 加强烟测：`card_smoke_test.py` 覆盖 Rogue 触发、主动技能、AI Rogue、双人 Rogue 和 Ultimate 关键链路。
 
-## 项目定位
+## 玩法模式
 
-- 这是一个爱好者驱动的围棋游戏项目
-- 它不是官方 KataGo GUI
-- 它不隶属于 KataGo 项目
-- 项目维护过程中大量使用了 AI 编码辅助工具
+### 普通对局
 
-For transparency: this project was developed with heavy AI coding assistance, mainly using tools such as `Claude Code` and `Codex`, while the maintainer provided gameplay direction, balancing goals, packaging targets, and testing feedback.
+标准 AI 对弈。适合正常练棋、熟悉界面、测试不同 AI 强度。
 
-## 运行目标
+### Rogue
 
-Windows 版本优先保证：
+开局从卡牌里选一张，之后整局围棋都会带着这张规则运行。它可以让 AI 手滑、限制 AI 区域、制造补子、触发连击、改变贴目，甚至把定式目标变成任务。
 
-- 好安装
-- 好启动
-- 出问题时有清晰回退
-- 没有 NVIDIA 也能运行
+### Ultimate
 
-当前回退路径：
+双方各拿一张强力大招。节奏更快，效果更夸张，适合短时间体验高冲击局势。
 
-- 优先尝试 `CUDA`
-- 不行则尝试 `OpenCL`
-- 再不行回退 `CPU`
+### 学习
 
-## Runtime Environment
+让 AI 与 AI 对弈。适合观察不同强度和风格下的布局选择。
 
-Recommended environment for source development:
+### 双人
+
+本地双人对局。适合线下分享，也适合把 Rogue 卡牌当成派对规则来玩。
+
+## 快速开始
+
+### 方式 1：使用 Windows 安装包
+
+从 GitHub Releases 下载最新版安装包，安装后直接打开 GoAI。
+
+项目会优先尝试 CUDA 引擎；环境不满足时会继续尝试 OpenCL 和 CPU。
+
+### 方式 2：从源码运行
+
+环境建议：
 
 - Windows 8.1 / 10 / 11
 - Python 3.11
-- a modern browser
-- optional GPU
+- 一个现代浏览器
+- 可选 NVIDIA / OpenCL GPU
 
-Runtime notes:
-
-- Older CPUs around the Intel i7-6700K class are supported, but the CPU backend is tuned for stability first
-- NVIDIA GPUs with outdated drivers may skip CUDA and fall back to OpenCL or CPU automatically
-- Windows 8.1 is the practical lower bound for the current Python 3.11 build pipeline
-
-## Quick Start
-
-### Option 1: Use the packaged Windows release
-
-If you just want to play, use the installer from the GitHub Releases page.
-
-### Option 2: Run from source
-
-1. Install Python 3.11
-2. Install dependencies
+安装依赖：
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Prepare the `katago/` directory
-
-This repository intentionally does not include large third-party engine binaries, neural network weights, or NVIDIA runtime DLLs by default. See `katago/README.md` for expected files.
-
-4. Run the backend
+准备 KataGo：
 
 ```bash
-python server.py
+python setup.py
 ```
 
-5. Or run the launcher
+启动桌面入口：
 
 ```bash
 python launcher.py
 ```
 
-## License
+或者直接启动后端：
 
-This repository is available under the MIT License.
+```bash
+python server.py
+```
 
-Please also read:
+默认页面由本地服务提供，浏览器会打开 GoAI 主界面。
 
-- `LICENSE`
-- `THIRD_PARTY_NOTICES.md`
+## KataGo 文件说明
 
-## Third-Party Credits
+仓库默认保留源码和配置，体积较大的第三方引擎文件、模型权重和运行时文件通过安装脚本或发布包获取。
 
-Core third-party components used by this project include:
+KataGo 目录约定见 [katago/README.md](katago/README.md)。
 
-- `KataGo` engine by David J Wu (`lightvector`) and contributors
-- official KataGo neural network weights from `katagotraining.org`
-- Python libraries such as `FastAPI`, `Uvicorn`, and `websockets`
+## 项目结构
 
-Links:
+```text
+app/
+  config/          游戏和引擎配置
+  data/            Rogue / Ultimate 卡牌数据
+  domain/          棋局状态与坐标领域模型
+  runtime/         WebSocket 行为和引擎运行逻辑
+static/
+  index.html       主游戏界面
+  assets/          木纹、棋盘、按钮图标等资源
+katago/            KataGo 配置和本地引擎文件位置
+server.py          FastAPI 后端
+launcher.py        Windows 桌面启动入口
+card_smoke_test.py 卡牌与关键规则烟测
+```
 
-- KataGo engine: <https://github.com/lightvector/KataGo>
-- KataGo networks: <https://katagotraining.org/networks/>
-- KataGo neural net license: <https://katagotraining.org/network_license/>
+## 开发命令
 
-## Repository Policy
+运行卡牌烟测：
 
-To keep the GitHub repository smaller and easier to review:
+```bash
+python card_smoke_test.py
+```
 
-- source code stays in Git
-- logs, build outputs, local test files, models, and packaged binaries stay out of Git
-- packaged installers should be attached to GitHub Releases instead of being committed into the source repository
+运行运行时烟测：
 
-## Friendly Note
+```bash
+python runtime_smoke_test.py
+```
 
-这不是一个“完美无瑕的专业软件产品”，而是一个围棋爱好者把自己想玩的玩法做出来、再尽量打磨到别人也能直接下载安装游玩的项目。
+构建 Windows 发布包：
 
-If the app feels a little rough around the edges sometimes, that is honest rather than hidden. The goal is simple: make Go more playful, more surprising, and easier to share.
+```powershell
+.\build_windows_release.ps1
+```
+
+## 卡牌系统
+
+当前版本包含：
+
+- 34 张 Rogue 卡
+- 25 张 Ultimate 卡
+- Rogue 精选池、AI Rogue 池、双人 Rogue 池、闯关 Beta 池
+- Ultimate 精选池和 AI Ultimate 池
+
+完整卡牌定义位于 [app/data/cards.py](app/data/cards.py)。
+
+<details>
+<summary>Rogue 卡牌例子</summary>
+
+| 卡牌 | 玩法变化 |
+| --- | --- |
+| 傀儡术 | 先指定 AI 下一手位置，随后 AI 被迫落到那里 |
+| 战争迷雾 | 前期不断刷新禁区，后续持续封锁 AI 点位 |
+| 神之一手 | 踩中隐藏区域后爆出己方棋子 |
+| 三连星 | 前两手命中星位后补出第三颗星位棋和援军 |
+| 快速思考 | 限时连击窗口，禁用推荐点位和悔棋 |
+| 代练上号 | 后段由更强 AI 临时代打 |
+| 起死回生 | 低胜率时触发一次逆转型补救 |
+
+</details>
+
+<details>
+<summary>Ultimate 大招例子</summary>
+
+| 大招 | 玩法变化 |
+| --- | --- |
+| 连珠棋 | 高概率追加行动 |
+| 无限增殖 | 落点周围爆出多颗同色棋 |
+| 双刀流 | 每回合固定连续落两手 |
+| 时空裂缝 | 抹去对手最近行动 |
+| 天崩地裂 | 十字方向清除敌子 |
+| 神之一手 | 隐藏命中后清空敌子并铺满己棋 |
+| 五子连珠爆发 | 五连触发大范围清除和补子 |
+
+</details>
+
+## 设计方向
+
+GoAI 的目标是让围棋在保留基本棋感的同时更容易被新玩家尝试：
+
+- 棋盘始终是视觉中心。
+- UI 像棋具，按钮像可以按下的实体物件。
+- AI 强度有回退路径，旧电脑也能进入游戏。
+- 卡牌规则提供戏剧性，同时通过烟测保护关键行为。
+- 中文和英文界面并行维护。
+
+## 第三方与授权
+
+GoAI 使用 MIT License。详见 [LICENSE](LICENSE)。
+
+核心第三方组件：
+
+- KataGo by David J Wu (`lightvector`) and contributors
+- KataGo neural network weights from `katagotraining.org`
+- FastAPI, Uvicorn, websockets and related Python packages
+
+本项目是独立爱好者项目，与 KataGo 上游保持独立。第三方授权和说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+## 仓库策略
+
+- 源码、配置、UI 资源进入 Git。
+- 日志、构建产物、本地测试文件、模型和打包二进制保持在仓库外。
+- Windows 安装包建议发布到 GitHub Releases。
+
+## 开发透明度
+
+项目开发过程中使用了 AI 编码辅助工具。维护者负责玩法方向、体验判断、打包目标、测试反馈和发布取舍。
+

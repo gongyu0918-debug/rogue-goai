@@ -1,8 +1,13 @@
 """Card definitions and related pure data."""
 
+from __future__ import annotations
+
+from collections.abc import Iterable
+from typing import Any
+
 ROGUE_CARDS = {
     "tengen": {"name": "天元", "desc": "开局 5 手，AI 会优先靠近天元与星位落子", "icon": "◎"},
-    "dice": {"name": "掷骰", "desc": "AI 每手有 8% 概率直接虚手", "icon": "🎉"},
+    "dice": {"name": "掷骰", "desc": "AI 每手有 10% 概率直接虚手", "icon": "🎉"},
     "erosion": {"name": "蚕食", "desc": "每提 1 子，贴目向有利方偏移 4 目", "icon": "🌑"},
     "puppet": {"name": "傀儡术", "desc": "先选定 AI 下一手的落点；你先正常落子，随后 AI 会被迫下在那里（限 1 次）", "icon": "🎁", "uses": 1},
     "seal": {"name": "封印术", "desc": "指定 4 个禁着点，整局 AI 都不能下在这些点", "icon": "🔀"},
@@ -12,8 +17,8 @@ ROGUE_CARDS = {
     "time_press": {"name": "限时压制", "desc": "AI 大约下降 5 段，且每手最多思考 0.10 秒，前 12 手更容易仓促误判", "icon": "⏱️"},
     "lowline": {"name": "低空飞行", "desc": "AI 前 8 手偏向二三路低位", "icon": "🦊"},
     "suboptimal": {"name": "次优之选", "desc": "AI 前 8 手更容易从后几名的候选点里随机挑一手", "icon": "🚍"},
-    "mirror": {"name": "镜像", "desc": "AI 有 10% 概率按棋盘对称位置镜像模仿你的上一手", "icon": "🪞"},
-    "slip": {"name": "手滑了", "desc": "AI 有 10% 概率手滑到相邻的点位", "icon": "😾"},
+    "mirror": {"name": "镜像", "desc": "AI 有 16% 概率按棋盘对称位置镜像模仿你的上一手", "icon": "🪞"},
+    "slip": {"name": "手滑了", "desc": "AI 有 14% 概率手滑到相邻的点位", "icon": "😾"},
     "blackhole": {"name": "黑洞", "desc": "棋盘中心 13 子区域对 AI 前 6 手禁入", "icon": "🕳️"},
     "exchange": {"name": "乾坤挪移", "desc": "强制 AI 虚手，你继续行棋（限 1 次）", "icon": "🔄", "uses": 1},
     "fog": {"name": "战争迷雾", "desc": "AI 前 11 手每手前会刷新一个 3×3 禁区遮罩；之后每回合随机封锁 2 个 AI 禁着点", "icon": "🌫️"},
@@ -24,11 +29,11 @@ ROGUE_CARDS = {
     "sprout": {"name": "萌芽", "desc": "每次提子后，都会在附近自动长出 1 颗己棋", "icon": "🌱"},
     "joseki_ocd": {"name": "定式强迫症", "desc": "开局亮出 7 个目标点，只要下中 4 个，剩下的 3 个会自动补成你的棋子", "icon": "📻"},
     "handicap_quest": {"name": "让子任务", "desc": "先虚手 1 次，之后每满 8 手奖励 AI 虚手一次，最多触发 3 次", "icon": "🎵"},
-    "god_hand": {"name": "神之一手", "desc": "踩中隐藏菱形区，周围 3×3 内随机爆出 2 颗己棋，只会落在空点", "icon": "✨"},
+    "god_hand": {"name": "神之一手", "desc": "踩中隐藏菱形区，周围 3×3 内随机爆出 3 颗己棋，只会落在空点", "icon": "✨"},
     "sansan_trap": {"name": "三三陷阱", "desc": "只有对手第 1 手正好下在四个三三点之一时才会触发，并在那手棋周围反生 8 颗我方棋", "icon": "🪤"},
     "corner_helper": {"name": "守角辅助", "desc": "每个角各算一次：任一角的 5×5 区域里有 4 颗己子时，就会在那个角补 1 颗援军", "icon": "🏯"},
-    "sanrensei": {"name": "三连星", "desc": "若你前 2 手都落在星位，会自动补出第 3 颗星位棋，并再长出 1 颗援军", "icon": "⭐"},
-    "no_regret": {"name": "永不悔棋", "desc": "禁用悔棋，但每手 10% 概率白送一子", "icon": "🚫"},
+    "sanrensei": {"name": "三连星", "desc": "若你前 2 手都落在星位，会自动补出第 3 颗星位棋，并再长出 2 颗援军", "icon": "⭐"},
+    "no_regret": {"name": "永不悔棋", "desc": "禁用悔棋，但每手 12% 概率白送一子", "icon": "🚫"},
     "quickthink": {"name": "快速思考", "desc": "4 秒内落子可追加 2 秒连击窗口；选中后禁用推荐点位与悔棋", "icon": "⚡"},
     "foolish_wisdom": {"name": "大智若愚", "desc": "摆出愚形，附近 5×5 内随机长出 2 颗己棋", "icon": "🧠"},
     "five_in_row": {"name": "五子连珠", "desc": "这是五子棋，不是围棋。每当我方横、竖、斜正好连成 5 颗同色棋，就会优先在首尾补子；若首尾被堵住，则改在两端附近补子，并在连线附近再补 4 颗援军", "icon": "🎯"},
@@ -168,3 +173,150 @@ AI_ULTIMATE_POOL = [
     "wildgrow",
     "plague",
 ]
+
+CARD_REQUIRED_FIELDS = ("name", "desc", "icon")
+CHALLENGE_CATEGORIES = ("derivative", "trap", "zone", "restriction", "active")
+
+ROGUE_CARD_META = {
+    "puppet": {"tier": "S", "category": "主动", "complexity": "高"},
+    "twin": {"tier": "A", "category": "主动", "complexity": "中"},
+    "exchange": {"tier": "A", "category": "主动", "complexity": "低"},
+    "coach_mode": {"tier": "S", "category": "主动", "complexity": "中"},
+    "dice": {"tier": "B+", "category": "AI干扰", "complexity": "低"},
+    "mirror": {"tier": "B+", "category": "AI干扰", "complexity": "低"},
+    "slip": {"tier": "B+", "category": "AI干扰", "complexity": "低"},
+    "god_hand": {"tier": "A", "category": "爆发", "complexity": "中"},
+    "sansan_trap": {"tier": "A", "category": "陷阱", "complexity": "中"},
+    "sanrensei": {"tier": "A", "category": "开局构筑", "complexity": "中"},
+    "joseki_ocd": {"tier": "A", "category": "任务", "complexity": "中"},
+    "no_regret": {"tier": "B+", "category": "风险收益", "complexity": "低"},
+    "quickthink": {"tier": "A", "category": "节奏", "complexity": "高"},
+    "five_in_row": {"tier": "A", "category": "连线构筑", "complexity": "高"},
+}
+
+ULTIMATE_CARD_META = {
+    "chain": {"tier": "S", "category": "连动", "complexity": "低"},
+    "double": {"tier": "S", "category": "连动", "complexity": "低"},
+    "quickthink": {"tier": "S", "category": "节奏", "complexity": "高"},
+    "joseki_burst": {"tier": "S", "category": "任务爆发", "complexity": "中"},
+    "god_hand": {"tier": "S", "category": "爆发", "complexity": "中"},
+    "five_in_row": {"tier": "S", "category": "连线构筑", "complexity": "高"},
+}
+
+DEFAULT_ROGUE_META = {"tier": "B", "category": "规则改写", "complexity": "中"}
+DEFAULT_ULTIMATE_META = {"tier": "S", "category": "大招", "complexity": "中"}
+
+
+def _missing_pool_entries(pool_name: str, pool: Iterable[str], catalog: dict[str, dict[str, Any]]) -> list[str]:
+    return [f"{pool_name}:{card_id}" for card_id in pool if card_id not in catalog]
+
+
+def validate_card_catalog() -> list[str]:
+    """Return human-readable catalog errors for smoke tests and startup checks."""
+    errors: list[str] = []
+    for catalog_name, catalog in (("ROGUE_CARDS", ROGUE_CARDS), ("ULTIMATE_CARDS", ULTIMATE_CARDS)):
+        for card_id, card in catalog.items():
+            for field in CARD_REQUIRED_FIELDS:
+                if not card.get(field):
+                    errors.append(f"{catalog_name}.{card_id}: missing {field}")
+            uses = card.get("uses")
+            if uses is not None and (not isinstance(uses, int) or uses < 0):
+                errors.append(f"{catalog_name}.{card_id}: invalid uses={uses!r}")
+
+    for missing in _missing_pool_entries("ROGUE_FEATURED_CARDS", ROGUE_FEATURED_CARDS, ROGUE_CARDS):
+        errors.append(f"unknown rogue featured card {missing}")
+    for missing in _missing_pool_entries("CHALLENGE_BETA_POOL", CHALLENGE_BETA_POOL, ROGUE_CARDS):
+        errors.append(f"unknown challenge card {missing}")
+    for missing in _missing_pool_entries("TWO_PLAYER_ROGUE_POOL", TWO_PLAYER_ROGUE_POOL, ROGUE_CARDS):
+        errors.append(f"unknown two-player rogue card {missing}")
+    for missing in _missing_pool_entries("AI_ROGUE_POOL", AI_ROGUE_POOL, ROGUE_CARDS):
+        errors.append(f"unknown AI rogue card {missing}")
+    for missing in _missing_pool_entries("ULTIMATE_FEATURED_CARDS", ULTIMATE_FEATURED_CARDS, ULTIMATE_CARDS):
+        errors.append(f"unknown ultimate featured card {missing}")
+    for missing in _missing_pool_entries("AI_ULTIMATE_POOL", AI_ULTIMATE_POOL, ULTIMATE_CARDS):
+        errors.append(f"unknown AI ultimate card {missing}")
+
+    for card_id, category in CHALLENGE_CATEGORY_MAP.items():
+        if card_id not in ROGUE_CARDS:
+            errors.append(f"unknown challenge category card CHALLENGE_CATEGORY_MAP:{card_id}")
+        if category not in CHALLENGE_CATEGORIES:
+            errors.append(f"unknown challenge category {card_id}:{category}")
+    return errors
+
+
+def assert_valid_card_catalog() -> None:
+    errors = validate_card_catalog()
+    if errors:
+        raise ValueError("Invalid card catalog:\n" + "\n".join(errors))
+
+
+def get_rogue_card(card_id: str) -> dict[str, Any]:
+    return ROGUE_CARDS[card_id]
+
+
+def get_ultimate_card(card_id: str) -> dict[str, Any]:
+    return ULTIMATE_CARDS[card_id]
+
+
+def rogue_card_meta(card_id: str) -> dict[str, str]:
+    return {**DEFAULT_ROGUE_META, **ROGUE_CARD_META.get(card_id, {})}
+
+
+def ultimate_card_meta(card_id: str) -> dict[str, str]:
+    return {**DEFAULT_ULTIMATE_META, **ULTIMATE_CARD_META.get(card_id, {})}
+
+
+def rogue_card_summary(card_id: str) -> dict[str, Any]:
+    card = get_rogue_card(card_id)
+    return {"id": card_id, "name": card["name"], "desc": card["desc"], "icon": card["icon"], "meta": rogue_card_meta(card_id)}
+
+
+def ultimate_card_summary(card_id: str) -> dict[str, Any]:
+    card = get_ultimate_card(card_id)
+    return {"id": card_id, "name": card["name"], "desc": card["desc"], "icon": card["icon"], "meta": ultimate_card_meta(card_id)}
+
+
+def rogue_card_ids(pool: Iterable[str] | None = None, exclude: Iterable[str] | None = None) -> list[str]:
+    excluded = set(exclude or [])
+    source = list(pool) if pool is not None else list(ROGUE_CARDS.keys())
+    return [card_id for card_id in source if card_id in ROGUE_CARDS and card_id not in excluded]
+
+
+def ultimate_card_ids(exclude: Iterable[str] | None = None) -> list[str]:
+    excluded = set(exclude or [])
+    return [card_id for card_id in ULTIMATE_CARDS if card_id not in excluded]
+
+
+def featured_rogue_cards(pool: Iterable[str] | None = None) -> list[str]:
+    source = rogue_card_ids(pool)
+    return [card_id for card_id in source if card_id in ROGUE_FEATURED_CARDS]
+
+
+def featured_ultimate_cards(pool: Iterable[str] | None = None) -> list[str]:
+    source = list(pool) if pool is not None else list(ULTIMATE_CARDS.keys())
+    return [card_id for card_id in source if card_id in ULTIMATE_FEATURED_CARDS]
+
+
+def challenge_card_category(card_id: str) -> str | None:
+    return CHALLENGE_CATEGORY_MAP.get(card_id)
+
+
+def challenge_category_counts(cards: Iterable[str]) -> dict[str, int]:
+    counts = {category: 0 for category in CHALLENGE_CATEGORIES}
+    for card_id in cards:
+        category = challenge_card_category(card_id)
+        if category:
+            counts[category] += 1
+    return counts
+
+
+def ai_rogue_cards(exclude: Iterable[str] | None = None) -> list[str]:
+    return rogue_card_ids(AI_ROGUE_POOL, exclude=exclude)
+
+
+def ai_ultimate_cards(exclude: Iterable[str] | None = None) -> list[str]:
+    excluded = set(exclude or [])
+    return [card_id for card_id in AI_ULTIMATE_POOL if card_id in ULTIMATE_CARDS and card_id not in excluded]
+
+
+assert_valid_card_catalog()

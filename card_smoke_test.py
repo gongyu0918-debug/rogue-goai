@@ -4,6 +4,7 @@ import random
 import threading
 
 import server as s
+from app.data import cards as card_data
 from app.runtime.ws_actions import WebSocketActionContext, handle_rogue_use_puppet
 
 
@@ -77,6 +78,21 @@ def make_game(size=9):
     game = s.GoGame(size=size, komi=7.5, player_color="B", level="5k", two_player=False)
     game.current_player = game.player_color
     return game
+
+
+def smoke_card_catalog():
+    assert card_data.validate_card_catalog() == []
+    assert card_data.get_rogue_card("puppet")["uses"] == 1
+    assert card_data.get_ultimate_card("chain")["name"] == "连珠棋"
+    assert card_data.rogue_card_summary("puppet")["meta"]["category"] == "主动"
+    assert card_data.ultimate_card_summary("chain")["meta"]["tier"] == "S"
+    assert card_data.rogue_card_ids(["puppet", "missing", "dice"], exclude=["dice"]) == ["puppet"]
+    counts = card_data.challenge_category_counts(["twin", "exchange", "fog"])
+    assert counts["active"] == 2
+    assert counts["zone"] == 1
+    assert "god_hand" in card_data.featured_rogue_cards(["dice", "god_hand"])
+    assert all(card in card_data.ROGUE_CARDS for card in card_data.ai_rogue_cards())
+    assert all(card in card_data.ULTIMATE_CARDS for card in card_data.ai_ultimate_cards())
 
 
 def seed_board(game):
@@ -1443,6 +1459,7 @@ async def main():
     old_engine = s.engine
     try:
         s.engine = DummyEngine(["D4", "E5", "F6"])
+        smoke_card_catalog()
         await smoke_activate_rogue_cards()
         await smoke_player_rogue_effects()
         await smoke_joseki_completion()

@@ -45,8 +45,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#DistDir}\GoAI.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#DistDir}\GoAI_Server\*"; DestDir: "{app}\GoAI_Server"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#RepoRoot}\app\*"; DestDir: "{app}\app"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "__pycache__\*,*.pyc,*.pyo"
-Source: "{#RepoRoot}\static\*"; DestDir: "{app}\static"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "{#RepoRoot}\katago\*"; DestDir: "{app}\katago"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#RepoRoot}\static\*"; DestDir: "{app}\static"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "assets\icons\cards-tech-featured\*,assets\icons\cards-tech\*-sheet.png,assets\icons\cards-tech\featured-card-sheet-tech-v1.png,assets\icons\toolbar-tech\toolbar-sheet-tech-*.png,assets\textures\board-tech-classic-v1.png,assets\textures\stone-materials-tech-v2.png"
+Source: "{#RepoRoot}\katago\*"; DestDir: "{app}\katago"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "katago.exe.new,model.bin.gz,kata_log.txt"
 Source: "{#RepoRoot}\server.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#RepoRoot}\goai.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#RepoRoot}\goai.png"; DestDir: "{app}"; Flags: ignoreversion
@@ -54,6 +54,22 @@ Source: "{#RepoRoot}\launcher_bg_app.png"; DestDir: "{app}"; Flags: ignoreversio
 Source: "{#RepoRoot}\README.md"; DestDir: "{app}"; Flags: ignoreversion isreadme
 Source: "{#RepoRoot}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#RepoRoot}\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
+
+[InstallDelete]
+Type: files; Name: "{app}\katago\katago.exe.new"
+Type: files; Name: "{app}\katago\is-*.tmp"
+Type: files; Name: "{app}\katago\model.bin.gz"
+Type: files; Name: "{app}\katago\kata_log.txt"
+Type: filesandordirs; Name: "{app}\static\assets\icons\cards-tech-featured"
+Type: files; Name: "{app}\static\assets\icons\cards-tech\featured-card-sheet-tech-v1.png"
+Type: files; Name: "{app}\static\assets\icons\cards-tech\ig_06e57272b1184deb0169e8dcf2f0f8819885f9a1cae557b618-sheet.png"
+Type: files; Name: "{app}\static\assets\icons\cards-tech\ig_06e57272b1184deb0169e8dd3fcf1481988abcbebf8b621e56-sheet.png"
+Type: files; Name: "{app}\static\assets\icons\cards-tech\ig_06e57272b1184deb0169e8dd99fc008198b9536bed2eaddc83-sheet.png"
+Type: files; Name: "{app}\static\assets\icons\cards-tech\ig_06e57272b1184deb0169e8dded4f448198988ee3c4d926203b-sheet.png"
+Type: files; Name: "{app}\static\assets\icons\toolbar-tech\toolbar-sheet-tech-v1.png"
+Type: files; Name: "{app}\static\assets\icons\toolbar-tech\toolbar-sheet-tech-v2.png"
+Type: files; Name: "{app}\static\assets\textures\board-tech-classic-v1.png"
+Type: files; Name: "{app}\static\assets\textures\stone-materials-tech-v2.png"
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\goai.ico"
@@ -285,4 +301,33 @@ begin
              mbInformation, MB_OK);
     end;
   end;
+end;
+
+procedure DeleteKatagoInstallTemps();
+var
+  FindRec: TFindRec;
+  KatagoDir: String;
+begin
+  KatagoDir := ExpandConstant('{app}\katago');
+  if FindFirst(KatagoDir + '\is-*.tmp', FindRec) then
+  begin
+    try
+      repeat
+        DeleteFile(KatagoDir + '\' + FindRec.Name);
+      until not FindNext(FindRec);
+    finally
+      FindClose(FindRec);
+    end;
+  end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if (CurStep = ssPostInstall) or (CurStep = ssDone) then
+    DeleteKatagoInstallTemps();
+end;
+
+procedure DeinitializeSetup();
+begin
+  DeleteKatagoInstallTemps();
 end;

@@ -62,8 +62,8 @@ body::after {
   100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
 }
 @keyframes toolbarRise {
-  0% { transform: translateY(18px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
+  0% { transform: translateX(-50%) translateY(18px); opacity: 0; }
+  100% { transform: translateX(-50%) translateY(0); opacity: 1; }
 }
 @keyframes sheenSweep {
   0% { transform: translateX(-130%) skewX(-18deg); opacity: 0; }
@@ -177,6 +177,97 @@ header h1 {
   flex-wrap: wrap;
   justify-content: flex-end;
 }
+.client-command-deck {
+  width: min(1180px, calc(100% - 40px));
+  margin: 18px auto 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, .9fr);
+  gap: 16px;
+  align-items: stretch;
+  padding: 16px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(243,221,154,.16), transparent 34%),
+    linear-gradient(135deg, rgba(20,25,34,.94), rgba(7,10,15,.9));
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 24px 50px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.client-hero {
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 8px 8px 10px;
+}
+.client-kicker {
+  color: #8dddf4;
+  font-size: .72rem;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+.client-title {
+  margin-top: 8px;
+  font-size: clamp(1.62rem, 4vw, 3.05rem);
+  line-height: 1;
+  color: #f5e4ad;
+  letter-spacing: .04em;
+  text-shadow: 0 10px 32px rgba(0,0,0,.5);
+}
+.client-copy {
+  max-width: 680px;
+  color: #aeb9c6;
+  font-size: .9rem;
+  line-height: 1.7;
+}
+.client-actions {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 10px;
+}
+.client-action {
+  min-height: 46px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.025));
+  color: #dce5ef;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 12px 24px rgba(0,0,0,.2);
+}
+.client-action.primary {
+  color: #161108;
+  border-color: rgba(255,223,132,.5);
+  background: linear-gradient(180deg, #f5df96, #d0a82d);
+}
+.client-action:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 34px rgba(212,175,55,.16);
+}
+.client-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.client-status-card {
+  min-height: 76px;
+  padding: 13px 14px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.018));
+  border: 1px solid rgba(255,255,255,.07);
+}
+.client-status-card .label {
+  display: block;
+  color: #7f8b9a;
+  font-size: .68rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.client-status-card .value {
+  color: #f1f6fa;
+  font-size: .93rem;
+  font-weight: 700;
+}
 .lang-chip {
   border: 1px solid rgba(212, 175, 55, 0.36);
   background: linear-gradient(180deg, rgba(212, 175, 55, 0.16), rgba(212,175,55,0.06));
@@ -196,7 +287,7 @@ header h1 {
 .main-layout {
   display: flex;
   gap: 28px;
-  padding: 24px 24px 36px;
+  padding: 20px 24px 36px;
   align-items: flex-start;
   width: 100%;
   max-width: 1500px;
@@ -230,10 +321,16 @@ header h1 {
 /* Timers */
 .timer-wrap {
   display: flex;
+  position: absolute;
+  left: var(--board-fit-x, 0px);
+  top: max(8px, calc(var(--board-fit-y, 70px) - 40px));
+  width: var(--board-fit-size, 720px);
+  z-index: 44;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin: 0;
   gap: 8px;
+  pointer-events: none;
 }
 .timer-box {
   display: flex; align-items: center; gap: 6px;
@@ -254,7 +351,7 @@ header h1 {
 }
 .timer-stone.b { background: radial-gradient(circle at 35% 35%, #555, #000); }
 .timer-stone.w { background: radial-gradient(circle at 35% 35%, #fff, #aaa); border: 1px solid #999; }
-.timer-hidden { visibility: hidden; }
+.timer-hidden { display: none !important; }
 
 /* Board */
 #board-container {
@@ -309,6 +406,87 @@ header h1 {
   max-width: 100%;
   height: auto;
   background: transparent;
+  margin: 0 auto;
+}
+.match-hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 48;
+  width: min(260px, calc(100% - 24px));
+  padding: 10px 11px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(8,11,16,.74), rgba(8,11,16,.5));
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 14px 30px rgba(0,0,0,.28);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+  pointer-events: none;
+}
+.match-hud-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #f4e2a3;
+  font-size: .78rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+.match-hud-row {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hud-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.07);
+  color: #dbe3ec;
+  border: 1px solid rgba(255,255,255,.07);
+  font-size: .68rem;
+  font-weight: 700;
+}
+.hud-chip.gold {
+  color: #ffe39a;
+  background: rgba(212,175,55,.13);
+  border-color: rgba(212,175,55,.24);
+}
+.card-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin: 0 0 10px;
+}
+.card-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: #dce6ef;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.08);
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+.card-tag.tier {
+  color: #19140b;
+  background: linear-gradient(180deg, #f7e3a0, #d4af37);
+  border-color: rgba(255,227,157,.48);
+}
+.card-tag.complexity {
+  color: #9beaff;
+  background: rgba(83,198,230,.1);
+  border-color: rgba(83,198,230,.22);
 }
 
 /* Icon Toolbar */
@@ -359,20 +537,22 @@ header h1 {
   z-index: 1;
   pointer-events: none;
 }
-.toolbar-icon[data-icon="setup"] { background-image: url('assets/icons/toolbar-tech/setup.png?v=20260423c'); }
-.toolbar-icon[data-icon="pass"] { background-image: url('assets/icons/toolbar-tech/pass.png?v=20260423c'); }
-.toolbar-icon[data-icon="undo"] { background-image: url('assets/icons/toolbar-tech/undo.png?v=20260423c'); }
-.toolbar-icon[data-icon="score"] { background-image: url('assets/icons/toolbar-tech/score.png?v=20260423c'); }
-.toolbar-icon[data-icon="territory-on"] { background-image: url('assets/icons/toolbar-tech/territory-on.png?v=20260423c'); }
-.toolbar-icon[data-icon="territory-off"] { background-image: url('assets/icons/toolbar-tech/territory-off.png?v=20260423c'); }
-.toolbar-icon[data-icon="resign"] { background-image: url('assets/icons/toolbar-tech/resign.png?v=20260423c'); }
-.toolbar-icon[data-icon="wiki"] { background-image: url('assets/icons/toolbar-tech/wiki.png?v=20260423c'); }
-.toolbar-icon[data-icon="settings"] { background-image: url('assets/icons/toolbar-tech/settings.png?v=20260423c'); }
-.toolbar-icon[data-icon="sound-on"] { background-image: url('assets/icons/toolbar-tech/sound-on.png?v=20260423c'); }
-.toolbar-icon[data-icon="sound-off"] { background-image: url('assets/icons/toolbar-tech/sound-off.png?v=20260423c'); }
-.toolbar-icon[data-icon="skill"] { background-image: url('assets/icons/toolbar-tech/skill.png?v=20260423c'); }
-.toolbar-icon[data-icon="review-prev"] { background-image: url('assets/icons/toolbar-tech/review-prev.png?v=20260423c'); }
-.toolbar-icon[data-icon="review-next"] { background-image: url('assets/icons/toolbar-tech/review-next.png?v=20260423c'); }
+.toolbar-icon[data-icon="setup"] { background-image: url('assets/icons/toolbar-classic/setup.png?v=20260424d'); }
+.toolbar-icon[data-icon="rogue"] { background-image: url('assets/icons/toolbar-classic/rogue.png?v=20260424d'); }
+.toolbar-icon[data-icon="wiki"] { background-image: url('assets/icons/toolbar-classic/wiki.png?v=20260424d'); }
+.toolbar-icon[data-icon="pass"] { background-image: url('assets/icons/toolbar-classic/pass.png?v=20260424d'); }
+.toolbar-icon[data-icon="undo"] { background-image: url('assets/icons/toolbar-classic/undo.png?v=20260424d'); }
+.toolbar-icon[data-icon="score"] { background-image: url('assets/icons/toolbar-classic/score.png?v=20260424d'); }
+.toolbar-icon[data-icon="territory-on"] { background-image: url('assets/icons/toolbar-classic/territory-on.png?v=20260424d'); }
+.toolbar-icon[data-icon="territory-off"] { background-image: url('assets/icons/toolbar-classic/territory-off.png?v=20260424d'); }
+.toolbar-icon[data-icon="resign"] { background-image: url('assets/icons/toolbar-classic/resign.png?v=20260424d'); }
+.toolbar-icon[data-icon="settings"] { background-image: url('assets/icons/toolbar-classic/settings.png?v=20260424d'); }
+.toolbar-icon[data-icon="sound-on"] { background-image: url('assets/icons/toolbar-classic/sound-on.png?v=20260424d'); }
+.toolbar-icon[data-icon="sound-off"] { background-image: url('assets/icons/toolbar-classic/sound-off.png?v=20260424d'); }
+.toolbar-icon[data-icon="skill"] { background-image: url('assets/icons/toolbar-classic/skill.png?v=20260424d'); }
+.toolbar-icon[data-icon="review-prev"] { background-image: url('assets/icons/toolbar-classic/review-prev.png?v=20260424d'); }
+.toolbar-icon[data-icon="review-next"] { background-image: url('assets/icons/toolbar-classic/review-next.png?v=20260424d'); }
+.toolbar-icon[data-icon="fullscreen"] { background-image: url('assets/icons/toolbar-classic/fullscreen.png?v=20260424d'); }
 .board-toolbar button .btn-ripple {
   position: absolute;
   left: var(--x);
@@ -472,9 +652,12 @@ header h1 {
   top: 0; right: -380px; /* Hidden by default */
   width: 390px; height: 100vh;
   background:
+    linear-gradient(180deg, rgba(10,10,12,.72), rgba(6,7,9,.78)),
+    url('assets/textures/ui-dark-wood-v1.png?v=20260425a'),
     linear-gradient(180deg, rgba(15, 18, 25, 0.985), rgba(9, 12, 18, 0.985)),
     radial-gradient(circle at top, rgba(212,175,55,.09), transparent 35%),
     radial-gradient(circle at 78% 18%, rgba(126,189,255,.08), transparent 24%);
+  background-size: auto, cover, auto, auto, auto;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   box-shadow: -12px 0 44px rgba(0,0,0,0.56);
@@ -500,8 +683,11 @@ header h1 {
 
 .panel-card {
   background:
+    linear-gradient(180deg, rgba(12,11,10,.68), rgba(8,8,9,.76)),
+    url('assets/textures/ui-dark-wood-v1.png?v=20260425a'),
     linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012)),
     rgba(20,23,31,.94);
+  background-size: auto, cover, auto, auto;
   border-radius: 18px;
   padding: 18px 18px 16px;
   border: 1px solid rgba(255,255,255,.06);
@@ -518,12 +704,45 @@ header h1 {
 .form-row { display: flex; gap: 8px; align-items: center; margin-bottom: 7px; }
 .form-row label { font-size: .78rem; color: #aaa; min-width: 48px; }
 select, input[type=number] {
-  background: #111216; color: #e0e0e0;
-  border: 1px solid #333;
-  border-radius: 6px; padding: 6px 10px;
-  font-size: .85rem; flex: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, rgba(236,204,120,.92) 50%) calc(100% - 17px) 50% / 6px 6px no-repeat,
+    linear-gradient(135deg, rgba(236,204,120,.92) 50%, transparent 50%) calc(100% - 12px) 50% / 6px 6px no-repeat,
+    radial-gradient(circle at 50% 8%, rgba(255,236,179,.08), transparent 38%),
+    linear-gradient(180deg, rgba(11,10,9,.42), rgba(7,8,10,.64)),
+    url('assets/textures/ui-dark-wood-v1.png?v=20260425a'),
+    linear-gradient(180deg, #25180f, #0b0d11 72%, #07080b);
+  background-size: 6px 6px, 6px 6px, auto, auto, cover, auto;
+  color: #f1e7ca;
+  border: 1px solid rgba(156, 105, 45, .74);
+  border-radius: 12px;
+  padding: 8px 34px 8px 12px;
+  font-size: .85rem;
+  flex: 1;
+  box-shadow:
+    inset 0 1px 0 rgba(255,235,181,.08),
+    inset 0 -1px 0 rgba(0,0,0,.55),
+    0 9px 18px rgba(0,0,0,.2);
 }
-select:focus, input:focus { outline: 1px solid #d4af37; }
+select option {
+  background: #17100b;
+  color: #f2e5c7;
+}
+select option:checked {
+  background: #6f5426;
+  color: #fff4c8;
+}
+select:hover, input[type=number]:hover {
+  border-color: rgba(218, 174, 82, .88);
+}
+select:focus, input:focus {
+  outline: 1px solid rgba(239,203,118,.9);
+  box-shadow:
+    0 0 0 3px rgba(214,175,79,.16),
+    inset 0 1px 0 rgba(255,235,181,.1),
+    0 12px 22px rgba(0,0,0,.24);
+}
 
 /* Buttons */
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -546,6 +765,49 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 .btn-green:hover:not(:disabled)   { background: #3cb371; }
 .btn-purple  { background: #5c4b8b; color: #fff; }
 .btn-purple:hover:not(:disabled)  { background: #6a579e; }
+
+.settings-drawer button:not(.drawer-close),
+.overlay-modal .modal-content button:not(.modal-close),
+.settings-drawer .mode-btn,
+.overlay-modal .mode-btn {
+  background:
+    radial-gradient(circle at 50% 10%, rgba(255,238,190,.09), transparent 42%),
+    linear-gradient(180deg, rgba(11,10,9,.38), rgba(5,6,8,.62)),
+    url('assets/textures/ui-dark-wood-v1.png?v=20260425a'),
+    linear-gradient(180deg, rgba(48,34,23,.98), rgba(13,14,18,.98) 72%, rgba(7,8,10,.98));
+  background-size: auto, auto, cover, auto;
+  color: #f2e7c7;
+  border: 1px solid rgba(151,103,48,.7);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,235,185,.08),
+    inset 0 -1px 0 rgba(0,0,0,.62),
+    0 14px 28px rgba(0,0,0,.32);
+}
+.settings-drawer button:not(.drawer-close):hover:not(:disabled),
+.overlay-modal .modal-content button:not(.modal-close):hover:not(:disabled),
+.settings-drawer .mode-btn:hover:not(.active),
+.overlay-modal .mode-btn:hover:not(.active) {
+  color: #fff2c8;
+  border-color: rgba(229,185,83,.86);
+  box-shadow:
+    0 14px 28px rgba(212,175,55,.14),
+    inset 0 1px 0 rgba(255,238,190,.11),
+    inset 0 -1px 0 rgba(0,0,0,.55);
+}
+.settings-drawer .btn-primary,
+.overlay-modal .modal-content .btn-primary,
+.settings-drawer .mode-btn.active,
+.overlay-modal .mode-btn.active {
+  color: #fff1b8;
+  border-color: rgba(236,190,86,.86);
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255,232,155,.18), transparent 42%),
+    linear-gradient(180deg, rgba(33,22,12,.22), rgba(7,7,8,.48)),
+    url('assets/textures/ui-dark-wood-v1.png?v=20260425a'),
+    linear-gradient(180deg, rgba(84,57,26,.96), rgba(30,23,15,.98) 62%, rgba(10,10,11,.98));
+  background-size: auto, auto, cover, auto;
+}
 
 /* Start mode selector */
 .mode-row { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: nowrap; overflow-x: auto; }
@@ -575,6 +837,131 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 
 /* Toggle */
 .toggle-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.language-row select {
+  min-width: 160px;
+}
+.language-row .wood-select {
+  min-width: 160px;
+}
+.client-locale-controls .wood-select {
+  flex: 0 0 112px;
+  width: 112px;
+}
+.client-locale-controls .wood-select-button {
+  height: 36px;
+  min-height: 36px;
+  padding-block: 0;
+}
+.wood-select {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.wood-select-native {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.wood-select-button {
+  width: 100%;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 34px 8px 12px;
+  border-radius: 12px;
+  color: #f1e7ca;
+  text-align: left;
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255,236,179,.08), transparent 38%),
+    linear-gradient(180deg, rgba(11,10,9,.42), rgba(7,8,10,.64)),
+    url('assets/textures/ui-dark-wood-v1.png?v=20260425a'),
+    linear-gradient(180deg, #25180f, #0b0d11 72%, #07080b);
+  background-size: auto, auto, cover, auto;
+  border: 1px solid rgba(156,105,45,.74);
+  box-shadow:
+    inset 0 1px 0 rgba(255,235,181,.08),
+    inset 0 -1px 0 rgba(0,0,0,.55),
+    0 9px 18px rgba(0,0,0,.2);
+}
+.wood-select-button::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 8px solid #e7c879;
+  transform: translateY(-35%);
+  pointer-events: none;
+}
+.wood-select.open .wood-select-button,
+.wood-select-button:focus-visible {
+  outline: 1px solid rgba(239,203,118,.95);
+  border-color: rgba(229,185,83,.95);
+  box-shadow:
+    0 0 0 3px rgba(214,175,79,.18),
+    inset 0 1px 0 rgba(255,235,181,.1),
+    0 12px 24px rgba(0,0,0,.28);
+}
+.wood-select-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wood-select-popover {
+  position: fixed;
+  display: none;
+  max-height: min(320px, 48vh);
+  overflow-y: auto;
+  z-index: 5000;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid rgba(229,185,83,.78);
+  background:
+    linear-gradient(180deg, rgba(8,7,6,.46), rgba(5,6,7,.66)),
+    url('assets/textures/ui-dark-wood-v1.png?v=20260425a'),
+    linear-gradient(180deg, #25180f, #08090b);
+  background-size: auto, cover, auto;
+  box-shadow:
+    0 22px 44px rgba(0,0,0,.58),
+    inset 0 1px 0 rgba(255,232,176,.1);
+}
+.wood-select-popover.open {
+  display: block;
+}
+.wood-select-option {
+  width: 100%;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 10px;
+  color: #f4e7c8;
+  font-size: .9rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.wood-select-option:hover,
+.wood-select-option[aria-selected="true"] {
+  color: #fff5cb;
+  background:
+    linear-gradient(180deg, rgba(158,110,48,.42), rgba(58,38,19,.42)),
+    rgba(214,175,79,.1);
+}
+.wood-select-option.disabled {
+  color: rgba(210,198,170,.45);
+  cursor: default;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
 .curve-panel {
   margin-top: 14px;
   padding: 12px 12px 10px;
@@ -624,21 +1011,37 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 }
 .toggle {
   width: 42px; height: 24px;
-  background: #111216; border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(8,8,8,.56), rgba(5,6,8,.72)),
+    url('assets/textures/ui-dark-wood-v1.png?v=20260425a'),
+    linear-gradient(180deg, #21160f, #08090b);
+  background-size: auto, cover, auto;
+  border-radius: 12px;
   position: relative; cursor: pointer;
-  border: 1px solid #333; flex-shrink: 0;
-  transition: background .2s, border-color .2s;
+  border: 1px solid rgba(127,86,43,.7); flex-shrink: 0;
+  transition: background .2s, border-color .2s, box-shadow .2s;
+  box-shadow:
+    inset 0 1px 0 rgba(255,232,176,.06),
+    inset 0 -1px 0 rgba(0,0,0,.62);
 }
-.toggle.on { background: #27ae60; border-color: #2ecc71; box-shadow: 0 0 6px rgba(39,174,96,.3); }
+.toggle.on {
+  border-color: rgba(232,188,84,.9);
+  box-shadow:
+    0 0 0 2px rgba(214,175,79,.12),
+    0 0 12px rgba(214,175,79,.16),
+    inset 0 1px 0 rgba(255,232,176,.1),
+    inset 0 -1px 0 rgba(0,0,0,.58);
+}
 .toggle::after {
   content: ''; position: absolute;
-  width: 16px; height: 16px; background: #fff;
+  width: 16px; height: 16px;
+  background: radial-gradient(circle at 36% 28%, #fff8df, #d0b67a 56%, #6f4820 100%);
   border-radius: 50%; top: 2px; left: 2px;
   transition: left .2s cubic-bezier(.4,0,.2,1);
-  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  box-shadow: 0 2px 5px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.44);
 }
 .toggle.on::after { left: 20px; }
-.toggle-label { font-size: .8rem; color: #ccc; }
+.toggle-label { font-size: .8rem; color: #d8cfb6; }
 
 /* Review controls (mostly hidden inside toolbar now) */
 .review-bar {
@@ -837,6 +1240,10 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 @media (max-width: 980px) {
   header { padding: 12px 16px; }
   #network-badge { max-width: 100%; display: none; /* Hide on smaller screens for cleaner look */ }
+  .client-command-deck {
+    grid-template-columns: 1fr;
+    width: min(100% - 24px, 760px);
+  }
   .main-layout {
     flex-direction: column;
     align-items: center;
@@ -854,6 +1261,21 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
   header { padding: 8px 12px; }
   header h1 { font-size: 1.2rem; }
   #status-text { display: none; } /* Simpler header on mobile */
+  .client-command-deck {
+    padding: 12px;
+    border-radius: 20px;
+  }
+  .client-actions,
+  .client-status-grid {
+    grid-template-columns: 1fr;
+  }
+  .match-hud {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    margin-bottom: 8px;
+  }
   
   .main-layout {
     gap: 12px;
@@ -870,8 +1292,7 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
   #board-canvas {
     border-radius: 0;
     box-shadow: 0 4px 12px rgba(0,0,0,.5);
-    margin-left: -10px; /* Stretch to edges on mobile */
-    width: calc(100% + 20px) !important;
+    margin: 0 auto;
   }
 
   .panel-card {
@@ -933,8 +1354,11 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 .overlay-modal.show .modal-content .ultimate-card:nth-child(3) { animation-delay: .1s; }
 .modal-content {
   background:
+    linear-gradient(180deg, rgba(13,11,9,.74), rgba(7,8,10,.82)),
+    url('assets/textures/ui-dark-wood-v1.png?v=20260425a'),
     radial-gradient(circle at top, rgba(212,175,55,.10), transparent 40%),
     linear-gradient(180deg, #171c25, #0e131b);
+  background-size: auto, cover, auto, auto;
   border: 1px solid rgba(255,255,255,.08);
   border-radius: 26px;
   padding: 28px;
@@ -979,15 +1403,20 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
   padding: 14px 14px 12px;
   margin-bottom: 0;
   border-radius: 18px;
-  border: 1px solid rgba(255,255,255,.06);
+  border: 1px solid rgba(126,84,41,.72);
   background:
-    linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)),
-    linear-gradient(180deg, #131923, #0f141c);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+    linear-gradient(180deg, rgba(12,10,8,.5), rgba(6,7,8,.68)),
+    url('assets/textures/ui-dark-wood-v1.png?v=20260425a'),
+    linear-gradient(180deg, #22170f, #090a0c);
+  background-size: auto, cover, auto;
+  box-shadow:
+    inset 0 1px 0 rgba(255,232,176,.07),
+    inset 0 -1px 0 rgba(0,0,0,.56),
+    0 12px 24px rgba(0,0,0,.18);
 }
 #setup-modal .setup-field label {
   min-width: 0;
-  color: #aeb9c7;
+  color: #d9cba8;
   font-size: .76rem;
   letter-spacing: .08em;
 }
@@ -1000,6 +1429,20 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 #setup-modal .time-split {
   display: flex;
   gap: 8px;
+}
+#setup-modal .mode-btn.active {
+  color: #fff1b8;
+  border-color: rgba(236,190,86,.9);
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255,232,155,.18), transparent 42%),
+    linear-gradient(180deg, rgba(33,22,12,.22), rgba(7,7,8,.48)),
+    url('assets/textures/ui-dark-wood-v1.png?v=20260425a'),
+    linear-gradient(180deg, rgba(84,57,26,.96), rgba(30,23,15,.98) 62%, rgba(10,10,11,.98));
+  background-size: auto, auto, cover, auto;
+  box-shadow:
+    0 14px 28px rgba(212,175,55,.16),
+    inset 0 1px 0 rgba(255,238,190,.12),
+    inset 0 -1px 0 rgba(0,0,0,.58);
 }
 #setup-modal .time-split select {
   flex: 1;
@@ -1077,6 +1520,10 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 }
 #rogue-wiki-modal .wiki-card-copy {
   min-width: 0;
+}
+#rogue-wiki-modal .wiki-card-copy .card-meta-row {
+  justify-content: flex-start;
+  margin: 0 0 8px;
 }
 @media (max-width: 860px) {
   #rogue-wiki-modal .wiki-mode-grid,
@@ -1474,6 +1921,500 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
   100% { opacity: 0; transform: scale(1.9); }
 }
 
+/* Native client skin: image2.0 blueprint v2 */
+body {
+  background:
+    radial-gradient(circle at 12% 16%, rgba(138,93,44,.22), transparent 16%),
+    radial-gradient(circle at 78% 8%, rgba(52,88,107,.14), transparent 22%),
+    linear-gradient(180deg, #080a0d 0%, #101014 46%, #06070a 100%);
+}
+body::before {
+  background:
+    radial-gradient(circle at 16% 18%, rgba(0,0,0,.64), transparent 8%),
+    radial-gradient(circle at 16% 18%, rgba(111,73,36,.28), transparent 13%),
+    radial-gradient(circle at 11% 36%, rgba(54,34,20,.30), transparent 9%),
+    linear-gradient(115deg, rgba(255,196,88,.05), transparent 24%, rgba(65,210,222,.04) 72%, transparent);
+  opacity: .95;
+}
+body::after {
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(circle at center, transparent 0, black 78%);
+  opacity: .35;
+}
+header {
+  display: none;
+}
+header::before { display: none; }
+.brand-kicker {
+  font-size: 1.48rem;
+  letter-spacing: .035em;
+  color: #f1efe8;
+  text-transform: none;
+}
+#status-dot {
+  width: 9px;
+  height: 9px;
+}
+.lang-chip,
+#sound-toggle {
+  min-width: 54px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.04);
+  border-color: rgba(255,255,255,.12);
+  color: #eadcae;
+}
+#sound-toggle .toolbar-icon {
+  width: 24px;
+  height: 24px;
+}
+.client-command-deck {
+  width: min(var(--goai-stage-width, 1180px), calc(100% - 52px));
+  min-height: 54px;
+  margin: 10px auto 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255,232,170,.08), transparent 32%),
+    linear-gradient(180deg, rgba(9,8,7,.36), rgba(5,6,8,.48)),
+    url('assets/textures/ui-dark-wood-v1.png?v=20260425a'),
+    linear-gradient(180deg, rgba(43,30,20,.94), rgba(15,13,12,.92) 58%, rgba(7,8,10,.9));
+  background-size: auto, auto, cover, auto;
+  border: 1px solid rgba(130,86,42,.78);
+  box-shadow:
+    0 18px 40px rgba(0,0,0,.34),
+    inset 0 1px 0 rgba(255,232,176,.09),
+    inset 0 -1px 0 rgba(0,0,0,.64);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.client-identity {
+  display: inline-flex;
+  align-items: baseline;
+  flex: 0 0 auto;
+  gap: 10px;
+  padding: 0 10px;
+}
+.client-title {
+  margin: 0;
+  color: #f2f0e7;
+  font-size: 1.3rem;
+  line-height: 1;
+  letter-spacing: .02em;
+  text-shadow: none;
+}
+.client-kicker {
+  color: #f1c84f;
+  font-size: .72rem;
+  letter-spacing: .08em;
+  font-weight: 800;
+}
+.client-status-grid {
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: flex-start;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  flex-wrap: nowrap;
+}
+.client-status-card {
+  min-height: 34px;
+  padding: 6px 11px;
+  display: inline-flex;
+  align-items: center;
+  flex: 1 1 0;
+  min-width: 0;
+  gap: 8px;
+  border-radius: 11px;
+  background:
+    radial-gradient(circle at 50% 10%, rgba(255,232,176,.06), transparent 42%),
+    linear-gradient(180deg, rgba(9,8,7,.38), rgba(5,6,8,.54)),
+    url('assets/textures/ui-dark-wood-v1.png?v=20260425a'),
+    linear-gradient(180deg, rgba(38,27,18,.86), rgba(11,12,15,.86));
+  background-size: auto, auto, cover, auto;
+  border: 1px solid rgba(120,80,39,.64);
+  box-shadow:
+    inset 0 1px 0 rgba(255,232,176,.06),
+    inset 0 -1px 0 rgba(0,0,0,.5);
+  white-space: nowrap;
+}
+.client-status-card:nth-child(2) {
+  flex: 1.65 1 0;
+}
+.client-status-card .label {
+  margin: 0;
+  color: #a68f6d;
+  font-size: .63rem;
+  letter-spacing: .08em;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.client-status-card .value {
+  color: #f4ead0;
+  font-size: .82rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.client-actions {
+  display: none !important;
+  align-items: center;
+  gap: 8px;
+}
+.client-locale-controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+#lang-toggle.lang-chip {
+  flex: 0 0 auto;
+  width: 112px;
+  min-width: 112px;
+  height: 36px;
+  padding: 0 32px 0 12px;
+  color: #f2e6c7;
+  border-color: rgba(172,118,56,.82);
+}
+.client-action {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 11px;
+  font-size: .8rem;
+}
+.client-action.primary {
+  color: #101014;
+  background: linear-gradient(180deg, #ffe19a, #c99b27);
+}
+.main-layout {
+  width: 100%;
+  max-width: none;
+  justify-content: center;
+  padding: clamp(6px, .8vh, 12px) 0 18px;
+}
+#board-container {
+  width: var(--goai-stage-width, min(82vw, 1600px));
+  flex: 0 0 auto;
+  padding: var(--stage-pad-top, 6.8%) var(--stage-pad-right, 14%) var(--stage-pad-bottom, 11%) var(--stage-pad-left, 14%);
+  isolation: isolate;
+  background-image:
+    linear-gradient(180deg, rgba(5,7,10,0) 0%, rgba(5,7,10,.08) 72%, rgba(5,7,10,.5) 100%),
+    url('assets/textures/board-table-platform-v1.png?v=20260425a');
+  background-position: center top, center center;
+  background-size: 100% 100%, 106% 106%;
+  background-repeat: no-repeat;
+  border-radius: 28px;
+}
+#board-container::before {
+  left: 4%;
+  right: 4%;
+  bottom: 118px;
+  height: 92px;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,.6), rgba(0,0,0,.24) 50%, transparent 76%);
+  filter: blur(20px);
+  z-index: -2;
+}
+#board-container::after {
+  content: "";
+  position: absolute;
+  left: var(--board-fit-x, 250px);
+  top: var(--board-fit-y, 107px);
+  width: var(--board-fit-size, 720px);
+  height: var(--board-fit-size, 720px);
+  display: block;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow:
+    inset 0 0 0 2px rgba(56,31,12,.36),
+    inset 0 8px 12px rgba(12,7,3,.16),
+    inset 0 -3px 6px rgba(255,225,154,.08),
+    0 0 0 5px rgba(14,8,4,.12);
+}
+#board-canvas {
+  position: relative;
+  z-index: 1;
+  border-radius: 3px;
+  box-shadow:
+    0 5px 0 rgba(91,54,21,.58),
+    0 14px 28px rgba(0,0,0,.38),
+    inset 0 1px 0 rgba(255,244,204,.24);
+}
+.match-hud {
+  display: none !important;
+  top: 24px;
+  left: auto;
+  right: 24px;
+  width: min(244px, max(190px, calc((100% - 720px) / 2 - 18px)));
+  padding: 17px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(14,17,22,.88), rgba(8,10,14,.78));
+  border-color: rgba(255,255,255,.11);
+}
+.match-hud-title {
+  font-size: .78rem;
+  letter-spacing: .05em;
+  text-transform: none;
+}
+.hud-chip { border-radius: 10px; }
+#winrate-bar-wrap {
+  width: 100%;
+  max-width: 330px;
+  margin: 0;
+  opacity: .92;
+  display: none;
+}
+.top-winrate-slot {
+  min-width: 0;
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+}
+.top-winrate-slot.active {
+  display: flex;
+  flex: 0 1 330px;
+}
+.client-locale-controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+.board-toolbar {
+  position: absolute;
+  left: 50%;
+  bottom: var(--toolbar-bottom, clamp(8px, .95vh, 18px));
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 56px);
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: clamp(10px, .78vw, 20px);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.board-toolbar button {
+  width: clamp(72px, 4.25vw, 98px);
+  height: clamp(64px, 3.65vw, 82px);
+  flex-direction: column;
+  gap: 5px;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 50% 14%, rgba(255,255,255,.08), transparent 42%),
+    linear-gradient(180deg, rgba(28,33,42,.88), rgba(8,11,16,.86));
+  border-color: rgba(255,255,255,.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.07),
+    inset 0 -1px 0 rgba(0,0,0,.58),
+    0 18px 38px rgba(0,0,0,.46);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.board-toolbar button:hover:not(:disabled) {
+  border-color: rgba(229,185,83,.64);
+  box-shadow:
+    0 14px 28px rgba(212,175,55,.14),
+    inset 0 1px 0 rgba(255,255,255,.1),
+    inset 0 -1px 0 rgba(0,0,0,.5);
+}
+.board-toolbar button:first-child,
+.board-toolbar #btn-quick-rogue {
+  border-color: rgba(240,201,91,.38);
+}
+.toolbar-icon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  color: transparent;
+  filter: drop-shadow(0 7px 11px rgba(0,0,0,.34));
+  font-size: 0;
+  line-height: 1;
+}
+.toolbar-icon::before { content: none !important; }
+.tool-label {
+  color: #f0e6c8;
+  font-size: .78rem;
+  line-height: 1;
+  letter-spacing: .02em;
+  text-shadow: 0 1px 2px rgba(0,0,0,.7);
+}
+.board-toolbar button:disabled .tool-label,
+.board-toolbar button:disabled .toolbar-icon {
+  opacity: .34;
+}
+.board-toolbar button::after { display: none; }
+.overlay-modal {
+  background:
+    radial-gradient(circle at center, rgba(212,175,55,.14), transparent 34%),
+    rgba(4,5,8,.74);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.card-draft-modal {
+  width: min(760px, 92vw);
+  max-width: 760px !important;
+  padding: 20px 22px 22px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(32,34,38,.95), rgba(12,14,18,.95)) !important;
+  border: 1px solid rgba(255,255,255,.11);
+}
+.ultimate-draft-modal {
+  border-color: rgba(255,111,111,.45) !important;
+}
+.card-draft-modal > p {
+  color: #aeb7c1 !important;
+  text-align: center;
+  margin: 0 0 14px !important;
+  font-size: .8rem !important;
+  line-height: 1.2 !important;
+}
+.rogue-card,
+.ultimate-card {
+  min-height: 242px;
+  padding: 16px 13px 14px;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(65,210,222,.12), transparent 34%),
+    linear-gradient(180deg, #111a1f, #090d12) !important;
+  border-color: rgba(71,211,221,.34);
+  box-shadow: 0 18px 32px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.05);
+}
+.ultimate-card {
+  border-color: rgba(240,201,91,.38);
+  background:
+    radial-gradient(circle at 50% 20%, rgba(240,201,91,.18), transparent 34%),
+    linear-gradient(180deg, #1c1711, #0e0b08) !important;
+}
+.rogue-card .rc-icon.rc-icon-art,
+.ultimate-card .rc-icon.rc-icon-art {
+  width: 108px;
+  height: 108px;
+}
+.rogue-card .rc-name,
+.ultimate-card .rc-name {
+  margin-top: 4px;
+  color: #f0ead8;
+  font-size: 1.08rem;
+}
+.rogue-card .rc-desc,
+.ultimate-card .rc-desc {
+  max-width: 92%;
+  margin: 0 auto;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: #9da8b2;
+}
+.card-tag {
+  border-radius: 7px;
+  min-height: 20px;
+  padding: 3px 7px;
+}
+.card-tag.tier {
+  background: transparent;
+  color: #ffd465;
+  border-color: rgba(240,201,91,.42);
+}
+@media (max-width: 1240px) {
+  .match-hud {
+    right: 14px;
+    top: 18px;
+    width: min(260px, calc(100% - 28px));
+  }
+  #board-container::after { display: none; }
+}
+@media (max-width: 980px) {
+  .client-command-deck {
+    width: calc(100% - 20px);
+    gap: 7px;
+    padding: 7px 8px;
+    overflow: hidden;
+  }
+  .client-status-grid {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  .client-status-card {
+    min-height: 32px;
+    padding: 5px 8px;
+    gap: 5px;
+  }
+  .client-status-card .label {
+    display: none;
+  }
+  .client-title {
+    font-size: 1.12rem;
+  }
+  .client-kicker {
+    display: none;
+  }
+  .top-winrate-slot.active {
+    flex: 0 1 230px;
+    justify-content: flex-end;
+  }
+  .lang-chip {
+    min-width: 48px;
+    padding: 0 9px;
+  }
+  #board-container {
+    width: min(var(--goai-stage-width, 100%), calc(100vw - 20px));
+  }
+  .board-toolbar {
+    width: calc(100vw - 28px);
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+}
+@media (max-width: 720px) {
+  .client-status-card:nth-child(3),
+  .client-status-card:nth-child(4) {
+    display: none;
+  }
+  .client-command-deck {
+    gap: 6px;
+  }
+  .client-status-card {
+    padding-inline: 7px;
+  }
+  .top-winrate-slot.active {
+    flex-basis: 180px;
+  }
+  #winrate-bar {
+    height: 24px;
+  }
+  .board-toolbar button {
+    width: 70px;
+    height: 66px;
+  }
+  .tool-label {
+    font-size: .7rem;
+  }
+  .card-draft-modal #rogue-cards,
+  .card-draft-modal #ultimate-cards {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -1489,9 +2430,56 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
     <span id="sound-toggle" title="音效开关"><span class="toolbar-icon" data-icon="sound-on" aria-hidden="true"></span></span>
   </div>
   <div class="header-actions">
-    <button id="lang-toggle" class="lang-chip" title="切换语言">EN</button>
   </div>
 </header>
+
+<section id="client-command-deck" class="client-command-deck" aria-label="GoAI client command deck">
+  <div class="client-identity">
+    <span class="client-title" id="client-title">GoAI</span>
+    <span class="client-kicker" id="client-kicker">ROGUE</span>
+  </div>
+  <div class="client-status-grid">
+    <div class="client-status-card">
+      <span class="label" id="client-status-label">连接</span>
+      <span class="value" id="client-status-value">连接中…</span>
+    </div>
+    <div class="client-status-card">
+      <span class="label" id="client-engine-label">引擎</span>
+      <span class="value" id="client-engine-value">检测中…</span>
+    </div>
+    <div class="client-status-card">
+      <span class="label" id="client-mode-label">模式</span>
+      <span class="value" id="client-mode-value">Rogue</span>
+    </div>
+    <div class="client-status-card">
+      <span class="label" id="client-run-label">手数</span>
+      <span class="value" id="client-run-value">待开始</span>
+    </div>
+  </div>
+  <div id="top-winrate-slot" class="top-winrate-slot">
+    <div id="winrate-bar-wrap">
+      <div id="winrate-bar">
+        <div id="wr-black" style="width:50%">
+          <span class="wr-label" id="wr-black-label">黑 50.0%</span>
+        </div>
+        <div id="wr-white">
+          <span class="wr-label" id="wr-white-label">白 50.0%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="client-actions">
+    <button class="client-action primary" id="quick-rogue" onclick="quickStartRogue()">Rogue</button>
+    <button class="client-action" id="quick-setup" onclick="openNormalSetup()">开始</button>
+    <button class="client-action" id="quick-fullscreen" onclick="toggleFullscreen()">全屏</button>
+  </div>
+  <div class="client-locale-controls">
+    <select id="lang-toggle" class="lang-chip" title="切换语言" aria-label="语言">
+      <option value="zh">中文</option>
+      <option value="en">English</option>
+    </select>
+  </div>
+</section>
 
 <div class="main-layout" style="justify-content: center;">
   <!-- Board -->
@@ -1510,14 +2498,15 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
       <span class="ub-ai" id="ub-ai-card"></span>
     </div>
     <div id="board-fx-layer"></div>
-    <div id="winrate-bar-wrap">
-      <div id="winrate-bar">
-        <div id="wr-black" style="width:50%">
-          <span class="wr-label" id="wr-black-label">黑 50.0%</span>
-        </div>
-        <div id="wr-white">
-          <span class="wr-label" id="wr-white-label">白 50.0%</span>
-        </div>
+    <div id="match-hud" class="match-hud">
+      <div class="match-hud-title">
+        <span id="hud-mode">准备对局</span>
+        <span id="hud-move">0</span>
+      </div>
+      <div class="match-hud-row">
+        <span class="hud-chip gold" id="hud-turn">待开始</span>
+        <span class="hud-chip" id="hud-card">无卡牌</span>
+        <span class="hud-chip" id="hud-engine">AI 待命</span>
       </div>
     </div>
     <div class="timer-wrap timer-hidden" id="timer-wrap">
@@ -1547,16 +2536,18 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 
     <!-- Smart Board Toolbar -->
     <div class="board-toolbar" id="main-toolbar">
-      <button id="btn-setup" title="开始对弈" onclick="openSetupModal()"><span class="toolbar-icon" data-icon="setup" aria-hidden="true"></span></button>
-      <button id="btn-pass" title="虚手" disabled><span class="toolbar-icon" data-icon="pass" aria-hidden="true"></span></button>
-      <button id="btn-undo" title="悔棋" disabled><span class="toolbar-icon" data-icon="undo" aria-hidden="true"></span></button>
-      <button id="btn-score" title="计算胜负" disabled><span class="toolbar-icon" data-icon="score" aria-hidden="true"></span></button>
-      <button id="btn-territory-toggle" title="形势分析" onclick="toggleTerritory()"><span class="toolbar-icon" data-icon="territory-on" aria-hidden="true"></span></button>
-      <button id="btn-resign" title="认输" disabled><span class="toolbar-icon" data-icon="resign" aria-hidden="true"></span></button>
-      <button id="btn-rogue-wiki" title="ROGUE AI WIKI" onclick="openRogueWiki()"><span class="toolbar-icon" data-icon="wiki" aria-hidden="true"></span></button>
-      <button id="btn-settings" title="打开功能" onclick="document.getElementById('settings-drawer').classList.add('open')"><span class="toolbar-icon" data-icon="settings" aria-hidden="true"></span></button>
+      <button id="btn-setup" title="开始" onclick="openSetupModal()"><span class="toolbar-icon" data-icon="setup" aria-hidden="true"></span><span class="tool-label">开始</span></button>
+      <button id="btn-quick-rogue" title="Rogue" onclick="quickStartRogue()"><span class="toolbar-icon" data-icon="rogue" aria-hidden="true"></span><span class="tool-label">Rogue</span></button>
+      <button id="btn-rogue-wiki" title="Wiki" onclick="openRogueWiki()"><span class="toolbar-icon" data-icon="wiki" aria-hidden="true"></span><span class="tool-label">Wiki</span></button>
+      <button id="btn-pass" title="虚手" disabled><span class="toolbar-icon" data-icon="pass" aria-hidden="true"></span><span class="tool-label">虚手</span></button>
+      <button id="btn-undo" title="悔棋" disabled><span class="toolbar-icon" data-icon="undo" aria-hidden="true"></span><span class="tool-label">悔棋</span></button>
+      <button id="btn-score" title="计算" disabled><span class="toolbar-icon" data-icon="score" aria-hidden="true"></span><span class="tool-label">计算</span></button>
+      <button id="btn-territory-toggle" title="形势" onclick="toggleTerritory()"><span class="toolbar-icon" data-icon="territory-on" aria-hidden="true"></span><span class="tool-label">形势</span></button>
+      <button id="btn-resign" title="认输" disabled><span class="toolbar-icon" data-icon="resign" aria-hidden="true"></span><span class="tool-label">认输</span></button>
+      <button id="btn-settings" title="设置" onclick="document.getElementById('settings-drawer').classList.add('open')"><span class="toolbar-icon" data-icon="settings" aria-hidden="true"></span><span class="tool-label">设置</span></button>
       <button id="btn-skill" class="skill-btn" title="主动技能" style="display:none" disabled>
         <span class="toolbar-icon skill-btn-icon" data-icon="skill" aria-hidden="true"></span>
+        <span class="tool-label">技能</span>
         <span class="skill-use-badge" aria-hidden="true"></span>
       </button>
     </div>
@@ -1568,7 +2559,7 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
       <button id="btn-review-prev" title="上一手"><span class="toolbar-icon" data-icon="review-prev" aria-hidden="true"></span></button>
       <button id="btn-review-next" title="下一手"><span class="toolbar-icon" data-icon="review-next" aria-hidden="true"></span></button>
       <button id="btn-review-last" title="最后一手">⏭</button>
-      <button id="btn-review-exit" title="退出复盘" style="background:#5c4b8b;">⏏</button>
+      <button id="btn-review-exit" title="退出复盘">⏏</button>
       <button id="btn-review-settings" title="打开功能" onclick="document.getElementById('settings-drawer').classList.add('open')"><span class="toolbar-icon" data-icon="settings" aria-hidden="true"></span></button>
     </div>
   </div>
@@ -1586,6 +2577,26 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
         <select id="sel-placement">
           <option value="direct" selected>直接落子</option>
           <option value="fine">精确落子(支持微调)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label id="settings-stage-label">画面尺寸</label>
+        <select id="sel-stage-preset">
+          <option value="auto" selected>自适应</option>
+          <option value="1080">1080p</option>
+          <option value="1440">1440p</option>
+          <option value="2160">4K</option>
+        </select>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle on" id="sound-settings-toggle"></div>
+        <span class="toggle-label" id="settings-sound-label">音效</span>
+      </div>
+      <div class="form-row language-row">
+        <label id="settings-language-label">语言</label>
+        <select id="settings-language-select">
+          <option value="zh">中文</option>
+          <option value="en">English</option>
         </select>
       </div>
     </div>
@@ -1840,9 +2851,9 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 
 <!-- Rogue Card Selection Overlay -->
 <div id="rogue-overlay" class="overlay-modal">
-  <div class="modal-content" style="max-width:640px; background:rgba(15,15,20,0.97);">
-    <h2 style="color:#f5dd93; text-align:center; margin-bottom:4px; font-size:1.24rem; letter-spacing:.06em;">Rogue 模式</h2>
-    <p style="color:#97a3b1; text-align:center; margin-bottom:18px; font-size:.85rem; line-height:1.6;">从三张规则卡中选一张，让这一局从开盘开始就偏离常规。</p>
+  <div class="modal-content card-draft-modal">
+    <h2 style="color:#f5dd93; text-align:center; margin-bottom:4px; font-size:1.24rem; letter-spacing:.06em;">Rogue</h2>
+    <p>选择一张卡</p>
     <div id="rogue-cards" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; align-items:stretch;"></div>
     <div id="rogue-refresh-wrap" style="display:none; margin-top:14px; text-align:center;">
       <button class="btn-secondary" id="rogue-refresh-btn" type="button">刷新一次卡牌</button>
@@ -1852,17 +2863,17 @@ button:disabled { opacity: .38; cursor: default; transform: none; }
 
 <!-- Ultimate Card Selection Overlay -->
 <div id="ultimate-overlay" class="overlay-modal">
-  <div class="modal-content" style="max-width:640px; background:rgba(30,5,5,0.97); border:2px solid #ff4444;">
+  <div class="modal-content card-draft-modal ultimate-draft-modal">
     <h2 style="color:#ff8f86; text-align:center; margin-bottom:4px; font-size:1.34rem; text-shadow:0 0 12px rgba(255,68,68,0.4); letter-spacing:.05em;">
       大招模式</h2>
-    <p style="color:#ffc1bb; text-align:center; margin-bottom:18px; font-size:.85rem; line-height:1.6;">挑选你的终局武器。你会得到一张强卡，AI 也会得到它的回应。</p>
+    <p>选择一张大招卡</p>
     <div id="ultimate-cards" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; align-items:stretch;"></div>
   </div>
 </div>
 
 <!-- Rogue Wiki Overlay -->
 <div id="rogue-wiki-modal" class="overlay-modal">
-  <div class="modal-content" style="background:rgba(10,13,19,0.98);">
+  <div class="modal-content">
     <button class="modal-close" onclick="closeRogueWiki()" title="关闭">✕</button>
     <div class="wiki-shell">
       <div>
@@ -1934,6 +2945,7 @@ let analysis = { winrate: 0.5, score: 0, top_moves: [], ownership: [] };
 let winrateHistory = [];
 let showHints = false, showTerritory = true, showMoveNumbers = false;
 let boardSize = 19, CELL = 32, PAD;
+let stagePreset = localStorage.getItem("goai_stage_preset") || "auto";
 let gameId = localStorage.getItem("goai_game_id") || Math.random().toString(36).slice(2);
 localStorage.setItem("goai_game_id", gameId);
 let myColor = "B", aiColor = "W";
@@ -2026,7 +3038,7 @@ function updateChallengeInfo() {
 
 const ROGUE_CARD_ZH = {
   tengen: { name: "天元", desc: "开局 5 手，AI 会优先靠近天元与星位落子。" },
-  dice: { name: "掷骰", desc: "AI 每手有 8% 概率直接虚手。" },
+  dice: { name: "掷骰", desc: "AI 每手有 10% 概率直接虚手。" },
   erosion: { name: "蚕食", desc: "每提 1 子，贴目向有利方偏移 4 目。" },
   puppet: { name: "傀儡术", desc: "先选定 AI 下一手的落点；你先正常落子，随后 AI 会被迫下在那里，整局限 1 次。" },
   seal: { name: "封印术", desc: "指定 4 个禁着点，整局 AI 都不能下在这些点。" },
@@ -2036,8 +3048,8 @@ const ROGUE_CARD_ZH = {
   time_press: { name: "限时压制", desc: "AI 大约下降 5 段，且每手最多思考 0.10 秒，前 12 手更容易仓促误判。" },
   lowline: { name: "低空飞行", desc: "AI 前 8 手偏向二三路低位。" },
   suboptimal: { name: "次优之选", desc: "AI 前 8 手更容易从后几名的候选点里随机挑一手。" },
-  mirror: { name: "镜像", desc: "AI 有 10% 概率按棋盘对称位置镜像模仿你的上一手。" },
-  slip: { name: "手滑了", desc: "AI 有 10% 概率手滑到相邻的点位。" },
+  mirror: { name: "镜像", desc: "AI 有 16% 概率按棋盘对称位置镜像模仿你的上一手。" },
+  slip: { name: "手滑了", desc: "AI 有 14% 概率手滑到相邻的点位。" },
   blackhole: { name: "黑洞", desc: "棋盘中心 13 子区域对 AI 前 6 手禁入。" },
   exchange: { name: "乾坤挪移", desc: "强制 AI 虚手，你继续行棋，整局限 1 次。" },
   fog: { name: "战争迷雾", desc: "AI 前 11 手每手前会刷新一个 3×3 禁区遮罩；之后每回合随机封锁 2 个 AI 禁着点。" },
@@ -2048,11 +3060,11 @@ const ROGUE_CARD_ZH = {
   sprout: { name: "萌芽", desc: "每次提子后，都会在附近自动长出 1 颗己棋。" },
   joseki_ocd: { name: "定式强迫症", desc: "开局亮出 7 个目标点，只要下中 4 个，剩下的 3 个会自动补成你的棋子。" },
   handicap_quest: { name: "让子任务", desc: "先虚手 1 次，之后每满 8 手奖励 AI 虚手一次，最多触发 3 次。" },
-  god_hand: { name: "神之一手", desc: "踩中隐藏菱形区，周围 3×3 内随机爆出 2 颗己棋，只会落在空点。" },
+  god_hand: { name: "神之一手", desc: "踩中隐藏菱形区，周围 3×3 内随机爆出 3 颗己棋，只会落在空点。" },
   sansan_trap: { name: "三三陷阱", desc: "只有对手第 1 手正好下在四个三三点之一时才会触发，并在那手棋周围反生 8 颗我方棋。" },
   corner_helper: { name: "守角辅助", desc: "每个角各算一次：任一角的 5×5 区域里有 4 颗己子时，就会在那个角补 1 颗援军。" },
-  sanrensei: { name: "三连星", desc: "若你前 2 手都落在星位，会自动补出第 3 颗星位棋，并再长出 1 颗援军。" },
-  no_regret: { name: "永不悔棋", desc: "禁用悔棋，但每手 10% 概率白送一子。" },
+  sanrensei: { name: "三连星", desc: "若你前 2 手都落在星位，会自动补出第 3 颗星位棋，并再长出 2 颗援军。" },
+  no_regret: { name: "永不悔棋", desc: "禁用悔棋，但每手 12% 概率白送一子。" },
   quickthink: { name: "快速思考", desc: "4 秒内落子可追加 2 秒连击窗口；选中后禁用推荐点位与悔棋。" },
   foolish_wisdom: { name: "大智若愚", desc: "摆出愚形，附近 5×5 内随机长出 2 颗己棋。" },
   five_in_row: { name: "五子连珠", desc: "这是五子棋，不是围棋。每当我方正好连成 5 子，就会优先在首尾补子，并在连线附近补 4 颗援军。" },
@@ -2063,7 +3075,7 @@ const ROGUE_CARD_ZH = {
 
 const ROGUE_CARD_I18N = {
   tengen: { name: "Tengen", desc: "For its first 3 moves, the AI is pulled toward the center and star points." },
-  dice: { name: "Dice Roll", desc: "Each AI move has an 8% chance of being skipped entirely." },
+  dice: { name: "Dice Roll", desc: "Each AI move has a 10% chance of being skipped entirely." },
   erosion: { name: "Erosion", desc: "Every capture shifts komi by 4 points in the captor's favor." },
   puppet: { name: "Puppet", desc: "Mark the AI's next forced point first. You play your move, then the AI must answer there (once per game)." },
   seal: { name: "Seal", desc: "Mark 4 forbidden points the AI cannot touch for the whole game." },
@@ -2073,8 +3085,8 @@ const ROGUE_CARD_I18N = {
   time_press: { name: "Time Crunch", desc: "Drop the AI by about 5 ranks, cap it at 0.10 seconds per move, and make its first 12 moves much more likely to misread under time pressure." },
   lowline: { name: "Low Sweep", desc: "The AI hugs the 2nd\u20133rd lines for 6 moves." },
   suboptimal: { name: "Second Best", desc: "For its first 8 moves, the AI is much more likely to choose weaker backup options." },
-  mirror: { name: "Mirror", desc: "10% chance the AI mirrors your last move across the board." },
-  slip: { name: "Butterfingers", desc: "10% chance the AI slips to a straight-adjacent point." },
+  mirror: { name: "Mirror", desc: "16% chance the AI mirrors your last move across the board." },
+  slip: { name: "Butterfingers", desc: "14% chance the AI slips to a straight-adjacent point." },
   blackhole: { name: "Black Hole", desc: "The central 13-point zone is off-limits to the AI for its first 6 moves." },
   exchange: { name: "Turn Steal", desc: "Force the AI to pass \u2014 you keep playing (once per game)." },
   fog: { name: "Fog of War", desc: "For the AI's first 11 moves, a drifting 3\u00d73 no-go zone appears. After that, each turn blocks 2 random legal points." },
@@ -2085,11 +3097,11 @@ const ROGUE_CARD_I18N = {
   sprout: { name: "Sprout", desc: "Each capture spawns a bonus friendly stone nearby." },
   joseki_ocd: { name: "Joseki OCD", desc: "7 target points appear. Hit any 4 of them to auto-fill the remaining 3 with your stones." },
   handicap_quest: { name: "Handicap Quest", desc: "Pass once to start; after every 8 moves you force an AI pass, up to 3 times." },
-  god_hand: { name: "Hand of God", desc: "Step on a hidden diamond zone \u2014 2 friendly stones burst into nearby empty points inside a 3\u00d73 area." },
+  god_hand: { name: "Hand of God", desc: "Step on a hidden diamond zone \u2014 3 friendly stones burst into nearby empty points inside a 3\u00d73 area." },
   sansan_trap: { name: "3-3 Trap", desc: "Only if the opponent's very first move lands on any 3-3 point, you immediately gain 8 nearby counter-stones." },
   corner_helper: { name: "Corner Guard", desc: "Each corner can trigger once. If any corner's 5\u00d75 area has 4 of your stones, that corner gains 1 reinforcement." },
-  sanrensei: { name: "Three Stars", desc: "If your first 2 moves both land on star points, the game auto-fills a 3rd star point stone and adds 1 nearby support stone." },
-  no_regret: { name: "No Regrets", desc: "Undo disabled \u2014 but each move has an 8% chance to add a free stone." },
+  sanrensei: { name: "Three Stars", desc: "If your first 2 moves both land on star points, the game auto-fills a 3rd star point stone and adds 2 nearby support stones." },
+  no_regret: { name: "No Regrets", desc: "Undo disabled \u2014 but each move has a 12% chance to add a free stone." },
   quickthink: { name: "Quick Think", desc: "Play within 3s to unlock a 1s bonus move window. Hints and undo are disabled while this card is active." },
   foolish_wisdom: { name: "Wise Fool", desc: "Form an ugly shape to sprout 2 bonus stones in the nearby 5\u00d75 area." },
   five_in_row: { name: "Five in a Row", desc: "This is Gomoku, not Go. Whenever your stones form exactly 5 in a row, it extends the ends if possible; blocked ends become nearby support stones, plus 4 extra support stones near the line." },
@@ -2178,6 +3190,73 @@ function getTranslatedCard(card, mode) {
   return { ...card, name: meta.name, desc: meta.desc };
 }
 
+const CARD_META_TRANSLATIONS = {
+  "主动": "Active",
+  "AI干扰": "AI Disrupt",
+  "爆发": "Burst",
+  "陷阱": "Trap",
+  "开局构筑": "Opening Build",
+  "任务": "Quest",
+  "风险收益": "Risk Reward",
+  "节奏": "Tempo",
+  "连线构筑": "Line Build",
+  "规则改写": "Rule Shift",
+  "连动": "Chain",
+  "任务爆发": "Quest Burst",
+  "大招": "Ultimate",
+  "低": "Low",
+  "中": "Medium",
+  "高": "High",
+};
+
+const ROGUE_CARD_META = {
+  puppet: { tier: "S", category: "主动", complexity: "高" },
+  twin: { tier: "A", category: "主动", complexity: "中" },
+  exchange: { tier: "A", category: "主动", complexity: "低" },
+  coach_mode: { tier: "S", category: "主动", complexity: "中" },
+  dice: { tier: "B+", category: "AI干扰", complexity: "低" },
+  mirror: { tier: "B+", category: "AI干扰", complexity: "低" },
+  slip: { tier: "B+", category: "AI干扰", complexity: "低" },
+  god_hand: { tier: "A", category: "爆发", complexity: "中" },
+  sansan_trap: { tier: "A", category: "陷阱", complexity: "中" },
+  sanrensei: { tier: "A", category: "开局构筑", complexity: "中" },
+  joseki_ocd: { tier: "A", category: "任务", complexity: "中" },
+  no_regret: { tier: "B+", category: "风险收益", complexity: "低" },
+  quickthink: { tier: "A", category: "节奏", complexity: "高" },
+  five_in_row: { tier: "A", category: "连线构筑", complexity: "高" },
+};
+
+const ULTIMATE_CARD_META = {
+  chain: { tier: "S", category: "连动", complexity: "低" },
+  double: { tier: "S", category: "连动", complexity: "低" },
+  quickthink: { tier: "S", category: "节奏", complexity: "高" },
+  joseki_burst: { tier: "S", category: "任务爆发", complexity: "中" },
+  god_hand: { tier: "S", category: "爆发", complexity: "中" },
+  five_in_row: { tier: "S", category: "连线构筑", complexity: "高" },
+};
+
+function localizeCardMetaValue(value) {
+  if (!value) return "";
+  return currentLang === "en" ? (CARD_META_TRANSLATIONS[value] || value) : value;
+}
+
+function inferCardMeta(card, mode) {
+  const defaults = mode === "ultimate"
+    ? { tier: "S", category: "大招", complexity: "中" }
+    : { tier: "B", category: "规则改写", complexity: "中" };
+  const localMeta = mode === "ultimate" ? ULTIMATE_CARD_META[card.id] : ROGUE_CARD_META[card.id];
+  return { ...defaults, ...(localMeta || {}), ...(card.meta || {}) };
+}
+
+function getCardMetaMarkup(card, mode) {
+  const meta = inferCardMeta(card, mode);
+  return `<div class="card-meta-row">
+    <span class="card-tag tier">${ui("强度", "Tier")} ${meta.tier}</span>
+    <span class="card-tag">${localizeCardMetaValue(meta.category)}</span>
+    <span class="card-tag complexity">${ui("理解", "Read")} ${localizeCardMetaValue(meta.complexity)}</span>
+  </div>`;
+}
+
 const CARD_ART_IDS = new Set([
   "tengen","dice","erosion","puppet","seal","twin","nerf","komi_relief","time_press","lowline",
   "suboptimal","mirror","slip","blackhole","exchange","fog","gravity","golden_corner","sansan","shadow",
@@ -2259,6 +3338,7 @@ function renderRogueWiki() {
         ${getCardIconMarkup({ id: cardId, icon: "?" })}
         <div class="wiki-card-copy">
           <h4>${meta.name}</h4>
+          ${getCardMetaMarkup({ id: cardId }, "rogue")}
           <p>${meta.desc}</p>
         </div>
       </article>
@@ -2272,6 +3352,7 @@ function renderRogueWiki() {
         ${getCardIconMarkup({ id: cardId, icon: "?" })}
         <div class="wiki-card-copy">
           <h4>${meta.name}</h4>
+          ${getCardMetaMarkup({ id: cardId }, "ultimate")}
           <p>${meta.desc}</p>
         </div>
       </article>
@@ -2369,6 +3450,8 @@ function setTitle(selector, text) {
 function setSoundToggleVisual() {
   const icon = document.querySelector("#sound-toggle .toolbar-icon");
   if (icon) icon.dataset.icon = soundEnabled ? "sound-on" : "sound-off";
+  const settingsToggle = document.getElementById("sound-settings-toggle");
+  if (settingsToggle) settingsToggle.className = "toggle" + (soundEnabled ? " on" : "");
 }
 
 function setTerritoryToggleVisual() {
@@ -2386,6 +3469,101 @@ function setConnectionIndicator(ready, text) {
     dot.setAttribute("aria-label", label);
   }
   if (status) status.textContent = label;
+  syncClientShell();
+}
+
+function currentModeLabel() {
+  if (gameState?.challenge_beta || startMode === "challenge") return ui("闯关", "Challenge");
+  if (ultimateMode) return ui("Rogue · 大招对战", "Rogue · Ultimate Duel");
+  if (activeRogueCard || activeAiRogueCard || startMode === "rogue") {
+    const variant = getRogueVariantMode();
+    if (variant === "dual") return ui("Rogue · 双人抽卡", "Rogue · Dual Draft");
+    if (variant === "ultimate") return ui("Rogue · 大招对战", "Rogue · Ultimate Duel");
+    return ui("Rogue · 单人抽卡", "Rogue · Solo Draft");
+  }
+  if (twoPlayerMode || startMode === "two") return ui("双人对局", "Two Players");
+  if (gameState?.ai_observer || startMode === "watch") return ui("AI 学习", "AI Study");
+  return ui("普通对局", "Classic Game");
+}
+
+function currentTurnLabel() {
+  if (!gameState) return ui("待开始", "Ready");
+  if (gameState.game_over) return ui("已终局", "Finished");
+  const cp = gameState.current_player;
+  if (twoPlayerMode) return cp === "B" ? ui("黑棋落子", "Black to move") : ui("白棋落子", "White to move");
+  return cp === myColor ? ui("轮到你", "Your turn") : ui("AI 思考", "AI thinking");
+}
+
+function localizeEngineText(text) {
+  if (!text) return "";
+  if (currentLang !== "en") return text;
+  return String(text)
+    .replace(/CUDA\(升级包\)/g, "CUDA (upgrade pack)")
+    .replace(/升级包/g, "upgrade pack")
+    .replace(/引擎已就绪/g, "engine ready")
+    .replace(/引擎初始化中/g, "engine starting")
+    .replace(/引擎检测中/g, "checking engine")
+    .replace(/检测中/g, "checking")
+    .replace(/AI 待命/g, "AI ready")
+    .replace(/AI 在线/g, "AI online")
+    .replace(/CPU 模式/g, "CPU mode")
+    .replace(/高端/g, "high-end");
+}
+
+function syncClientShell() {
+  const statusValue = document.getElementById("client-status-value");
+  const engineValue = document.getElementById("client-engine-value");
+  const modeValue = document.getElementById("client-mode-value");
+  const runValue = document.getElementById("client-run-value");
+  const hudMode = document.getElementById("hud-mode");
+  const hudMove = document.getElementById("hud-move");
+  const hudTurn = document.getElementById("hud-turn");
+  const hudCard = document.getElementById("hud-card");
+  const hudEngine = document.getElementById("hud-engine");
+  const connected = !!ws && ws.readyState === WebSocket.OPEN;
+  const net = window.__goaiNetworkStatus || {};
+  const modeLabel = currentModeLabel();
+  const turnLabel = currentTurnLabel();
+  const moveText = String(gameState?.move_number || 0);
+  const cardText = ultimateMode
+    ? `${getUltimateCardName(ultimatePlayerCard) || ui("待选大招", "Pick Ultimate")}`
+    : (activeRogueCard ? getRogueCardName(activeRogueCard) : ui("无卡牌", "No Card"));
+  if (statusValue) statusValue.textContent = connected ? ui("已连接", "Connected") : ui("连接中…", "Connecting...");
+  if (engineValue) {
+    const engineText = net.engine_message
+      ? localizeEngineText(net.engine_message)
+      : (connected ? ui("AI 待命", "AI ready") : ui("检测中…", "Checking..."));
+    engineValue.textContent = engineText;
+    engineValue.title = engineText;
+  }
+  if (modeValue) modeValue.textContent = modeLabel;
+  if (runValue) runValue.textContent = gameState ? `${ui("第", "Move ")}${moveText}${currentLang === "en" ? "" : " 手"} · ${turnLabel}` : ui("待开始", "Ready");
+  if (hudMode) hudMode.textContent = modeLabel;
+  if (hudMove) hudMove.textContent = `${ui("手数", "Move")} ${moveText}`;
+  if (hudTurn) hudTurn.textContent = turnLabel;
+  if (hudCard) hudCard.textContent = cardText;
+  if (hudEngine) hudEngine.textContent = net.engine_backend ? localizeEngineText(net.engine_backend) : (connected ? ui("AI 在线", "AI online") : ui("AI 待命", "AI standby"));
+}
+
+function quickStartRogue() {
+  setMode("rogue");
+  const variant = document.getElementById("sel-rogue-variant");
+  if (variant) variant.value = "solo";
+  updateVariantOptionRows();
+  document.getElementById("btn-new").click();
+}
+
+function openNormalSetup() {
+  setMode("normal");
+  openSetupModal();
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen?.();
+  } else {
+    document.exitFullscreen?.();
+  }
 }
 
 function setOptionText(selectId, pairs) {
@@ -2395,7 +3573,160 @@ function setOptionText(selectId, pairs) {
     const opt = el.querySelector(`option[value="${value}"]`);
     if (opt) opt.textContent = ui(zh, en);
   });
+  syncWoodSelect(el);
 }
+
+let activeWoodSelect = null;
+let woodSelectPopover = null;
+
+function ensureWoodSelectPopover() {
+  if (woodSelectPopover) return woodSelectPopover;
+  woodSelectPopover = document.createElement("div");
+  woodSelectPopover.className = "wood-select-popover";
+  document.body.appendChild(woodSelectPopover);
+  return woodSelectPopover;
+}
+
+function selectedOption(select) {
+  return select?.selectedOptions?.[0] || Array.from(select?.options || []).find(opt => opt.selected) || select?.options?.[0] || null;
+}
+
+function syncWoodSelect(select) {
+  if (!select) return;
+  const wrap = select.closest(".wood-select");
+  if (!wrap) return;
+  const valueEl = wrap.querySelector(".wood-select-value");
+  const btn = wrap.querySelector(".wood-select-button");
+  const opt = selectedOption(select);
+  if (valueEl) valueEl.textContent = opt ? opt.textContent : "";
+  if (btn) {
+    btn.disabled = !!select.disabled;
+    btn.setAttribute("aria-expanded", wrap.classList.contains("open") ? "true" : "false");
+  }
+  if (activeWoodSelect === select) renderWoodSelectMenu(select);
+}
+
+function syncWoodSelects() {
+  document.querySelectorAll("select").forEach(syncWoodSelect);
+}
+
+function closeWoodSelectMenu() {
+  if (activeWoodSelect) {
+    const wrap = activeWoodSelect.closest(".wood-select");
+    if (wrap) wrap.classList.remove("open");
+    const btn = wrap?.querySelector(".wood-select-button");
+    if (btn) btn.setAttribute("aria-expanded", "false");
+  }
+  activeWoodSelect = null;
+  if (woodSelectPopover) {
+    woodSelectPopover.classList.remove("open");
+    woodSelectPopover.innerHTML = "";
+  }
+}
+
+function placeWoodSelectMenu(select) {
+  const wrap = select.closest(".wood-select");
+  const btn = wrap?.querySelector(".wood-select-button");
+  const pop = ensureWoodSelectPopover();
+  if (!btn) return;
+  const rect = btn.getBoundingClientRect();
+  const width = Math.max(rect.width, 180);
+  pop.style.width = `${width}px`;
+  pop.style.left = `${Math.round(rect.left)}px`;
+  pop.style.top = `${Math.round(rect.bottom + 6)}px`;
+  const popRect = pop.getBoundingClientRect();
+  if (popRect.bottom > window.innerHeight - 8) {
+    pop.style.top = `${Math.max(8, Math.round(rect.top - popRect.height - 6))}px`;
+  }
+}
+
+function renderWoodSelectMenu(select) {
+  const pop = ensureWoodSelectPopover();
+  pop.innerHTML = "";
+  Array.from(select.options).forEach((opt) => {
+    const item = document.createElement("div");
+    item.className = "wood-select-option" + (opt.disabled ? " disabled" : "");
+    item.textContent = opt.textContent;
+    item.setAttribute("role", "option");
+    item.setAttribute("aria-selected", opt.value === select.value ? "true" : "false");
+    if (!opt.disabled) {
+      item.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        select.value = opt.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        syncWoodSelect(select);
+        closeWoodSelectMenu();
+      });
+    }
+    pop.appendChild(item);
+  });
+  pop.classList.add("open");
+  placeWoodSelectMenu(select);
+}
+
+function openWoodSelectMenu(select) {
+  if (!select || select.disabled) return;
+  if (activeWoodSelect === select && woodSelectPopover?.classList.contains("open")) {
+    closeWoodSelectMenu();
+    return;
+  }
+  closeWoodSelectMenu();
+  activeWoodSelect = select;
+  const wrap = select.closest(".wood-select");
+  wrap?.classList.add("open");
+  const btn = wrap?.querySelector(".wood-select-button");
+  if (btn) btn.setAttribute("aria-expanded", "true");
+  renderWoodSelectMenu(select);
+}
+
+function enhanceWoodSelect(select) {
+  if (!select || select.dataset.woodEnhanced === "1") return;
+  select.dataset.woodEnhanced = "1";
+  select.classList.add("wood-select-native");
+  const wrap = document.createElement("span");
+  wrap.className = "wood-select";
+  select.parentNode.insertBefore(wrap, select);
+  wrap.appendChild(select);
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "wood-select-button";
+  btn.setAttribute("aria-haspopup", "listbox");
+  btn.setAttribute("aria-expanded", "false");
+  btn.innerHTML = '<span class="wood-select-value"></span>';
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    openWoodSelectMenu(select);
+  });
+  btn.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+      e.preventDefault();
+      openWoodSelectMenu(select);
+    } else if (e.key === "Escape") {
+      closeWoodSelectMenu();
+    }
+  });
+  wrap.appendChild(btn);
+  select.addEventListener("change", () => syncWoodSelect(select));
+  syncWoodSelect(select);
+}
+
+function enhanceWoodSelects() {
+  document.querySelectorAll("select").forEach(enhanceWoodSelect);
+}
+
+document.addEventListener("mousedown", (e) => {
+  if (!activeWoodSelect) return;
+  const wrap = activeWoodSelect.closest(".wood-select");
+  const pop = ensureWoodSelectPopover();
+  if (wrap?.contains(e.target) || pop.contains(e.target)) return;
+  closeWoodSelectMenu();
+});
+window.addEventListener("resize", () => {
+  if (activeWoodSelect) placeWoodSelectMenu(activeWoodSelect);
+});
+document.addEventListener("scroll", () => {
+  if (activeWoodSelect) placeWoodSelectMenu(activeWoodSelect);
+}, true);
 
 function ensureLanguageControl() {
   const panel = document.getElementById("lang-panel")
@@ -2420,32 +3751,58 @@ function applyLanguage() {
 
   ensureLanguageControl();
   rebuildCurveLegend();
-  const langToggle = document.getElementById("lang-toggle");
-  if (langToggle) {
-    langToggle.textContent = currentLang === "en" ? "中文" : "EN";
-    langToggle.title = ui("切换到英文界面", "Switch to Chinese");
+  const langSelect = document.getElementById("lang-toggle");
+  if (langSelect) {
+    langSelect.value = currentLang;
+    langSelect.title = ui("选择界面语言", "Choose interface language");
   }
+  const settingsLanguageSelect = document.getElementById("settings-language-select");
+  if (settingsLanguageSelect) settingsLanguageSelect.value = currentLang;
+  setText("#settings-language-label", ui("语言", "Language"));
+  setText("#settings-sound-label", ui("音效", "Sound"));
 
   setText("#header-main h1", ui("围棋对弈场", "Rogue Go Arena"));
+  setText("#client-kicker", ui("ROGUE", "ROGUE"));
+  setText("#client-title", ui("GoAI", "GoAI"));
+  setText("#quick-rogue", ui("Rogue", "Rogue"));
+  setText("#quick-setup", ui("开始", "Start"));
+  setText("#quick-fullscreen", ui("全屏", "Fullscreen"));
+  setText("#client-status-label", ui("连接", "Connection"));
+  setText("#client-engine-label", ui("引擎", "Engine"));
+  setText("#client-mode-label", ui("模式", "Mode"));
+  setText("#client-run-label", ui("手数", "Move"));
   setTitle("#sound-toggle", ui("音效开关", "Sound"));
   setConnectionIndicator(!!ws && ws.readyState === WebSocket.OPEN);
   setText("#thinking-indicator", ui("AI 思考中…", "AI is thinking..."));
   setText("#thinking-indicator-panel", ui("AI 思考中…", "AI is thinking..."));
 
-  setTitle("#btn-setup", ui("开始对弈", "Start Game"));
+  setTitle("#btn-setup", ui("开始", "Start"));
+  setTitle("#btn-quick-rogue", ui("Rogue", "Rogue"));
   setTitle("#btn-pass", ui("虚手", "Pass"));
   setTitle("#btn-undo", ui("悔棋", "Undo"));
-  setTitle("#btn-score", ui("计算胜负", "Score"));
-  setTitle("#btn-territory-toggle", ui("形势分析", "Territory"));
+  setTitle("#btn-score", ui("计算", "Score"));
+  setTitle("#btn-territory-toggle", ui("形势", "Territory"));
   setTitle("#btn-resign", ui("认输", "Resign"));
-  setTitle("#btn-rogue-wiki", ui("ROGUE AI WIKI", "ROGUE AI WIKI"));
-  setTitle("#btn-settings", ui("打开功能", "Settings"));
+  setTitle("#btn-rogue-wiki", ui("Wiki", "Wiki"));
+  setTitle("#btn-settings", ui("设置", "Settings"));
   setTitle("#btn-review-settings", ui("打开功能", "Settings"));
   setTitle("#btn-review-first", ui("第一手", "First Move"));
   setTitle("#btn-review-prev", ui("上一手", "Previous Move"));
   setTitle("#btn-review-next", ui("下一手", "Next Move"));
   setTitle("#btn-review-last", ui("最后一手", "Last Move"));
   setTitle("#btn-review-exit", ui("退出复盘", "Exit Review"));
+  [
+    ["#btn-setup .tool-label", "开始", "Start"],
+    ["#btn-quick-rogue .tool-label", "Rogue", "Rogue"],
+    ["#btn-rogue-wiki .tool-label", "Wiki", "Wiki"],
+    ["#btn-pass .tool-label", "虚手", "Pass"],
+    ["#btn-undo .tool-label", "悔棋", "Undo"],
+    ["#btn-score .tool-label", "计算", "Score"],
+    ["#btn-territory-toggle .tool-label", "形势", "Area"],
+    ["#btn-resign .tool-label", "认输", "Resign"],
+    ["#btn-settings .tool-label", "设置", "Settings"],
+    ["#btn-skill .tool-label", "技能", "Skill"],
+  ].forEach(([selector, zh, en]) => setText(selector, ui(zh, en)));
   setTitle(".drawer-close", ui("关闭", "Close"));
   setTitle("#overlay-close", ui("关闭", "Close"));
   setTitle(".modal-close", ui("关闭", "Close"));
@@ -2467,7 +3824,9 @@ function applyLanguage() {
   const settingsLabels = Array.from(document.querySelectorAll("#settings-drawer .form-row label"))
     .filter(el => el.id !== "lang-panel-label");
   if (settingsLabels[0]) settingsLabels[0].textContent = ui("落子模式", "Placement");
-  const toggleLabels = document.querySelectorAll("#settings-drawer .toggle-label");
+  setText("#settings-stage-label", ui("画面尺寸", "Display Size"));
+  const toggleLabels = Array.from(document.querySelectorAll("#settings-drawer .toggle-label"))
+    .filter(el => !el.id || !el.id.startsWith("settings-"));
   if (toggleLabels[0]) toggleLabels[0].textContent = ui("显示推荐落点", "Show Suggested Moves");
   if (toggleLabels[1]) toggleLabels[1].textContent = ui("显示手数", "Show Move Numbers");
   if (toggleLabels[2]) toggleLabels[2].textContent = ui("形势判断", "Territory Estimate");
@@ -2531,11 +3890,27 @@ function applyLanguage() {
   const ultTitle = document.querySelector("#ultimate-overlay h2");
   if (ultTitle) ultTitle.textContent = ui("大招模式", "Ultimate Mode");
   const ultSub = document.querySelector("#ultimate-overlay p");
-  if (ultSub) ultSub.textContent = ui("你与 AI 各选一张超强卡", "You and the AI each choose one card");
+  if (ultSub) ultSub.textContent = ui("选择大招卡", "Pick ultimate card");
 
   setOptionText("sel-placement", [
     ["direct", "直接落子", "Direct"],
     ["fine", "精准落子(支持微调)", "Fine-tune"]
+  ]);
+  setOptionText("sel-stage-preset", [
+    ["auto", "自适应", "Auto"],
+    ["1080", "1080p", "1080p"],
+    ["1440", "1440p", "1440p"],
+    ["2160", "4K", "4K"]
+  ]);
+  const stageSelect = document.getElementById("sel-stage-preset");
+  if (stageSelect) stageSelect.value = stagePreset;
+  setOptionText("lang-toggle", [
+    ["zh", "中文", "Chinese"],
+    ["en", "English", "English"]
+  ]);
+  setOptionText("settings-language-select", [
+    ["zh", "中文", "Chinese"],
+    ["en", "English", "English"]
   ]);
   setOptionText("sel-color", [
     ["B", "黑棋（先手）", "Black (First)"],
@@ -2577,10 +3952,14 @@ function applyLanguage() {
   if (activeRogueCard) updateRogueBar();
   if (ultimateMode) updateUltimateBar();
   if (gameState) updateUI();
+  syncClientShell();
   renderRogueWiki();
   refreshSetupModeHint();
   updateVariantOptionRows();
   drawWinrateCurve();
+  enhanceWoodSelects();
+  syncWoodSelects();
+  resizeBoard(reviewMode ? reviewBoardSize : (gameState?.size || boardSize || 19));
 }
 
 // Review mode state
@@ -3488,6 +4867,15 @@ document.getElementById("sel-time-mode").addEventListener("change", (e) => {
   document.getElementById("row-byoyomi").style.display = mode === "byoyomi" ? "flex" : "none";
 });
 
+document.getElementById("sel-stage-preset").addEventListener("change", (e) => {
+  stagePreset = e.target.value || "auto";
+  localStorage.setItem("goai_stage_preset", stagePreset);
+  _boardCacheParams = "";
+  _offScreenBoard = null;
+  resizeBoard(reviewMode ? reviewBoardSize : (gameState?.size || boardSize || 19));
+  render();
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // CANVAS RENDERING
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -3500,44 +4888,111 @@ let boardRecoveryTimer = null;
 let boardWatchdogTimer = null;
 let boardRenderSize = 0;
 let boardRenderDpr = 1;
+const SCENE_W = 1672;
+const SCENE_H = 941;
+const SCENE_ASPECT = SCENE_W / SCENE_H;
+
+function stagePresetConfig() {
+  return {
+    "1080": { factor: 0.92, maxWidth: 1920 },
+    "1440": { factor: 0.95, maxWidth: 2560 },
+    "2160": { factor: 0.96, maxWidth: 3840 },
+    auto: { factor: 0.96, maxWidth: 3840 },
+  }[stagePreset] || { factor: 0.96, maxWidth: 3840 };
+}
+
+function syncBoardFitFrame() {
+  if (!boardContainer || !canvas) return;
+  boardContainer.style.setProperty("--board-fit-x", `${canvas.offsetLeft}px`);
+  boardContainer.style.setProperty("--board-fit-y", `${canvas.offsetTop}px`);
+  boardContainer.style.setProperty("--board-fit-size", `${canvas.offsetWidth}px`);
+}
 
 function updateNetworkBadge(status) {
   window.__goaiNetworkStatus = status || null;
 }
 
 async function refreshNetworkInfo() {
-  return null;
+  try {
+    const resp = await fetch("/status", { cache: "no-store" });
+    if (!resp.ok) return null;
+    const status = await resp.json();
+    updateNetworkBadge(status);
+    syncClientShell();
+    return status;
+  } catch (_) {
+    syncClientShell();
+    return null;
+  }
 }
 
 function resizeBoard(size) {
   boardSize = size;
   const compact = window.innerWidth <= 640;
   const stacked = window.innerWidth <= 980;
-  const layoutWidth = mainLayout?.clientWidth || window.innerWidth;
-  const sideWidth = stacked ? 0 : (sidePanel?.offsetWidth || 0);
-  const gap = stacked ? 0 : 16;
-  const containerWidth = boardContainer?.clientWidth || 0;
-  const availableWidth = Math.min(
-    700,
-    Math.max(
-      compact ? 280 : 360,
-      containerWidth || (layoutWidth - sideWidth - gap)
+  const deckRect = document.getElementById("client-command-deck")?.getBoundingClientRect();
+  const topClear = Math.ceil((deckRect?.bottom || 64) + (stacked ? 10 : 14));
+  const bottomClear = compact ? 8 : 18;
+  const horizontalMargin = compact ? 12 : (stacked ? 20 : 72);
+  const availableViewportWidth = Math.max(300, window.innerWidth - horizontalMargin);
+  const availableViewportHeight = Math.max(360, window.innerHeight - topClear - bottomClear);
+  const preset = stagePresetConfig();
+  const stageWidth = Math.floor(Math.max(
+    compact ? Math.min(availableViewportWidth, 320) : Math.min(availableViewportWidth, 900),
+    Math.min(
+      availableViewportWidth,
+      window.innerWidth * preset.factor,
+      availableViewportHeight * SCENE_ASPECT,
+      preset.maxWidth
     )
+  ));
+  const stageHeight = Math.floor(stageWidth / SCENE_ASPECT);
+  const boardTop = Math.round(stageHeight * (compact ? 0.05 : 0.04));
+  const toolbarBottomInset = Math.round(Math.min(compact ? 12 : 18, Math.max(8, window.innerHeight * 0.0095)));
+  const toolbarButtonHeight = compact
+    ? 66
+    : Math.round(Math.min(82, Math.max(64, window.innerWidth * 0.0365)));
+  const windowedTight = !compact && availableViewportHeight < 1050;
+  const toolbarSafeClear = toolbarButtonHeight + toolbarBottomInset + (windowedTight ? 18 : 10);
+  const toolbarBaseClear = Math.round(Math.min(
+    compact ? 92 : 112,
+    Math.max(compact ? 64 : 58, stageHeight * (compact ? 0.075 : 0.058))
+  ));
+  const toolbarClear = Math.max(toolbarBaseClear, toolbarSafeClear);
+  const boardTarget = Math.max(
+    compact ? 280 : 520,
+    Math.min(stageWidth * (compact ? 0.7 : 0.54), stageHeight - boardTop - toolbarClear)
   );
   // Solve: total = PAD*2 + CELL*(size-1), PAD = CELL*padRatio
   // total = CELL*(2*padRatio + size - 1) <= availableWidth
   const padRatio = 1.3;
   const denominator = 2 * padRatio + size - 1;
-  CELL = Math.floor(availableWidth / denominator);
-  CELL = Math.max(compact ? 16 : 22, Math.min(CELL, compact ? 30 : 38));
+  CELL = Math.floor(boardTarget / denominator);
+  const minCell = compact ? (boardTarget < 310 ? 13 : 15) : 22;
+  CELL = Math.max(minCell, Math.min(CELL, compact ? 30 : 96));
   PAD = Math.floor(CELL * padRatio);
-  const total = Math.max(compact ? 280 : 360, PAD * 2 + CELL * (size - 1));
+  const minBoardTotal = compact ? Math.min(280, boardTarget) : 520;
+  const total = Math.max(minBoardTotal, PAD * 2 + CELL * (size - 1));
+  const boardLeft = Math.round((stageWidth - total) / 2);
+  const boardRight = Math.max(0, stageWidth - boardLeft - total);
+  const boardBottom = Math.max(0, stageHeight - boardTop - total);
+  document.documentElement.style.setProperty("--goai-stage-width", `${stageWidth}px`);
+  if (boardContainer) {
+    boardContainer.style.width = `${stageWidth}px`;
+    boardContainer.style.setProperty("--stage-pad-left", `${boardLeft}px`);
+    boardContainer.style.setProperty("--stage-pad-right", `${boardRight}px`);
+    boardContainer.style.setProperty("--stage-pad-top", `${boardTop}px`);
+    boardContainer.style.setProperty("--stage-pad-bottom", `${boardBottom}px`);
+    boardContainer.style.setProperty("--toolbar-bottom", `${toolbarBottomInset}px`);
+    boardContainer.style.setProperty("--toolbar-width", `${Math.min(stageWidth * 0.72, Math.max(1120, total * 1.08))}px`);
+  }
   boardRenderSize = total;
   boardRenderDpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
   canvas.width = Math.floor(total * boardRenderDpr);
   canvas.height = Math.floor(total * boardRenderDpr);
   canvas.style.width = `${total}px`;
   canvas.style.height = `${total}px`;
+  syncBoardFitFrame();
   ctx.setTransform(boardRenderDpr, 0, 0, boardRenderDpr, 0, 0);
   ctx.imageSmoothingEnabled = true;
   if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
@@ -3575,7 +5030,7 @@ function ensureBoardReady(delay = 250) {
 let _boardCacheParams = "";
 let _offScreenBoard = null;
 let _stoneSpriteCache = new Map();
-const BOARD_TEXTURE_SRC = "assets/textures/board-tech-classic-v2.png?v=20260423a";
+const BOARD_TEXTURE_SRC = "assets/textures/board-kaya-classic-v1.png?v=20260424a";
 const BLACK_STONE_TEXTURE_SRC = "assets/textures/stone-black-traditional-v1.png?v=20260423b";
 const WHITE_STONE_TEXTURE_SRC = "assets/textures/stone-materials-tech-v3.png?v=20260423a";
 const boardTextureImage = new Image();
@@ -4259,17 +5714,14 @@ function showRogueCards(cards, meta = {}) {
   if (rogueTitle) {
     rogueTitle.textContent = inChallenge
       ? ui(`\u95ef\u5173 \u7b2c ${stage} \u5173`, `Challenge - Stage ${stage}`)
-      : ui("Rogue 模式", "Rogue Mode");
+      : ui("Rogue", "Rogue");
   }
   if (rogueSub) {
     rogueSub.textContent = inChallenge
-      ? ui(
-          `\u95ef\u5173\u9009\u5361\uff1a\u7b2c ${stage} \u5173\uff0c\u5269\u4f59\u5237\u65b0 ${refreshRemaining} \u6b21\u3002\u540c\u7c7b\u5361\u66f4\u5bb9\u6613\u8fde\u51fa\uff0c\u5e76\u4f1a\u6fc0\u6d3b\u95ef\u5173\u5957\u88c5\u6548\u679c\u3002`,
-          `Challenge pick: Stage ${stage}, ${refreshRemaining} refreshes left. Matching card families chain more often and unlock challenge set bonuses.`
-        )
+      ? ui(`第 ${stage} 关 · 刷新 ${refreshRemaining}`, `Stage ${stage} · Refresh ${refreshRemaining}`)
       : (twoPlayerMode
-        ? ui("\u8bf7\u9009\u62e9\u4e00\u5f20\u5171\u4eab\u89c4\u5219\u5361", "Choose one shared rule card")
-        : ui("\u8bf7\u9009\u62e9\u4e00\u5f20\u5f3a\u5316\u5361", "Choose one card"));
+        ? ui("共享规则卡", "Shared rule card")
+        : ui("选择一张卡", "Pick a card"));
   }
   if (refreshWrap && refreshBtn) {
     refreshWrap.style.display = inChallenge && refreshRemaining > 0 ? "" : "none";
@@ -4283,6 +5735,7 @@ function showRogueCards(cards, meta = {}) {
     const div = document.createElement("div");
     div.className = "rogue-card";
     div.innerHTML = `${getCardIconMarkup(c)}
+      ${getCardMetaMarkup(c, "rogue")}
       <div class="rc-name">${c.name}</div>
       <div class="rc-desc">${c.desc}</div>`;
     div.onclick = () => {
@@ -4294,6 +5747,7 @@ function showRogueCards(cards, meta = {}) {
     container.appendChild(div);
   });
   document.getElementById("rogue-overlay").classList.add("show");
+  syncClientShell();
 }
 
 function updateRogueBar() {
@@ -4401,6 +5855,7 @@ function updateRogueSkillButton() {
 function updateRogueBar() {
   updateRogueSkillButton();
   refreshHintVisibility();
+  syncClientShell();
 }
 
 function resetRogueState() {
@@ -4424,23 +5879,23 @@ function resetRogueState() {
   document.getElementById("ultimate-bar").style.display = "none";
   document.getElementById("ultimate-overlay").classList.remove("show");
   clearCardTurnTimer();
+  syncClientShell();
 }
 
 function showUltimateCards(cards) {
   ultimateOfferCards = Array.isArray(cards) ? cards.map(c => ({ ...c })) : [];
-  console.log("[Ultimate] showUltimateCards called, cards:", cards);
   const container = document.getElementById("ultimate-cards");
-  if (!container) { console.error("[Ultimate] #ultimate-cards not found!"); return; }
+  if (!container) return;
   container.innerHTML = "";
   ultimateOfferCards.forEach(c0 => {
     const c = getTranslatedCard(c0, "ultimate");
     const div = document.createElement("div");
     div.className = "ultimate-card";
     div.innerHTML = `${getCardIconMarkup(c)}
+      ${getCardMetaMarkup(c, "ultimate")}
       <div class="rc-name">${c.name}</div>
       <div class="rc-desc">${c.desc}</div>`;
     div.onclick = () => {
-      console.log("[Ultimate] Card clicked:", c0.id);
       container.querySelectorAll(".ultimate-card").forEach(card => card.classList.remove("selected"));
       div.classList.add("selected");
       showCardEffectVisual(c0.name || c.name, "ultimate");
@@ -4450,9 +5905,7 @@ function showUltimateCards(cards) {
   });
   const overlay = document.getElementById("ultimate-overlay");
   overlay.classList.add("show");
-  console.log("[Ultimate] Overlay display:", getComputedStyle(overlay).display,
-              "visibility:", getComputedStyle(overlay).visibility,
-              "z-index:", getComputedStyle(overlay).zIndex);
+  syncClientShell();
 }
 
 const ULTIMATE_NAMES = {
@@ -4485,7 +5938,7 @@ const ULTIMATE_NAMES = {
 
 function updateUltimateBar() {
   const bar = document.getElementById("ultimate-bar");
-  if (!ultimateMode) { bar.style.display = "none"; return; }
+  if (!ultimateMode) { bar.style.display = "none"; syncClientShell(); return; }
   bar.style.display = "flex";
   const pName = ultimatePlayerName || getUltimateCardName(ultimatePlayerCard) || "—";
   const aName = ultimateAiName || getUltimateCardName(ultimateAiCard) || "—";
@@ -4493,6 +5946,7 @@ function updateUltimateBar() {
   document.getElementById("ub-ai-card").textContent = "AI: " + aName;
   const mc = gameState ? (gameState.ultimate_move_count || 0) : 0;
   document.getElementById("ub-moves").textContent = ui(`决胜 ${mc} / 20`, `${mc} / 20`);
+  syncClientShell();
 }
 
 function drawRogueMarks() {
@@ -5199,7 +6653,6 @@ function handleMessage(msg) {
 
     // ── Ultimate mode messages ─────────────────────────────────────────────
     case "ultimate_offer":
-      console.log("[Ultimate] Received ultimate_offer, cards count:", msg.cards?.length);
       showUltimateCards(msg.cards);
       break;
 
@@ -5234,19 +6687,21 @@ function reasonText(r) {
 function updateUI() {
   if (!gameState) return;
   if (twoPlayerMode) {
-    document.getElementById("info-my-color").innerHTML = "双方（人）";
+    document.getElementById("info-my-color").innerHTML = ui("双方（人）", "Human vs Human");
   } else {
     const colorDot = `<span class="my-color-badge" style="background:${myColor==='B'?'#111':'#eee'}"></span>`;
     document.getElementById("info-my-color").innerHTML =
-      colorDot + (myColor==="B" ? "黑棋" : "白棋");
+      colorDot + (myColor==="B" ? ui("黑棋", "Black") : ui("白棋", "White"));
   }
   document.getElementById("info-move").textContent = gameState.move_number || 0;
   const cp = gameState.current_player;
   if (twoPlayerMode) {
-    document.getElementById("info-player").textContent = cp === "B" ? "黑棋落子" : "白棋落子";
+    document.getElementById("info-player").textContent = cp === "B" ? ui("黑棋落子", "Black to move") : ui("白棋落子", "White to move");
   } else {
     document.getElementById("info-player").textContent =
-      cp === myColor ? (cp==="B"?"黑（我）":"白（我）") : (cp==="B"?"黑（AI）":"白（AI）");
+      cp === myColor
+        ? (cp==="B" ? ui("黑（我）", "Black (You)") : ui("白（我）", "White (You)"))
+        : (cp==="B" ? ui("黑（AI）", "Black (AI)") : ui("白（AI）", "White (AI)"));
   }
   if (cardTurnRemaining > 0 && isMyTurn) {
     document.getElementById("info-player").textContent += ` ${cardTurnLabel}${cardTurnRemaining.toFixed(1)}s`;
@@ -5256,13 +6711,16 @@ function updateUI() {
   document.getElementById("info-level").textContent =
     gameState.ai_observer
       ? `${ui("黑", "Black")} ${RANK_LABELS[gameState.ai_level_black] || gameState.ai_level_black || "—"} / ${ui("白", "White")} ${RANK_LABELS[gameState.ai_level_white] || gameState.ai_level_white || "—"}`
-      : (twoPlayerMode ? "双人" : (RANK_LABELS[gameState.level] || gameState.level || "—"));
+      : (twoPlayerMode ? ui("双人", "Two Players") : (RANK_LABELS[gameState.level] || gameState.level || "—"));
+  syncClientShell();
 }
 
 function updateWinRate(wr) {
   const wrap = document.getElementById("winrate-bar-wrap");
   const hintsAllowed = showHints && !isHintLockedByCard();
-  if (wrap) wrap.style.display = hintsAllowed ? "" : "none";
+  const topSlot = document.getElementById("top-winrate-slot");
+  if (wrap) wrap.style.display = hintsAllowed ? "block" : "none";
+  if (topSlot) topSlot.classList.toggle("active", hintsAllowed);
   if (!hintsAllowed) return;
   const rawBlack = Math.max(0, Math.min(100, wr * 100));
   const rawWhite = 100 - rawBlack;
@@ -5438,7 +6896,10 @@ function refreshHintVisibility() {
     const toggle = document.getElementById("hint-toggle");
     if (toggle) toggle.className = "toggle";
   }
-  if (wrap) wrap.style.display = showHints && !locked ? "" : "none";
+  const visible = showHints && !locked;
+  const topSlot = document.getElementById("top-winrate-slot");
+  if (wrap) wrap.style.display = visible ? "block" : "none";
+  if (topSlot) topSlot.classList.toggle("active", visible);
 }
 
 function isHintLockedByCard() {
@@ -5668,8 +7129,12 @@ document.getElementById("btn-new").addEventListener("click", () => {
   }, 200);
 });
 
-document.getElementById("lang-toggle").addEventListener("click", () => {
-  setLanguage(currentLang === "en" ? "zh" : "en");
+document.getElementById("lang-toggle").addEventListener("change", (e) => {
+  setLanguage(e.target.value || "zh");
+});
+
+document.getElementById("settings-language-select").addEventListener("change", (e) => {
+  setLanguage(e.target.value || "zh");
 });
 
 document.getElementById("btn-pass").addEventListener("click", () => {
@@ -5737,6 +7202,7 @@ document.getElementById("hint-toggle").addEventListener("click", () => {
   showHints = !showHints;
   document.getElementById("hint-toggle").className = "toggle" + (showHints ? " on" : "");
   refreshHintVisibility();
+  updateWinRate(analysis ? analysis.winrate : 0.5);
   if (showHints && gameState) sendWS({ action: "request_hint" });
   render();
 });
@@ -5762,6 +7228,7 @@ document.getElementById("sel-level").addEventListener("change", e => {
 document.getElementById("sel-handicap").addEventListener("change", e => {
   if (parseInt(e.target.value, 10) > 0) {
     document.getElementById("sel-komi").value = "0";
+    syncWoodSelect(document.getElementById("sel-komi"));
   }
 });
 
@@ -5770,6 +7237,12 @@ document.getElementById("sound-toggle").addEventListener("click", () => {
   soundEnabled = !soundEnabled;
   setSoundToggleVisual();
   // Initialize audio context on first user interaction
+  if (soundEnabled) getAudioCtx();
+});
+
+document.getElementById("sound-settings-toggle").addEventListener("click", () => {
+  soundEnabled = !soundEnabled;
+  setSoundToggleVisual();
   if (soundEnabled) getAudioCtx();
 });
 
@@ -5898,6 +7371,7 @@ rankSelects.forEach(selectEl => populateRankSelect(selectEl));
         }
       });
     }
+    syncWoodSelects();
   } catch(e) { /* GPU detection unavailable */ }
 })();
 
@@ -5938,6 +7412,8 @@ function updateVariantOptionRows() {
   if (isRogue) {
     document.getElementById("sel-size").value = "19";
     document.getElementById("sel-handicap").value = "0";
+    syncWoodSelect(document.getElementById("sel-size"));
+    syncWoodSelect(document.getElementById("sel-handicap"));
   }
 }
 
@@ -5973,9 +7449,16 @@ function updateUI() {
   document.getElementById("info-cap-w").textContent = gameState.captures?.W || 0;
   document.getElementById("info-level").textContent =
     twoPlayerMode ? ui("双人", "Two Players") : (RANK_LABELS[gameState.level] || gameState.level || "—");
+  syncClientShell();
 }
 
 function updateWinRate(wr) {
+  const wrap = document.getElementById("winrate-bar-wrap");
+  const hintsAllowed = showHints && !isHintLockedByCard();
+  const topSlot = document.getElementById("top-winrate-slot");
+  if (wrap) wrap.style.display = hintsAllowed ? "block" : "none";
+  if (topSlot) topSlot.classList.toggle("active", hintsAllowed);
+  if (!hintsAllowed) return;
   const rawBlack = Math.max(0, Math.min(100, wr * 100));
   const rawWhite = 100 - rawBlack;
   const b = rawBlack.toFixed(1);
