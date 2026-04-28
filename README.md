@@ -5,12 +5,14 @@
 <h1 align="center">GoAI · Rogue Go Arena</h1>
 
 <p align="center">
-  <strong>围棋 × KataGo × Roguelike 卡牌 × WebView2 Desktop</strong><br>
-  一款把传统围棋变成构筑、反制、爆发和翻盘体验的 Windows 桌面 AI 对弈游戏。
+  <strong>Go × KataGo × Roguelike Cards × WebView2 Desktop</strong><br>
+  A Windows-first AI Go game that turns every 19×19 match into a draft, counterplay, burst, and comeback run.
 </p>
 
 <p align="center">
   <a href="https://github.com/gongyu0918-debug/rogue-goai/releases/latest"><strong>Download for Windows</strong></a>
+  ·
+  <a href="#english">English</a>
   ·
   <a href="#为什么值得玩">中文</a>
   ·
@@ -18,9 +20,9 @@
   ·
   <a href="#korean--한국어">한국어</a>
   ·
-  <a href="#快速开始">Quick Start</a>
+  <a href="#quick-start">Quick Start</a>
   ·
-  <a href="#玩法模式">Modes</a>
+  <a href="#game-modes">Modes</a>
   ·
   <a href="#开发命令">Development</a>
 </p>
@@ -35,10 +37,77 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/goai-hero.png" alt="GoAI dark wood board interface">
+  <img src="docs/assets/goai-hero-current.jpg" alt="GoAI current dark wood board interface">
 </p>
 
 > `main` 是当前主力 WebView2 桌面版。原 HTML 浏览器版作为 [`html-main`](https://github.com/gongyu0918-debug/rogue-goai/tree/html-main) 维护分支保留，通用玩法、卡牌、服务端和 HTML UI 更新可从那里继承。
+
+## English
+
+GoAI is a desktop Go arena built for people who want the reading depth of KataGo and the volatility of a roguelike run in the same match. You still play real Go on a 19×19 board, but Rogue cards can force AI moves, seal zones, spawn stones, shift komi, trigger hidden bursts, or turn a losing position into a playable comeback.
+
+The Windows build wraps the same HTML/WebSocket game core in a WebView2 desktop shell. The UI behaves like a local app, the server stays easy to debug, and KataGo runs as a sidecar engine with CUDA, OpenCL, and CPU fallback.
+
+## Screenshots
+
+| Current Board | Rogue Guide |
+| --- | --- |
+| <img src="docs/assets/goai-hero-current.jpg" alt="GoAI current board with winrate and wood UI"> | <img src="docs/assets/goai-rogue-guide.jpg" alt="GoAI Rogue wiki guide panel"> |
+
+| Rogue Card Draft |
+| --- |
+| <img src="docs/assets/goai-card-draft.jpg" alt="GoAI Rogue card selection screen"> |
+
+## Why Players Notice It
+
+| Hook | What it means |
+| --- | --- |
+| Real Go engine | KataGo remains the reading core, so the game still feels like Go instead of a skin over random moves. |
+| Roguelike draft | 34 Rogue cards can reshape a match before the first stone lands. |
+| Ultimate burst | 25 ultimate cards create short, dramatic games with high-impact turns. |
+| AI counterplay | The AI can also receive Rogue rules, turning a normal match into a response game. |
+| Wood-board focus | Clean top-down board, restrained dark wood UI, stone bowls, and readable tool icons. |
+| Four languages | Chinese, English, Japanese, and Korean are available through external locale packs. |
+
+## Game Modes
+
+### Classic
+
+Standard AI Go. Use it for normal practice, rank testing, and reading-focused games.
+
+### Rogue
+
+Draft one card from three choices at the start. A single pick can change the rhythm of the whole game: forced AI moves, bonus stones, forbidden points, komi pressure, timed combo turns, or hidden-zone explosions.
+
+### Ultimate
+
+Both sides carry a high-impact ultimate card. Chain turns, proliferation, board wipes, time reversal, and five-in-a-row bursts make even short games swing hard.
+
+### Study
+
+Watch AI-vs-AI games to study opening shape, pace, tradeoffs, and engine preferences.
+
+### Local Two Player
+
+Play on one PC with a shared board. Rogue rules can also turn it into a party-style Go variant.
+
+## Quick Start
+
+Download the latest Windows installer from [Latest Release](https://github.com/gongyu0918-debug/rogue-goai/releases/latest), install GoAI, and launch it from the desktop entry.
+
+The packaged build probes engine paths in this order:
+
+```text
+CUDA -> OpenCL -> CPU
+```
+
+For source development, use Python 3.11:
+
+```bash
+pip install -r requirements.txt
+python setup.py
+python launcher.py
+```
 
 ## 为什么值得玩
 
