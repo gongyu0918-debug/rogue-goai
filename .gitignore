@@ -34,6 +34,7 @@ katago/*
 !katago/default_gtp.cfg
 
 # Local test artifacts
+/.playwright-cli/
 _*.log
 _*.sgf
 output/

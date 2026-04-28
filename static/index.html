@@ -6544,6 +6544,7 @@ function handleMessage(msg) {
   switch (msg.type) {
 
     case "game_start": {
+      clearGameLog();
       twoPlayerMode = !!msg.two_player;
       gameState = msg;
       syncChallengeSessionFromState(msg);
@@ -7167,6 +7168,11 @@ function log(msg) {
   requestAnimationFrame(() => {
     el.scrollTop = el.scrollHeight;
   });
+}
+
+function clearGameLog() {
+  const el = document.getElementById("game-log");
+  if (el) el.innerHTML = "";
 }
 
 function showOverlay(title, sub, winner, score) {

@@ -114,12 +114,18 @@ class EngineStartupManager:
 
     def available_models(self) -> list[Path]:
         models = []
+        seen = set()
         for candidate in (
+            self.paths.user_model_large,
             self.paths.model_large,
             self.paths.model_default,
             self.paths.model_small,
         ):
             if candidate.exists():
+                key = str(candidate.resolve()).casefold()
+                if key in seen:
+                    continue
+                seen.add(key)
                 models.append(candidate)
         return models
 
@@ -127,6 +133,7 @@ class EngineStartupManager:
         return any(
             path.exists()
             for path in (
+                self.paths.user_model_large,
                 self.paths.model_large,
                 self.paths.model_default,
                 self.paths.model_small,

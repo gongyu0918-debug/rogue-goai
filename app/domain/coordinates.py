@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 
+from typing import Optional
+
+
 GTP_COLUMNS = "ABCDEFGHJKLMNOPQRST"
 
 
-def coord_to_gtp(x: int, y: int, size: int = 19) -> str:
+def coord_to_gtp(x: int, y: int, size: int = 19) -> Optional[str]:
     """Convert zero-based board coordinates to GTP notation."""
+    if not (0 <= x < size and 0 <= y < size and size <= len(GTP_COLUMNS)):
+        return None
     return f"{GTP_COLUMNS[x]}{size - y}"
 
 
@@ -21,4 +26,3 @@ def gtp_to_coord(gtp: str, size: int = 19) -> tuple[int, int] | None:
     except (ValueError, IndexError):
         print(f"[GTP] Invalid coord: {gtp!r}")
     return None
-

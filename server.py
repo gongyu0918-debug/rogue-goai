@@ -158,6 +158,8 @@ parser.add_argument("--no-katago", action="store_true",
                     help="Disable KataGo (free-play / two-player only)")
 parser.add_argument("--host", default="127.0.0.1",
                     help="Host interface to bind the HTTP/WebSocket server to")
+parser.add_argument("--port", default=8000, type=int,
+                    help="Port to bind the HTTP/WebSocket server to")
 args, _ = parser.parse_known_args()
 NO_KATAGO = args.no_katago
 
@@ -182,7 +184,7 @@ KATAGO_CONFIG = BASE_DIR / "katago" / "config.cfg"
 KATAGO_CPU_CONFIG = BASE_DIR / "katago" / "config_cpu.cfg"
 STATIC_DIR = BASE_DIR / "static"
 SERVER_HOST = args.host
-SERVER_PORT = 8000
+SERVER_PORT = args.port
 
 
 def log(message: str):
@@ -623,6 +625,17 @@ async def get_gpu_info():
     return info
 
 
+def _board_point_from_data(data: dict, size: int) -> Optional[tuple[int, int]]:
+    try:
+        x = int(data["x"])
+        y = int(data["y"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not (0 <= x < size and 0 <= y < size):
+        return None
+    return x, y
+
+
 @app.get("/sgf/{game_id}")
 async def export_sgf(game_id: str):
     active_games.prune()
@@ -979,7 +992,11 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
 
                     # ── Ultimate mode play ─────────────────────────────────
                     if game.ultimate and not game.two_player:
-                        x, y = int(data["x"]), int(data["y"])
+                        point = _board_point_from_data(data, game.size)
+                        if point is None:
+                            await send_error("落点超出棋盘范围")
+                            continue
+                        x, y = point
 
                         if game.ultimate_ai_card == "territory":
                             cv_player = 1 if color == "B" else 2
@@ -998,6 +1015,9 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                             continue
 
                         gtp = coord_to_gtp(x, y, game.size)
+                        if gtp is None:
+                            await send_error("落点超出棋盘范围")
+                            continue
                         captured = game.place_stone(x, y, color)
                         if captured == -1:
                             await send_error("打劫禁着：不能立即提回")
@@ -1082,8 +1102,15 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                             f"{ROGUE_HANDICAP_REQUIRED_PASSES - game.rogue_handicap_passes} 次才能落子")
                         continue
 
-                    x, y = int(data["x"]), int(data["y"])
+                    point = _board_point_from_data(data, game.size)
+                    if point is None:
+                        await send_error("落点超出棋盘范围")
+                        continue
+                    x, y = point
                     gtp = coord_to_gtp(x, y, game.size)
+                    if gtp is None:
+                        await send_error("落点超出棋盘范围")
+                        continue
 
                     if game.board[y][x] != 0:
                         await send_error("该位置已有棋子")

@@ -32,7 +32,7 @@ class WebSocketActionContext:
     do_analysis_bg: Callable[[Any], Awaitable[None]]
     run_in_executor: Callable[..., Awaitable[Any]]
     GoGame: type
-    coord_to_gtp: Callable[[int, int, int], str]
+    coord_to_gtp: Callable[[int, int, int], Optional[str]]
     get_game_visits: Callable[[str, int, str], int]
     pick_challenge_beta_choices: Callable[..., list[str]]
     pick_ai_rogue_card: Callable[..., str]
@@ -57,6 +57,17 @@ class WebSocketActionContext:
         if not self.game:
             self.game = self.active_games.get(self.game_id, touch=True)
         return self.game
+
+
+def _board_point_from_data(data: dict, size: int) -> Optional[tuple[int, int]]:
+    try:
+        x = int(data["x"])
+        y = int(data["y"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not (0 <= x < size and 0 <= y < size):
+        return None
+    return x, y
 
 
 async def handle_reconnect(ctx: WebSocketActionContext, data: dict) -> None:
@@ -236,7 +247,11 @@ async def handle_rogue_seal_point(ctx: WebSocketActionContext, data: dict) -> No
     game = ctx.restore_game()
     if not game or not game.rogue_waiting_seal:
         return
-    x, y = int(data["x"]), int(data["y"])
+    point = _board_point_from_data(data, game.size)
+    if point is None:
+        await ctx.send_error("目标点超出棋盘范围")
+        return
+    x, y = point
     if (x, y) not in game.rogue_seal_points:
         game.rogue_seal_points.append((x, y))
     await ctx.send(
@@ -271,9 +286,13 @@ async def handle_rogue_use_puppet(ctx: WebSocketActionContext, data: dict) -> No
     if game.current_player != game.player_color:
         await ctx.send_error("还没轮到你")
         return
-    x, y = int(data["x"]), int(data["y"])
+    point = _board_point_from_data(data, game.size)
+    if point is None:
+        await ctx.send_error("目标点超出棋盘范围")
+        return
+    x, y = point
     gtp = ctx.coord_to_gtp(x, y, game.size)
-    if not (0 <= x < game.size and 0 <= y < game.size):
+    if gtp is None:
         await ctx.send_error("目标点超出棋盘范围")
         return
     if game.board[y][x] != 0:

@@ -95,7 +95,7 @@ ROGUE_TARGET_MAX = 10.0
 
 
 def choose_backend() -> tuple[Path, Path, str]:
-    model = s._select_model()
+    model = s.engine_runtime.select_model()
     if not model:
         raise RuntimeError("No KataGo model found")
 
@@ -110,7 +110,7 @@ def choose_backend() -> tuple[Path, Path, str]:
         cfg = s.KATAGO_CPU_CONFIG if s.KATAGO_CPU_CONFIG.exists() else s.KATAGO_CONFIG
         return s.KATAGO_CPU_EXE, cfg, "CPU"
 
-    has_gpu, candidates = s._build_engine_candidates()
+    has_gpu, candidates = s.engine_runtime.build_candidates()
     if not candidates:
         raise RuntimeError("No KataGo engine candidates found")
     preferred = None
@@ -633,7 +633,9 @@ async def run_mode(mode: str):
 
 async def main():
     exe, cfg, label = choose_backend()
-    model = s._select_model()
+    model = s.engine_runtime.select_model()
+    if not model:
+        raise RuntimeError("No KataGo model found")
     print(f"[eval] starting {label}: {exe.name} with {model.name}")
     s.engine.start(exe, cfg, model, startup_timeout=120.0)
     try:
