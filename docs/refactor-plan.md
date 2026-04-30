@@ -63,9 +63,15 @@ Done:
   - Pointer/touch hover and placement handling
   - Fine-tune placement state and controls
   - Player move commit and AI response timeout
+- `static/js/i18n.js`
+  - Language detection and persistence
+  - Locale pack loading and fallback lookup
+  - `ui`, `escapeHtml`, object-locale, and rank label helpers
+  - Language switching entry point
 
 Still in `static/index.html`:
 
+- Server event translation tables
 - WebSocket message dispatch
 - i18n bootstrap and generic UI localization
 - Review/SGF controls
