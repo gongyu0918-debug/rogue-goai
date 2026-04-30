@@ -53,10 +53,15 @@ Done:
   - Board visual cache invalidation
   - Board base texture painting
   - Stone sprite cache and texture painting
+- `static/js/board_renderer.js`
+  - Board grid, star points, stones, and move numbers
+  - Hint and review-hint drawing
+  - Territory overlay drawing
+  - Main canvas render pass
 
 Still in `static/index.html`:
 
-- Board canvas rendering and input
+- Board input and fine-tune UI positioning
 - WebSocket message dispatch
 - i18n bootstrap and generic UI localization
 - Review/SGF controls
@@ -68,7 +73,7 @@ Still in `static/index.html`:
    - Keep DOM writes grouped by screen/component.
 
 2. `static/js/board_renderer.js`
-   - Move board grid/stones/hints/territory/review hints/winrate curve.
+   - Add a narrow renderer API and move winrate curve when the shell UI split is ready.
    - Leave only a narrow API: `renderBoard(state)`, `resizeBoard()`, `setBoardOptions(options)`.
 
 3. `static/js/ws_client.js`
