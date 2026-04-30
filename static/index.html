@@ -3190,6 +3190,7 @@ header::before { display: none; }
 <script src="/static/js/card_board_marks.js?v=20260430b"></script>
 <script src="/static/js/card_turn_timer.js?v=20260430b"></script>
 <script src="/static/js/board_layout.js?v=20260430c"></script>
+<script src="/static/js/board_input.js?v=20260430f"></script>
 <script src="/static/js/board_assets.js?v=20260430d"></script>
 <script src="/static/js/board_renderer.js?v=20260430e"></script>
 <script>
@@ -5065,9 +5066,6 @@ document.getElementById("sel-stage-preset").addEventListener("change", (e) => {
   render();
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CANVAS RENDERING
-// ═══════════════════════════════════════════════════════════════════════════════
 function updateNetworkBadge(status) {
   window.__rogueGoArenaNetworkStatus = status || null;
 }
@@ -5086,32 +5084,6 @@ async function refreshNetworkInfo() {
   }
 }
 
-function updateFinetuneUI() {
-  const ui = document.getElementById("finetune-ui");
-  if (!ui) return;
-  if (!fineTunePos || reviewMode) {
-    ui.classList.remove("show");
-    return;
-  }
-  ui.classList.add("show");
-  
-  const rect = canvas.getBoundingClientRect();
-  const cCont = document.getElementById("board-container").getBoundingClientRect();
-  
-  const internalX = PAD + fineTunePos.x * CELL;
-  const internalY = PAD + fineTunePos.y * CELL;
-  
-  const logicalSize = boardRenderSize || Math.round(canvas.width / boardRenderDpr);
-  const displayX = (internalX / logicalSize) * rect.width;
-  const displayY = (internalY / logicalSize) * rect.height;
-  
-  const offsetX = displayX + (rect.left - cCont.left);
-  const offsetY = displayY + (rect.top - cCont.top);
-
-  ui.style.left = offsetX + "px";
-  ui.style.top = offsetY + "px";
-}
-
 function getCurrentBoard() {
   if (reviewMode) {
     const b = buildBoardAtIndex(reviewMoves, reviewBoardSize, reviewIndex);
@@ -5127,158 +5099,6 @@ function getCurrentSize() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // ROGUE MODE FUNCTIONS
 bindRogueSkillButtons();
-
-// ─── Board input ──────────────────────────────────────────────────────────────
-function boardXY(e) {
-  const rect = canvas.getBoundingClientRect();
-  const logicalSize = boardRenderSize || Math.round(canvas.width / boardRenderDpr);
-  const sx = logicalSize / rect.width;
-  const sy = logicalSize / rect.height;
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  const x = Math.round(((clientX - rect.left) * sx - PAD) / CELL);
-  const y = Math.round(((clientY - rect.top) * sy - PAD) / CELL);
-  return { x, y };
-}
-
-// ─── Unified play logic (debounced for mobile touch+click) ───────────────────
-let lastPlayTime = 0;
-let aiResponseTimer = null;
-function isCoachTakingOver() {
-  return !twoPlayerMode
-    && activeRogueCard === "coach_mode"
-    && (gameState?.rogue_coach_moves_left || 0) > 0;
-}
-function tryPlay(x, y) {
-  const now = Date.now();
-  const minGap = (ultimateMode && ultimatePlayerCard === "quickthink" && gameState?.ultimate_quickthink_active) ? 80 : 400;
-  if (now - lastPlayTime < minGap) return; // debounce touch+click dual-fire
-  if (reviewMode) return;
-  if (!gameState || gameState.game_over) return;
-  if (isCoachTakingOver()) {
-    logI18n("🎓 代练上号接管中，请等待强化 AI 完成代打。", "🎓 Coach is controlling this phase. Wait for the boosted AI to finish.", "🎓 コーチモードが代打中です。強化AIの着手完了をお待ちください。", "🎓 코치 모드가 대리 착수 중입니다. 강화 AI가 마칠 때까지 기다려 주세요.");
-    return;
-  }
-  if (!twoPlayerMode && !isMyTurn) return;
-  if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) return;
-
-  const mode = document.getElementById("sel-placement").value;
-  if (mode === "fine") {
-    fineTunePos = { x, y };
-    if (!animFrameId) render();
-    return;
-  }
-  
-  if (gameState.board[y][x] !== 0) return;
-  // Ko rule: prevent clicking on the ko-forbidden point
-  if (gameState.ko_point && gameState.ko_point[0] === x && gameState.ko_point[1] === y) return;
-  if (activeRogueCard === "puppet"
-      && gameState.rogue_puppet_target
-      && gameState.rogue_puppet_target[0] === x
-      && gameState.rogue_puppet_target[1] === y) {
-    logI18n("🎭 这个点已被傀儡术预留给 AI", "🎭 This point is reserved for the AI by Puppet.", "🎭 この点は傀儡術でAI用に予約済みです", "🎭 이 지점은 꼭두각시술로 AI에게 예약되었습니다");
-    return;
-  }
-  commitPlay(x, y);
-}
-
-function commitPlay(x, y) {
-  closeWoodSelectMenu();
-  if (gameState.board[y][x] !== 0) return;
-  fineTunePos = null;
-  updateFinetuneUI();
-
-  const expectsAi = !(
-    (activeRogueCard === "quickthink" && gameState?.rogue_quickthink_stage === 1) ||
-    (ultimateMode && ultimatePlayerCard === "quickthink" && gameState?.ultimate_quickthink_active)
-  );
-
-  lastPlayTime = Date.now();
-  previousBoard = gameState.board.map(row => [...row]);
-
-  // Optimistic update: immediately show the player's stone
-  const myVal = (twoPlayerMode ? gameState.current_player : myColor) === "B" ? 1 : 2;
-  gameState.board[y][x] = myVal;
-  addPlaceAnimation(x, y);
-  playStoneSound();
-  if (!animFrameId) render();
-
-  sendWS({ action: "play", x, y });
-  if (!twoPlayerMode) {
-    isMyTurn = !expectsAi;
-    setThinking(expectsAi);
-    // Safety timeout: if AI doesn't respond in 30s, try to recover
-    clearTimeout(aiResponseTimer);
-    aiResponseTimer = setTimeout(() => {
-      if (!isMyTurn && gameState && !gameState.game_over) {
-        logI18n("⚠ AI 响应超时，尝试重新请求…", "⚠ AI response timed out. Retrying...", "⚠ AIの応答がタイムアウトしました。再要求中…", "⚠ AI 응답 시간 초과, 다시 요청 중…");
-        sendWS({ action: "request_hint" });
-        setThinking(false);
-        // Re-check game state
-        if (gameState) isMyTurn = (gameState.current_player === myColor);
-      }
-    }, 30000);
-  }
-}
-
-canvas.addEventListener("click", e => {
-  closeWoodSelectMenu();
-  const {x, y} = boardXY(e);
-  if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) return;
-  // Rogue: seal point selection
-  if (rogueSealing) {
-    sendWS({ action: "rogue_seal_point", x, y });
-    return;
-  }
-  // Rogue: puppet mode — choose AI's move
-  if (puppetMode) {
-    if (isCoachTakingOver()) {
-      logI18n("🎓 代练上号接管中，暂时不能指定傀儡点。", "🎓 Coach is controlling this phase. Puppet targeting is paused.", "🎓 コーチモードが代打中のため、傀儡点は指定できません。", "🎓 코치 모드가 대리 착수 중이라 꼭두각시 지점을 지정할 수 없습니다.");
-      return;
-    }
-    puppetMode = false;
-    sendWS({ action: "rogue_use_puppet", x, y });
-    return;
-  }
-  tryPlay(x, y);
-});
-
-canvas.addEventListener("mousemove", e => {
-  if (reviewMode) return;
-  const {x, y} = boardXY(e);
-  hoverXY = {x, y};
-  if (!animFrameId) render();
-});
-canvas.addEventListener("mouseleave", () => { hoverXY = null; if (!animFrameId) render(); });
-
-// Touch support - passive:false ensures preventDefault works on mobile
-canvas.addEventListener("touchend", e => {
-  e.preventDefault();
-  closeWoodSelectMenu();
-  if (!e.changedTouches || !e.changedTouches[0]) return;
-  const touch = e.changedTouches[0];
-  const rect = canvas.getBoundingClientRect();
-  const logicalSize = boardRenderSize || Math.round(canvas.width / boardRenderDpr);
-  const sx = logicalSize / rect.width;
-  const sy = logicalSize / rect.height;
-  const x = Math.round(((touch.clientX - rect.left) * sx - PAD) / CELL);
-  const y = Math.round(((touch.clientY - rect.top) * sy - PAD) / CELL);
-  if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) return;
-  if (rogueSealing) { sendWS({ action: "rogue_seal_point", x, y }); return; }
-  if (puppetMode) {
-    if (isCoachTakingOver()) {
-      logI18n("🎓 代练上号接管中，暂时不能指定傀儡点。", "🎓 Coach is controlling this phase. Puppet targeting is paused.", "🎓 コーチモードが代打中のため、傀儡点は指定できません。", "🎓 코치 모드가 대리 착수 중이라 꼭두각시 지점을 지정할 수 없습니다.");
-      return;
-    }
-    puppetMode = false;
-    sendWS({ action: "rogue_use_puppet", x, y });
-    return;
-  }
-  tryPlay(x, y);
-}, { passive: false });
-
-// Prevent touchstart from scrolling the page when touching the board
-canvas.addEventListener("touchstart", e => { e.preventDefault(); }, { passive: false });
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CAPTURE DETECTION (board diff for animations)
@@ -6329,15 +6149,6 @@ document.getElementById("sgf-file-input").addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (file) loadSgfFile(file);
   e.target.value = ""; // reset so same file can be loaded again
-});
-
-// Fine-tune controls
-document.getElementById("ft-up").addEventListener("click", () => { if(fineTunePos) { fineTunePos.y = Math.max(0, fineTunePos.y-1); render(); }});
-document.getElementById("ft-down").addEventListener("click", () => { if(fineTunePos) { fineTunePos.y = Math.min(boardSize-1, fineTunePos.y+1); render(); }});
-document.getElementById("ft-left").addEventListener("click", () => { if(fineTunePos) { fineTunePos.x = Math.max(0, fineTunePos.x-1); render(); }});
-document.getElementById("ft-right").addEventListener("click", () => { if(fineTunePos) { fineTunePos.x = Math.min(boardSize-1, fineTunePos.x+1); render(); }});
-document.getElementById("ft-ok").addEventListener("click", () => {
-  if(fineTunePos) commitPlay(fineTunePos.x, fineTunePos.y);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

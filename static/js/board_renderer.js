@@ -1,8 +1,4 @@
 // Board drawing and visual overlays.
-// Input handling remains in index.html until board_input.js is extracted.
-
-let fineTunePos = null;
-let hoverXY = null;
 
 function drawBoard() {
   const size = boardSize, W = boardRenderSize || Math.round(canvas.width / boardRenderDpr);

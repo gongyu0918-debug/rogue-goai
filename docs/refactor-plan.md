@@ -58,10 +58,14 @@ Done:
   - Hint and review-hint drawing
   - Territory overlay drawing
   - Main canvas render pass
+- `static/js/board_input.js`
+  - Board coordinate conversion
+  - Pointer/touch hover and placement handling
+  - Fine-tune placement state and controls
+  - Player move commit and AI response timeout
 
 Still in `static/index.html`:
 
-- Board input and fine-tune UI positioning
 - WebSocket message dispatch
 - i18n bootstrap and generic UI localization
 - Review/SGF controls
