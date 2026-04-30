@@ -33,6 +33,16 @@ Done:
   - Ko marker
   - Joseki/puppet/Ultimate target markers
   - AI Rogue seal overlays
+- `static/js/card_state.js`
+  - Rogue/Ultimate card offer state
+  - Active Rogue/AI card state
+  - Rogue seal/uses/puppet state
+  - Ultimate selection state
+  - Card turn timer state
+- `static/js/card_turn_timer.js`
+  - Rogue Quick Thinking countdown
+  - Ultimate Quick Thinking countdown
+  - Card turn timer cleanup and UI refresh
 
 Still in `static/index.html`:
 
@@ -56,8 +66,8 @@ Still in `static/index.html`:
    - Replace the current large `handleMessage` function with typed handlers by message type.
 
 4. `static/js/card_state.js`
-   - Move mutable card state (`activeRogueCard`, `rogueUses`, `rogueSeals`, Ultimate selections) behind getters/setters.
-   - This should be done before deeper board-renderer extraction so external modules stop relying on shared global variables.
+   - Replace direct shared lexical bindings with a small state API (`getCardState`, `patchCardState`, reset helpers).
+   - Do this only after WebSocket handlers and board overlays agree on the same state shape.
 
 5. `static/js/setup_controls.js`
    - Move start-game controls, rank selectors, handicap/time/variant controls.
