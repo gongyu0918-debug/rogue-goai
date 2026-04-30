@@ -68,10 +68,16 @@ Done:
   - Locale pack loading and fallback lookup
   - `ui`, `escapeHtml`, object-locale, and rank label helpers
   - Language switching entry point
+- `static/js/shell_ui.js`
+  - Generic text/title helpers
+  - Connection indicator and top HUD synchronization
+  - Engine status localization
+  - Toolbar sound/territory visuals and quick actions
 
 Still in `static/index.html`:
 
 - Server event translation tables
+- Wood select control implementation
 - WebSocket message dispatch
 - i18n bootstrap and generic UI localization
 - Review/SGF controls
