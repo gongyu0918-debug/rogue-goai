@@ -3231,6 +3231,16 @@ function fallbackLocalePack() {
   return localeCache.zh || activeLocalePack();
 }
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  })[char]);
+}
+
 async function loadLocalePack(lang) {
   const normalized = normalizeLang(lang);
   if (localeCache[normalized]) return localeCache[normalized];
@@ -3493,9 +3503,9 @@ function inferCardMeta(card, mode) {
 function getCardMetaMarkup(card, mode) {
   const meta = inferCardMeta(card, mode);
   return `<div class="card-meta-row">
-    <span class="card-tag tier">${ui("强度", "Tier", "強さ", "강도")} ${meta.tier}</span>
-    <span class="card-tag">${localizeCardMetaValue(meta.category)}</span>
-    <span class="card-tag complexity">${ui("理解", "Read", "理解", "이해")} ${localizeCardMetaValue(meta.complexity)}</span>
+    <span class="card-tag tier">${escapeHtml(ui("强度", "Tier", "強さ", "강도"))} ${escapeHtml(meta.tier)}</span>
+    <span class="card-tag">${escapeHtml(localizeCardMetaValue(meta.category))}</span>
+    <span class="card-tag complexity">${escapeHtml(ui("理解", "Read", "理解", "이해"))} ${escapeHtml(localizeCardMetaValue(meta.complexity))}</span>
   </div>`;
 }
 
@@ -3512,7 +3522,7 @@ function getCardIconMarkup(card) {
   if (CARD_ART_IDS.has(card.id)) {
     return `<div class="rc-icon rc-icon-art" style="background-image:url('assets/icons/cards-tech/${card.id}.png')"></div>`;
   }
-  return `<div class="rc-icon">${card.icon}</div>`;
+  return `<div class="rc-icon">${escapeHtml(card.icon)}</div>`;
 }
 
 function getRogueCardName(cardId) {
@@ -3545,8 +3555,8 @@ function renderRogueWiki() {
   const modes = activeLocalePack()?.wikiModes || fallbackLocalePack()?.wikiModes || [];
   modeWrap.innerHTML = modes.map(item => `
     <article class="wiki-mode-card">
-      <h3>${localizedModeField(item, "Title")}</h3>
-      <p>${localizedModeField(item, "Desc")}</p>
+      <h3>${escapeHtml(localizedModeField(item, "Title"))}</h3>
+      <p>${escapeHtml(localizedModeField(item, "Desc"))}</p>
     </article>
   `).join("");
 
@@ -3556,9 +3566,9 @@ function renderRogueWiki() {
       <article class="wiki-card-item">
         ${getCardIconMarkup({ id: cardId, icon: "?" })}
         <div class="wiki-card-copy">
-          <h4>${meta.name}</h4>
+          <h4>${escapeHtml(meta.name)}</h4>
           ${getCardMetaMarkup({ id: cardId }, "rogue")}
-          <p>${meta.desc}</p>
+          <p>${escapeHtml(meta.desc)}</p>
         </div>
       </article>
     `;
@@ -3570,9 +3580,9 @@ function renderRogueWiki() {
       <article class="wiki-card-item">
         ${getCardIconMarkup({ id: cardId, icon: "?" })}
         <div class="wiki-card-copy">
-          <h4>${meta.name}</h4>
+          <h4>${escapeHtml(meta.name)}</h4>
           ${getCardMetaMarkup({ id: cardId }, "ultimate")}
-          <p>${meta.desc}</p>
+          <p>${escapeHtml(meta.desc)}</p>
         </div>
       </article>
     `;
@@ -6222,8 +6232,8 @@ function showRogueCards(cards, meta = {}) {
     div.className = "rogue-card";
     div.innerHTML = `${getCardIconMarkup(c)}
       ${getCardMetaMarkup(c, "rogue")}
-      <div class="rc-name">${c.name}</div>
-      <div class="rc-desc">${c.desc}</div>`;
+      <div class="rc-name">${escapeHtml(c.name)}</div>
+      <div class="rc-desc">${escapeHtml(c.desc)}</div>`;
     div.onclick = () => {
       container.querySelectorAll(".rogue-card").forEach(card => card.classList.remove("selected"));
       div.classList.add("selected");
@@ -6379,8 +6389,8 @@ function showUltimateCards(cards) {
     div.className = "ultimate-card";
     div.innerHTML = `${getCardIconMarkup(c)}
       ${getCardMetaMarkup(c, "ultimate")}
-      <div class="rc-name">${c.name}</div>
-      <div class="rc-desc">${c.desc}</div>`;
+      <div class="rc-name">${escapeHtml(c.name)}</div>
+      <div class="rc-desc">${escapeHtml(c.desc)}</div>`;
     div.onclick = () => {
       container.querySelectorAll(".ultimate-card").forEach(card => card.classList.remove("selected"));
       div.classList.add("selected");

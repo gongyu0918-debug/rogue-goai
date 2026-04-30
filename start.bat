@@ -12,10 +12,17 @@ echo.
 
 set "ENGINE_OPENCL=katago\katago_opencl.exe"
 set "ENGINE_CPU=katago\katago_cpu.exe"
-set "MODEL_FILE=katago\model.bin.gz"
+set "MODEL_LARGE=katago\model_large.bin.gz"
+set "MODEL_DEFAULT=katago\model.bin.gz"
+set "MODEL_SMALL=katago\model_b18.bin.gz"
 set "SERVER_EXE=rogue-go-arena-server\rogue-go-arena-server.exe"
 
-if not exist "%MODEL_FILE%" (
+set "HAS_MODEL="
+if exist "%MODEL_LARGE%" set "HAS_MODEL=1"
+if exist "%MODEL_DEFAULT%" set "HAS_MODEL=1"
+if exist "%MODEL_SMALL%" set "HAS_MODEL=1"
+
+if not defined HAS_MODEL (
     echo [!] 模型不存在，正在运行 setup.py ...
     python setup.py
 )
@@ -25,8 +32,13 @@ if not exist "%ENGINE_OPENCL%" if not exist "%ENGINE_CPU%" (
     python setup.py
 )
 
-if not exist "%MODEL_FILE%" (
-    echo [错误] model.bin.gz 仍不存在，无法启动
+set "HAS_MODEL="
+if exist "%MODEL_LARGE%" set "HAS_MODEL=1"
+if exist "%MODEL_DEFAULT%" set "HAS_MODEL=1"
+if exist "%MODEL_SMALL%" set "HAS_MODEL=1"
+
+if not defined HAS_MODEL (
+    echo [错误] 未找到 model_large.bin.gz / model.bin.gz / model_b18.bin.gz，无法启动
     pause
     exit /b 1
 )

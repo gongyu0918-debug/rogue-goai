@@ -119,7 +119,7 @@ class KataGoEngine:
             ):
                 last_progress_bucket = progress_bucket
                 self.stderr_callback(
-                    f"{Path(_exe).name} ゛婓場宎趙笢ㄛ眒脹渾 {elapsed}s"
+                    f"{Path(_exe).name} is still initializing, elapsed {elapsed}s"
                 )
             time.sleep(0.3)
 
