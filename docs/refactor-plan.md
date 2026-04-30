@@ -73,6 +73,11 @@ Done:
   - Connection indicator and top HUD synchronization
   - Engine status localization
   - Toolbar sound/territory visuals and quick actions
+- `static/js/game_log.js`
+  - Game log entry storage
+  - Localized log append helpers
+  - Server event log bridge
+  - Log rendering and clearing
 
 Still in `static/index.html`:
 
