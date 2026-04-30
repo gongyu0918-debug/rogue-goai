@@ -43,10 +43,16 @@ Done:
   - Rogue Quick Thinking countdown
   - Ultimate Quick Thinking countdown
   - Card turn timer cleanup and UI refresh
+- `static/js/board_layout.js`
+  - Board canvas element/context ownership
+  - Stage preset sizing
+  - Canvas DPR sizing and CSS fit variables
+  - Board recovery/watchdog helpers
 
 Still in `static/index.html`:
 
 - Board canvas rendering and input
+- Board texture/stone caches
 - WebSocket message dispatch
 - i18n bootstrap and generic UI localization
 - Review/SGF controls
@@ -58,7 +64,7 @@ Still in `static/index.html`:
    - Keep DOM writes grouped by screen/component.
 
 2. `static/js/board_renderer.js`
-   - Move board resize, board paint, stone sprites, hints, territory, winrate curve.
+   - Move board paint, stone sprites, hints, territory, winrate curve.
    - Leave only a narrow API: `renderBoard(state)`, `resizeBoard()`, `setBoardOptions(options)`.
 
 3. `static/js/ws_client.js`
