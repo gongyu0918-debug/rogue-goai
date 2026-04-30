@@ -23,6 +23,16 @@ Done:
   - Rogue/Ultimate card wiki rendering
   - Rogue skill button binding and display state
   - Ultimate status bar rendering
+- `static/js/card_catalog.js`
+  - Card id lists
+  - Card presentation metadata
+  - Localized card lookup
+  - Safe card icon/meta markup helpers
+- `static/js/card_board_marks.js`
+  - Rogue seal/blackhole/golden-corner/fog board overlays
+  - Ko marker
+  - Joseki/puppet/Ultimate target markers
+  - AI Rogue seal overlays
 
 Still in `static/index.html`:
 
@@ -30,7 +40,6 @@ Still in `static/index.html`:
 - WebSocket message dispatch
 - i18n bootstrap and generic UI localization
 - Review/SGF controls
-- Card mark drawing on the board
 
 ## Frontend Extraction Roadmap
 
@@ -46,9 +55,9 @@ Still in `static/index.html`:
    - Move WebSocket connect/reconnect/send and message routing.
    - Replace the current large `handleMessage` function with typed handlers by message type.
 
-4. `static/js/card_board_marks.js`
-   - Move `drawRogueMarks` and card-specific board overlays.
-   - Keep it dependent only on a render context and a small state snapshot.
+4. `static/js/card_state.js`
+   - Move mutable card state (`activeRogueCard`, `rogueUses`, `rogueSeals`, Ultimate selections) behind getters/setters.
+   - This should be done before deeper board-renderer extraction so external modules stop relying on shared global variables.
 
 5. `static/js/setup_controls.js`
    - Move start-game controls, rank selectors, handicap/time/variant controls.

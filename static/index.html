@@ -3184,7 +3184,9 @@ header::before { display: none; }
 </div>
 <div id="global-fx-layer"></div>
 
+<script src="/static/js/card_catalog.js?v=20260430a"></script>
 <script src="/static/js/rogue_cards_ui.js?v=20260430a"></script>
+<script src="/static/js/card_board_marks.js?v=20260430a"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS & RANK TABLES
@@ -3417,18 +3419,6 @@ function updateChallengeInfo() {
   );
 }
 
-const ROGUE_CARD_IDS = [
-  "tengen","dice","erosion","puppet","seal","twin","nerf","komi_relief","time_press","lowline",
-  "suboptimal","mirror","slip","blackhole","exchange","fog","gravity","golden_corner","sansan","shadow",
-  "sprout","joseki_ocd","handicap_quest","god_hand","sansan_trap","corner_helper","sanrensei","no_regret",
-  "quickthink","foolish_wisdom","five_in_row","coach_mode","capture_foul","last_stand",
-];
-const ULTIMATE_CARD_IDS = [
-  "chain","proliferate","double","wildgrow","rejection","territory","shadow_clone","plague","meteor","quantum",
-  "devour","timewarp","blackout","magnet","necro","wall","joseki_burst","god_hand","corner_helper",
-  "sanrensei","quickthink","foolish_wisdom","five_in_row","capture_foul","last_stand",
-];
-
 let rogueOfferCards = [];
 let ultimateOfferCards = [];
 let activeAiRogueCard = null;
@@ -3440,98 +3430,6 @@ async function setLanguage(lang) {
   localStorage.setItem("rogue_go_arena_lang", currentLang);
   await ensureLocale(currentLang);
   applyLanguage();
-}
-
-function getCardMeta(cardId, mode) {
-  const active = activeLocalePack()?.cards?.[mode]?.[cardId];
-  const fallback = fallbackLocalePack()?.cards?.[mode]?.[cardId];
-  return active || fallback || { name: cardId, desc: "" };
-}
-
-function getTranslatedCard(card, mode) {
-  const localeCode = { zh: "zh-CN", en: "en-US", ja: "ja-JP", ko: "ko-KR" }[currentLang] || "zh-CN";
-  if (card?.i18n) {
-    const name = card.i18n.name?.[localeCode] || card.i18n.name?.["zh-CN"] || card.name;
-    const desc = card.i18n.desc?.[localeCode] || card.i18n.desc?.["zh-CN"] || card.desc;
-    return { ...card, name, desc };
-  }
-  const meta = getCardMeta(card.id, mode);
-  if (!meta) return card;
-  return { ...card, name: meta.name, desc: meta.desc };
-}
-
-const ROGUE_CARD_META = {
-  puppet: { tier: "S", category: "主动", complexity: "高" },
-  twin: { tier: "A", category: "主动", complexity: "中" },
-  exchange: { tier: "A", category: "主动", complexity: "低" },
-  coach_mode: { tier: "S", category: "主动", complexity: "中" },
-  dice: { tier: "B+", category: "AI干扰", complexity: "低" },
-  mirror: { tier: "B+", category: "AI干扰", complexity: "低" },
-  slip: { tier: "B+", category: "AI干扰", complexity: "低" },
-  god_hand: { tier: "A", category: "爆发", complexity: "中" },
-  sansan_trap: { tier: "A", category: "陷阱", complexity: "中" },
-  sanrensei: { tier: "A", category: "开局构筑", complexity: "中" },
-  joseki_ocd: { tier: "A", category: "任务", complexity: "中" },
-  no_regret: { tier: "B+", category: "风险收益", complexity: "低" },
-  quickthink: { tier: "A", category: "节奏", complexity: "高" },
-  five_in_row: { tier: "A", category: "连线构筑", complexity: "高" },
-};
-
-const ULTIMATE_CARD_META = {
-  chain: { tier: "S", category: "连动", complexity: "低" },
-  double: { tier: "S", category: "连动", complexity: "低" },
-  quickthink: { tier: "S", category: "节奏", complexity: "高" },
-  joseki_burst: { tier: "S", category: "任务爆发", complexity: "中" },
-  god_hand: { tier: "S", category: "爆发", complexity: "中" },
-  five_in_row: { tier: "S", category: "连线构筑", complexity: "高" },
-};
-
-function localizeCardMetaValue(value) {
-  if (!value) return "";
-  return activeLocalePack()?.cardMeta?.[value]
-    || fallbackLocalePack()?.cardMeta?.[value]
-    || value;
-}
-
-function inferCardMeta(card, mode) {
-  const defaults = mode === "ultimate"
-    ? { tier: "S", category: "大招", complexity: "中" }
-    : { tier: "B", category: "规则改写", complexity: "中" };
-  const localMeta = mode === "ultimate" ? ULTIMATE_CARD_META[card.id] : ROGUE_CARD_META[card.id];
-  return { ...defaults, ...(localMeta || {}), ...(card.meta || {}) };
-}
-
-function getCardMetaMarkup(card, mode) {
-  const meta = inferCardMeta(card, mode);
-  return `<div class="card-meta-row">
-    <span class="card-tag tier">${escapeHtml(ui("强度", "Tier", "強さ", "강도"))} ${escapeHtml(meta.tier)}</span>
-    <span class="card-tag">${escapeHtml(localizeCardMetaValue(meta.category))}</span>
-    <span class="card-tag complexity">${escapeHtml(ui("理解", "Read", "理解", "이해"))} ${escapeHtml(localizeCardMetaValue(meta.complexity))}</span>
-  </div>`;
-}
-
-const CARD_ART_IDS = new Set([
-  "tengen","dice","erosion","puppet","seal","twin","nerf","komi_relief","time_press","lowline",
-  "suboptimal","mirror","slip","blackhole","exchange","fog","gravity","golden_corner","sansan","shadow",
-  "sprout","joseki_ocd","handicap_quest","god_hand","sansan_trap","corner_helper","sanrensei","no_regret",
-  "quickthink","foolish_wisdom","five_in_row","coach_mode","capture_foul","last_stand","chain","proliferate",
-  "double","wildgrow","rejection","territory","shadow_clone","plague","meteor","quantum","devour","timewarp",
-  "blackout","magnet","necro","wall","joseki_burst",
-]);
-
-function getCardIconMarkup(card) {
-  if (CARD_ART_IDS.has(card.id)) {
-    return `<div class="rc-icon rc-icon-art" style="background-image:url('assets/icons/cards-tech/${card.id}.png')"></div>`;
-  }
-  return `<div class="rc-icon">${escapeHtml(card.icon)}</div>`;
-}
-
-function getRogueCardName(cardId) {
-  return getCardMeta(cardId, "rogue").name;
-}
-
-function getUltimateCardName(cardId) {
-  return getCardMeta(cardId, "ultimate").name;
 }
 
 function translateServerEventMessageLegacy(message) {
@@ -6142,137 +6040,6 @@ let hoverXY = null;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ROGUE MODE FUNCTIONS
-function drawRogueMarks() {
-  ctx.save();
-  // Draw seal/blackhole/golden_corner forbidden zones
-  if (rogueSeals.length) {
-    const isBlackhole = activeRogueCard === "blackhole";
-    const isGolden = activeRogueCard === "golden_corner";
-    const isFog = activeRogueCard === "fog";
-    rogueSeals.forEach(([sx, sy]) => {
-      const px = PAD + sx * CELL;
-      const py = PAD + sy * CELL;
-      if (isBlackhole) {
-        ctx.fillStyle = "rgba(80, 0, 120, 0.22)";
-        ctx.fillRect(px - CELL/2, py - CELL/2, CELL, CELL);
-        ctx.fillStyle = "rgba(80, 0, 120, 0.45)";
-        ctx.font = `${CELL * 0.32}px sans-serif`;
-        ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText("?", px, py);
-      } else if (isGolden) {
-        ctx.fillStyle = "rgba(212, 175, 55, 0.18)";
-        ctx.fillRect(px - CELL/2, py - CELL/2, CELL, CELL);
-        ctx.fillStyle = "rgba(212, 175, 55, 0.5)";
-        ctx.font = `${CELL * 0.32}px sans-serif`;
-        ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText("?", px, py);
-      } else if (isFog) {
-        ctx.fillStyle = "rgba(70, 150, 210, 0.22)";
-        ctx.fillRect(px - CELL/2, py - CELL/2, CELL, CELL);
-        ctx.strokeStyle = "rgba(70, 150, 210, 0.45)";
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(px - CELL/2, py - CELL/2, CELL, CELL);
-      } else {
-        const r = CELL * 0.32;
-        ctx.strokeStyle = "rgba(220, 40, 40, 0.85)";
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(px - r, py - r); ctx.lineTo(px + r, py + r);
-        ctx.moveTo(px + r, py - r); ctx.lineTo(px - r, py + r);
-        ctx.stroke();
-      }
-    });
-  }
-  // Draw ko-forbidden point (small square marker)
-  if (gameState && gameState.ko_point && !reviewMode) {
-    const [kx, ky] = gameState.ko_point;
-    if (gameState.board[ky][kx] === 0) {
-      const px = PAD + kx * CELL;
-      const py = PAD + ky * CELL;
-      const r = CELL * 0.18;
-      ctx.fillStyle = "rgba(220, 40, 40, 0.55)";
-      ctx.fillRect(px - r, py - r, r * 2, r * 2);
-    }
-  }
-  // Draw joseki_ocd target points (green circles)
-  if (activeRogueCard === "joseki_ocd" && gameState
-      && gameState.rogue_joseki_targets && !gameState.rogue_joseki_done) {
-    const board = getCurrentBoard();
-    gameState.rogue_joseki_targets.forEach(([tx, ty]) => {
-      if (board && board[ty] && board[ty][tx] !== 0) return; // occupied
-      const px = PAD + tx * CELL;
-      const py = PAD + ty * CELL;
-      ctx.strokeStyle = "rgba(0, 200, 80, 0.7)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(px, py, CELL * 0.38, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = "rgba(0, 200, 80, 0.15)";
-      ctx.fill();
-    });
-  }
-  if (activeRogueCard === "puppet" && gameState?.rogue_puppet_target) {
-    const [tx, ty] = gameState.rogue_puppet_target;
-    const board = getCurrentBoard();
-    if (board && board[ty] && board[ty][tx] === 0) {
-      const px = PAD + tx * CELL;
-      const py = PAD + ty * CELL;
-      ctx.strokeStyle = "rgba(188, 120, 255, 0.9)";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.arc(px, py, CELL * 0.34, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = "rgba(188, 120, 255, 0.18)";
-      ctx.beginPath();
-      ctx.arc(px, py, CELL * 0.24, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  if (ultimatePlayerCard === "joseki_burst" && gameState
-      && gameState.ultimate_joseki_targets && !gameState.ultimate_joseki_done) {
-    const board = getCurrentBoard();
-    gameState.ultimate_joseki_targets.forEach(([tx, ty]) => {
-      if (board && board[ty] && board[ty][tx] === (myColor === "B" ? 1 : 2)) return;
-      const px = PAD + tx * CELL;
-      const py = PAD + ty * CELL;
-      ctx.strokeStyle = "rgba(255, 120, 20, 0.85)";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.arc(px, py, CELL * 0.26, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = "rgba(255, 120, 20, 0.18)";
-      ctx.beginPath();
-      ctx.arc(px, py, CELL * 0.2, 0, Math.PI * 2);
-      ctx.fill();
-    });
-  }
-  if (aiRogueSeals.length) {
-    const isAiBlackhole = activeAiRogueCard === "blackhole";
-    const isAiGolden = activeAiRogueCard === "golden_corner";
-    const isAiFog = activeAiRogueCard === "fog";
-    aiRogueSeals.forEach(([sx, sy]) => {
-      const px = PAD + sx * CELL;
-      const py = PAD + sy * CELL;
-      if (isAiBlackhole) {
-        ctx.fillStyle = "rgba(180, 40, 60, 0.20)";
-        ctx.fillRect(px - CELL/2, py - CELL/2, CELL, CELL);
-      } else if (isAiGolden) {
-        ctx.fillStyle = "rgba(220, 80, 80, 0.18)";
-        ctx.fillRect(px - CELL/2, py - CELL/2, CELL, CELL);
-      } else if (isAiFog) {
-        ctx.fillStyle = "rgba(180, 90, 120, 0.22)";
-        ctx.fillRect(px - CELL/2, py - CELL/2, CELL, CELL);
-      }
-      ctx.fillStyle = "rgba(255, 190, 190, 0.92)";
-      ctx.font = `${CELL * 0.28}px sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("!", px, py);
-    });
-  }
-  ctx.restore();
-}
-
 bindRogueSkillButtons();
 
 function render() {
