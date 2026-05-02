@@ -146,6 +146,66 @@ def line_key(points: list[tuple[int, int]] | tuple[tuple[int, int], ...]) -> tup
     return tuple(sorted(points))
 
 
+def shape_center(shape: tuple[tuple[int, int], ...]) -> tuple[int, int]:
+    xs = [x for x, _ in shape]
+    ys = [y for _, y in shape]
+    return ((min(xs) + max(xs)) // 2, (min(ys) + max(ys)) // 2)
+
+
+def find_new_fool_shapes(
+    game: Any,
+    color: str,
+    seen_shapes: set[tuple[tuple[int, int], ...]],
+) -> list[tuple[tuple[int, int], ...]]:
+    cv = 1 if color == "B" else 2
+    found = []
+    found_keys = set()
+    orientations = [
+        ((1, 0), (0, 1)),
+        ((-1, 0), (0, 1)),
+        ((1, 0), (0, -1)),
+        ((-1, 0), (0, -1)),
+    ]
+
+    for y in range(game.size):
+        for x in range(game.size):
+            if game.board[y][x] != cv:
+                continue
+            for (ax, ay), (bx, by) in orientations:
+                p1 = (x + ax, y + ay)
+                p2 = (x + bx, y + by)
+                if not (0 <= p1[0] < game.size and 0 <= p1[1] < game.size):
+                    continue
+                if not (0 <= p2[0] < game.size and 0 <= p2[1] < game.size):
+                    continue
+                if game.board[p1[1]][p1[0]] != cv or game.board[p2[1]][p2[0]] != cv:
+                    continue
+                diag = (x + ax + bx, y + ay + by)
+                if 0 <= diag[0] < game.size and 0 <= diag[1] < game.size:
+                    if game.board[diag[1]][diag[0]] == cv:
+                        continue
+                shape = line_key([(x, y), p1, p2])
+                if shape in seen_shapes or shape in found_keys:
+                    continue
+                loosely_isolated = True
+                shape_set = set(shape)
+                for sx, sy in shape:
+                    for nx, ny in adjacent_points(sx, sy, game.size):
+                        if (nx, ny) in shape_set:
+                            continue
+                        if game.board[ny][nx] == cv:
+                            loosely_isolated = False
+                            break
+                    if not loosely_isolated:
+                        break
+                if not loosely_isolated:
+                    continue
+                found.append(shape)
+                found_keys.add(shape)
+
+    return found
+
+
 def find_exact_five_lines(game: Any, color: str) -> list[tuple[tuple[int, int], ...]]:
     cv = 1 if color == "B" else 2
     lines = []

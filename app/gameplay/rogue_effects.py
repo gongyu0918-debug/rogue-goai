@@ -9,11 +9,13 @@ from app.gameplay.effect_utils import (
     adjacent8_points,
     adjacent_points,
     find_corner_with_min_stones,
+    find_new_fool_shapes,
     get_corner_helper_spawn_points,
     get_sansan_points,
     get_square_points,
     get_star_points,
     set_points_to_color,
+    shape_center,
     spawn_bonus_points,
 )
 from app.data.cards import challenge_card_category, challenge_category_counts
@@ -302,6 +304,38 @@ def apply_player_rogue_board_effects(
             if changed:
                 modified = True
             messages.append(f"✦ 三连星发动，自动补出 {len(changed)} 颗星位棋")
+
+    if rogue_has(game, "foolish_wisdom"):
+        new_shapes = find_new_fool_shapes(game, color, game.rogue_fool_shapes)
+        changed = []
+        for shape in new_shapes:
+            game.rogue_fool_shapes.add(shape)
+            cx, cy = shape_center(shape)
+            area = [
+                (px, py)
+                for px, py in get_square_points(cx, cy, 2, game.size)
+                if game.board[py][px] == 0
+            ]
+            random.shuffle(area)
+            changed.extend(spawn_bonus_points(
+                game,
+                area[:gameplay_config.ROGUE_FOOLISH_FILL_COUNT],
+                color,
+            ))
+            if challenge_should_bonus_derivative(game):
+                extra_area = [
+                    (px, py)
+                    for px, py in get_square_points(cx, cy, 2, game.size)
+                    if game.board[py][px] == 0
+                ]
+                random.shuffle(extra_area)
+                changed.extend(spawn_bonus_points(game, extra_area[:1], color))
+        if changed:
+            modified = True
+        if new_shapes:
+            messages.append(
+                f"🪤 大智若愚发动，识别到 {len(new_shapes)} 个愚形，额外长出 {len(changed)} 颗己方棋子"
+            )
 
     if (
         rogue_has(game, "handicap_quest")

@@ -129,6 +129,7 @@ from app.gameplay.effect_utils import (
     diamond_points as _diamond_points,
     find_exact_five_lines as _find_exact_five_lines,
     find_corner_with_min_stones as _find_corner_with_min_stones,
+    find_new_fool_shapes as _find_new_fool_shapes,
     get_blackhole_points as _get_blackhole_points,
     get_corner_helper_spawn_points as _get_corner_helper_spawn_points,
     get_golden_corner_points as _get_golden_corner_points,
@@ -143,6 +144,7 @@ from app.gameplay.effect_utils import (
     pick_joseki_targets as _pick_joseki_targets,
     random_hidden_center as _random_hidden_center,
     set_points_to_color as _set_points_to_color,
+    shape_center as _shape_center,
     spawn_bonus_points as _spawn_bonus_points,
     spawn_random_owned_stones as _spawn_random_owned_stones,
     try_spawn_bonus_stone as _try_spawn_bonus_stone,
@@ -943,70 +945,6 @@ def _pick_fog_point(game, rng: random.Random) -> list[tuple[int, int]]:
     return [rng.choice(candidates)]
 
 
-def _shape_key(points: list[tuple[int, int]] | tuple[tuple[int, int], ...]) -> tuple[tuple[int, int], ...]:
-    return tuple(sorted(points))
-
-
-def _shape_center(shape: tuple[tuple[int, int], ...]) -> tuple[int, int]:
-    xs = [x for x, _ in shape]
-    ys = [y for _, y in shape]
-    return ((min(xs) + max(xs)) // 2, (min(ys) + max(ys)) // 2)
-
-
-def _find_new_fool_shapes(
-    game: GoGame,
-    color: str,
-    seen_shapes: set[tuple[tuple[int, int], ...]],
-) -> list[tuple[tuple[int, int], ...]]:
-    cv = 1 if color == "B" else 2
-    found = []
-    found_keys = set()
-    orientations = [
-        ((1, 0), (0, 1)),
-        ((-1, 0), (0, 1)),
-        ((1, 0), (0, -1)),
-        ((-1, 0), (0, -1)),
-    ]
-
-    for y in range(game.size):
-        for x in range(game.size):
-            if game.board[y][x] != cv:
-                continue
-            for (ax, ay), (bx, by) in orientations:
-                p1 = (x + ax, y + ay)
-                p2 = (x + bx, y + by)
-                if not (0 <= p1[0] < game.size and 0 <= p1[1] < game.size):
-                    continue
-                if not (0 <= p2[0] < game.size and 0 <= p2[1] < game.size):
-                    continue
-                if game.board[p1[1]][p1[0]] != cv or game.board[p2[1]][p2[0]] != cv:
-                    continue
-                diag = (x + ax + bx, y + ay + by)
-                if 0 <= diag[0] < game.size and 0 <= diag[1] < game.size:
-                    if game.board[diag[1]][diag[0]] == cv:
-                        continue
-                shape = _shape_key([(x, y), p1, p2])
-                if shape in seen_shapes or shape in found_keys:
-                    continue
-                loosely_isolated = True
-                shape_set = set(shape)
-                for sx, sy in shape:
-                    for nx, ny in _adjacent_points(sx, sy, game.size):
-                        if (nx, ny) in shape_set:
-                            continue
-                        if game.board[ny][nx] == cv:
-                            loosely_isolated = False
-                            break
-                    if not loosely_isolated:
-                        break
-                if not loosely_isolated:
-                    continue
-                found.append(shape)
-                found_keys.add(shape)
-
-    return found
-
-
 def _get_player_bonus_forbidden_points(game: GoGame, color: str) -> set[tuple[int, int]]:
     if game.two_player:
         return set()
@@ -1531,33 +1469,6 @@ async def _apply_player_rogue_move_effects(game: GoGame, send_fn,
                     await _sync_board_to_katago(game)
                 await send_fn({"type": "rogue_event",
                                "msg": f"🚫 永不悔棋发动，在 {coord_to_gtp(bonus[0], bonus[1], game.size)} 补了一手"})
-
-    if _rogue_has(game, "foolish_wisdom"):
-        new_shapes = _find_new_fool_shapes(game, color, game.rogue_fool_shapes)
-        changed = []
-        for shape in new_shapes:
-            game.rogue_fool_shapes.add(shape)
-            cx, cy = _shape_center(shape)
-            area = [
-                (px, py)
-                for px, py in _get_square_points(cx, cy, 2, game.size)
-                if game.board[py][px] == 0
-            ]
-            random.shuffle(area)
-            changed.extend(_spawn_bonus_points(game, area[:ROGUE_FOOLISH_FILL_COUNT], color))
-            if _challenge_should_bonus_derivative(game):
-                extra_area = [
-                    (px, py)
-                    for px, py in _get_square_points(cx, cy, 2, game.size)
-                    if game.board[py][px] == 0
-                ]
-                random.shuffle(extra_area)
-                changed.extend(_spawn_bonus_points(game, extra_area[:1], color))
-        if changed and engine.ready:
-            await _sync_board_to_katago(game)
-        if new_shapes:
-            await send_fn({"type": "rogue_event",
-                           "msg": f"🪤 大智若愚发动，识别到 {len(new_shapes)} 个愚形，额外长出 {len(changed)} 颗己方棋子"})
 
     if _rogue_has(game, "five_in_row"):
         await _trigger_rogue_five_in_row(game, send_fn, color)
