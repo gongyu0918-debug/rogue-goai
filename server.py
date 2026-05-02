@@ -22,12 +22,9 @@ import uvicorn
 import app.config.gameplay as gameplay_config
 import app.runtime.ws_actions as ws_actions_module
 from app.config.gameplay import (
-    CHALLENGE_ACTIVE_USE_BONUS,
-    CHALLENGE_DERIVATIVE_BONUS_CHANCE,
     CHALLENGE_RESTRICTION_DECAY_CHANCE,
     CHALLENGE_SET_MIN_COUNT,
     CHALLENGE_TRAP_EXTRA_TURN_CHANCE,
-    CHALLENGE_ZONE_EXPAND_RADIUS,
     MAX_MOVE_TIME,
     OPENING_MOVE_THRESHOLD,
     RANK_LABELS,
@@ -116,8 +113,6 @@ from app.config.gpu_tiers import (
     GPU_TIERS as _GPU_TIERS,
 )
 from app.data.cards import (
-    challenge_card_category,
-    challenge_category_counts,
     get_gameplay_tuning_specs,
     get_gameplay_tuning_values,
     get_rogue_card,
@@ -162,7 +157,18 @@ from app.gameplay.effect_utils import (
     spawn_random_owned_stones as _spawn_random_owned_stones,
     try_spawn_bonus_stone as _try_spawn_bonus_stone,
 )
-from app.gameplay.rogue_effects import apply_rogue_card_uses, reset_rogue_effect_state
+from app.gameplay.rogue_effects import (
+    apply_rogue_card_uses,
+    challenge_active_use_bonus as _challenge_active_use_bonus,
+    challenge_category_counts_for_game as _challenge_category_counts,
+    challenge_has_set as _challenge_has_set,
+    challenge_remaining as _challenge_remaining,
+    challenge_should_bonus_derivative as _challenge_should_bonus_derivative,
+    challenge_zone_points as _challenge_zone_points,
+    reset_rogue_effect_state,
+    rogue_card_ids as _rogue_card_ids,
+    rogue_has as _rogue_has,
+)
 from app.services.card_config_service import CardConfigService
 from app.runtime.engine import KataGoEngine
 from app.runtime.game_store import ActiveGameStore
@@ -271,9 +277,6 @@ def get_game_visits(level: str, move_count: int = -1,
         cpu_mode=engine_runtime.cpu_mode,
     )
 
-
-def _challenge_card_category(card_id: str) -> Optional[str]:
-    return challenge_card_category(card_id)
 
 def _is_loopback_host(host: str) -> bool:
     host = (host or "").strip().lower()
@@ -1242,55 +1245,6 @@ def _get_ai_rogue_forbidden_points(game: GoGame) -> list[tuple[int, int]]:
     if card in {"blackhole", "golden_corner", "fog"}:
         return list(game.ai_rogue_seal_points)
     return []
-
-
-def _rogue_card_ids(game: GoGame) -> list[str]:
-    cards: list[str] = []
-    for card_id in list(getattr(game, "challenge_cards", [])) + [game.rogue_card]:
-        if card_id and card_id not in cards:
-            cards.append(card_id)
-    return cards
-
-
-def _rogue_has(game: GoGame, card_id: str) -> bool:
-    return card_id in _rogue_card_ids(game)
-
-
-def _challenge_remaining(game: GoGame, key: str) -> int:
-    return max(0, game.challenge_limits.get(key, 0) - game.challenge_usage.get(key, 0))
-
-
-def _challenge_category_counts(game: GoGame) -> dict[str, int]:
-    return challenge_category_counts(list(getattr(game, "challenge_cards", [])))
-
-
-def _challenge_has_set(game: GoGame, category: str, need: int = CHALLENGE_SET_MIN_COUNT) -> bool:
-    if not getattr(game, "challenge_beta", False):
-        return False
-    return _challenge_category_counts(game).get(category, 0) >= need
-
-
-def _challenge_zone_points(game: GoGame, points: list[tuple[int, int]]) -> list[tuple[int, int]]:
-    if not _challenge_has_set(game, "zone"):
-        return list(points)
-    expanded: set[tuple[int, int]] = set()
-    for px, py in points:
-        for dy in range(-CHALLENGE_ZONE_EXPAND_RADIUS, CHALLENGE_ZONE_EXPAND_RADIUS + 1):
-            for dx in range(-CHALLENGE_ZONE_EXPAND_RADIUS, CHALLENGE_ZONE_EXPAND_RADIUS + 1):
-                nx, ny = px + dx, py + dy
-                if 0 <= nx < game.size and 0 <= ny < game.size:
-                    expanded.add((nx, ny))
-    return sorted(expanded)
-
-
-def _challenge_active_use_bonus(game: GoGame, card_id: str) -> int:
-    if not _challenge_has_set(game, "active"):
-        return 0
-    return CHALLENGE_ACTIVE_USE_BONUS if _challenge_card_category(card_id) == "active" else 0
-
-
-def _challenge_should_bonus_derivative(game: GoGame) -> bool:
-    return _challenge_has_set(game, "derivative") and random.random() < CHALLENGE_DERIVATIVE_BONUS_CHANCE
 
 
 async def _challenge_apply_trap_bonus(game: GoGame, send_fn, source_name: str) -> None:
