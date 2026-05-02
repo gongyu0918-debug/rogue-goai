@@ -2,18 +2,20 @@ from __future__ import annotations
 
 import random
 from collections.abc import Awaitable
+from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
-from app.config.gameplay import (
-    AI_STYLE_OPTIONS,
-    CPU_MAX_VISITS,
-    MAX_GAME_VISITS,
-    OPENING_MAX_VISITS,
-    OPENING_MOVE_THRESHOLD,
-    RANK_VISITS,
-    ROGUE_MAX_VISITS,
-    ULTIMATE_MAX_VISITS,
-)
+import app.config.gameplay as gameplay_config
+
+
+@dataclass(frozen=True)
+class AiMovePlan:
+    mode: str
+    effective_level: str
+    visits: int
+    time_limit: float
+    move_count: int
+    ai_move_count: int
 
 
 def compute_game_visits(
@@ -23,17 +25,61 @@ def compute_game_visits(
     *,
     cpu_mode: bool = False,
 ) -> int:
-    raw = RANK_VISITS.get(level, 800)
-    visits = MAX_GAME_VISITS if raw == 0 else min(raw, MAX_GAME_VISITS)
+    raw = gameplay_config.RANK_VISITS.get(level, 800)
+    visits = gameplay_config.MAX_GAME_VISITS if raw == 0 else min(raw, gameplay_config.MAX_GAME_VISITS)
     if mode == "rogue":
-        visits = min(visits, ROGUE_MAX_VISITS)
+        visits = min(visits, gameplay_config.ROGUE_MAX_VISITS)
     elif mode == "ultimate":
-        visits = min(visits, ULTIMATE_MAX_VISITS)
+        visits = min(visits, gameplay_config.ULTIMATE_MAX_VISITS)
     if cpu_mode:
-        visits = min(visits, CPU_MAX_VISITS)
-    if 0 <= move_count < OPENING_MOVE_THRESHOLD and visits > OPENING_MAX_VISITS:
-        visits = OPENING_MAX_VISITS
+        visits = min(visits, gameplay_config.CPU_MAX_VISITS)
+    if (
+        0 <= move_count < gameplay_config.OPENING_MOVE_THRESHOLD
+        and visits > gameplay_config.OPENING_MAX_VISITS
+    ):
+        visits = gameplay_config.OPENING_MAX_VISITS
     return visits
+
+
+def plan_rogue_ai_search(
+    game: Any,
+    rogue_cards: set[str],
+    *,
+    move_count: int,
+    ai_move_count: int,
+    get_game_visits: Callable[[str, int, str], int],
+    weaken_rank: Callable[[str, int], str],
+) -> AiMovePlan:
+    mode = "rogue" if rogue_cards else "normal"
+    effective_level = game.level
+    if "nerf" in rogue_cards:
+        effective_level = weaken_rank(effective_level, 8)
+    if "time_press" in rogue_cards:
+        effective_level = weaken_rank(effective_level, 5)
+    visits = get_game_visits(effective_level, move_count, mode)
+
+    if "nerf" in rogue_cards:
+        visits = max(30, int(visits * gameplay_config.ROGUE_NERF_FACTOR))
+
+    if move_count < gameplay_config.OPENING_MOVE_THRESHOLD:
+        time_limit = min(3.0, gameplay_config.MAX_MOVE_TIME)
+    elif visits > 5000:
+        time_limit = gameplay_config.MAX_MOVE_TIME
+    else:
+        time_limit = 8.0
+
+    if "time_press" in rogue_cards:
+        time_limit = min(gameplay_config.ROGUE_TIME_PRESS_MAX_TIME, time_limit)
+        visits = min(visits, gameplay_config.ROGUE_TIME_PRESS_MAX_VISITS)
+
+    return AiMovePlan(
+        mode=mode,
+        effective_level=effective_level,
+        visits=visits,
+        time_limit=time_limit,
+        move_count=move_count,
+        ai_move_count=ai_move_count,
+    )
 
 
 def choose_ai_style_move(
@@ -44,7 +90,7 @@ def choose_ai_style_move(
     *,
     gtp_to_coord: Callable[[str, int], Optional[tuple[int, int]]],
 ) -> Optional[str]:
-    if style not in AI_STYLE_OPTIONS or style == "balanced":
+    if style not in gameplay_config.AI_STYLE_OPTIONS or style == "balanced":
         return None
     best_move = None
     best_score = None

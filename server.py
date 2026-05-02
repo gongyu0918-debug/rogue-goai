@@ -120,7 +120,12 @@ from app.gameplay.card_selection import (
     pick_rogue_choices,
     pick_ultimate_choices,
 )
-from app.gameplay.ai_moves import AiMoveService, compute_game_visits, choose_ai_style_move
+from app.gameplay.ai_moves import (
+    AiMoveService,
+    compute_game_visits,
+    choose_ai_style_move,
+    plan_rogue_ai_search,
+)
 from app.gameplay.effect_utils import (
     adjacent8_points as _adjacent8_points,
     adjacent_points as _adjacent_points,
@@ -1950,27 +1955,16 @@ async def _ai_move(game: GoGame, send_fn):
             await send_fn({"type": "rogue_event",
                            "msg": f"🎭 傀儡术目标 {puppet_gtp} 执行失败，AI 改为正常应手"})
 
-    _mode = "rogue" if rogue_cards else "normal"
-    effective_level = game.level
-    if "nerf" in rogue_cards:
-        effective_level = _weaken_rank(effective_level, 8)
-    if "time_press" in rogue_cards:
-        effective_level = _weaken_rank(effective_level, 5)
-    visits = get_game_visits(effective_level, move_count, mode=_mode)
-
-    if "nerf" in rogue_cards:
-        visits = max(30, int(visits * ROGUE_NERF_FACTOR))
-
-    if move_count < OPENING_MOVE_THRESHOLD:
-        time_limit = min(3.0, MAX_MOVE_TIME)
-    elif visits > 5000:
-        time_limit = MAX_MOVE_TIME
-    else:
-        time_limit = 8.0
-
-    if "time_press" in rogue_cards:
-        time_limit = min(ROGUE_TIME_PRESS_MAX_TIME, time_limit)
-        visits = min(visits, ROGUE_TIME_PRESS_MAX_VISITS)
+    ai_plan = plan_rogue_ai_search(
+        game,
+        rogue_cards,
+        move_count=move_count,
+        ai_move_count=ai_move_count,
+        get_game_visits=get_game_visits,
+        weaken_rank=_weaken_rank,
+    )
+    visits = ai_plan.visits
+    time_limit = ai_plan.time_limit
 
     if "fog" in rogue_cards:
         rng = random.Random(time.time_ns())
