@@ -291,6 +291,15 @@ class AiMoveService:
         self._coord_to_gtp = coord_to_gtp
         self._gtp_to_coord = gtp_to_coord
 
+    def bind_runtime(
+        self,
+        *,
+        engine: Any,
+        run_in_executor: Callable[..., Awaitable[Any]],
+    ) -> None:
+        self._engine = engine
+        self._run_in_executor = run_in_executor
+
     async def pick_nonpass_fallback_move(
         self,
         game: Any,
@@ -534,6 +543,22 @@ class AiMoveService:
             return gtp
 
         return await self._run_in_executor(_analyze_pick)
+
+    async def generate_move(self, color: str, visits: int, time_limit: float) -> str:
+        def _genmove_atomic():
+            with self._engine.command_lock:
+                mv = 10000000 if visits == 0 else visits
+                self._engine._send_command_locked(f"kata-set-param maxVisits {mv}")
+                self._engine.current_visits = visits
+                self._engine._send_command_locked(f"kata-set-param maxTime {time_limit}")
+                resp = self._engine._send_command_locked(
+                    f"genmove {color}",
+                    timeout=max(60, time_limit + 15),
+                )
+                self._engine._send_command_locked("kata-set-param maxTime -1")
+                return resp
+
+        return await self._run_in_executor(_genmove_atomic)
 
     async def no_resign_move(self, game: Any, color: str) -> str:
         del game

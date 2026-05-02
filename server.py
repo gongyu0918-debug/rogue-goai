@@ -678,6 +678,10 @@ ai_move_service = AiMoveService(
 )
 
 
+def _bind_ai_move_service_runtime():
+    ai_move_service.bind_runtime(engine=engine, run_in_executor=run_in_executor)
+
+
 @app.websocket("/ws/{game_id}")
 async def websocket_endpoint(websocket: WebSocket, game_id: str):
     await websocket.accept()
@@ -2106,20 +2110,7 @@ async def _ai_move(game: GoGame, send_fn):
             except Exception:
                 gtp_move = None
         if not gtp_move:
-            def _genmove_atomic():
-                with engine.command_lock:
-                    mv = 10000000 if visits == 0 else visits
-                    engine._send_command_locked(f"kata-set-param maxVisits {mv}")
-                    engine.current_visits = visits
-                    engine._send_command_locked(
-                        f"kata-set-param maxTime {time_limit}")
-                    resp = engine._send_command_locked(
-                        f"genmove {color}",
-                        timeout=max(60, time_limit + 15))
-                    engine._send_command_locked("kata-set-param maxTime -1")
-                    return resp
-
-            resp = await run_in_executor(_genmove_atomic)
+            resp = await _ai_generate_move(color, visits, time_limit)
             if game.game_over:
                 return
             if "?" in resp:
@@ -2234,15 +2225,18 @@ async def _ai_move(game: GoGame, send_fn):
 
 
 async def _ai_move_avoid_points(game, color, visits, time_limit, forbidden):
+    _bind_ai_move_service_runtime()
     return await ai_move_service.avoid_points(game, color, visits, time_limit, forbidden)
 
 
 async def _ai_move_avoid_points_allow_only(game, color, visits, time_limit,
                                            allowed: list[tuple[int, int]]):
+    _bind_ai_move_service_runtime()
     return await ai_move_service.allow_only_points(game, color, visits, time_limit, allowed)
 
 
 async def _ai_move_suboptimal(game, color, visits, time_limit, start_idx=2, end_idx=5):
+    _bind_ai_move_service_runtime()
     return await ai_move_service.suboptimal_move(
         game,
         color,
@@ -2254,11 +2248,18 @@ async def _ai_move_suboptimal(game, color, visits, time_limit, start_idx=2, end_
 
 
 async def _ai_move_no_resign(game, color: str) -> str:
+    _bind_ai_move_service_runtime()
     return await ai_move_service.no_resign_move(game, color)
 
 
 async def _ai_retry_avoiding_ko(game, color):
+    _bind_ai_move_service_runtime()
     return await ai_move_service.retry_avoiding_ko(game, color)
+
+
+async def _ai_generate_move(color: str, visits: int, time_limit: float) -> str:
+    _bind_ai_move_service_runtime()
+    return await ai_move_service.generate_move(color, visits, time_limit)
 
 
 async def _finish_ai_move(game, send_fn, color, card, gtp_move, rogue_msg=None):
@@ -2351,17 +2352,7 @@ async def _generate_ai_style_move(game: GoGame, color: str, visits: int, time_li
         await run_in_executor(engine.send_command, f"play {color} {chosen}")
         return chosen
 
-    def _genmove_atomic():
-        with engine.command_lock:
-            mv = 10000000 if visits == 0 else visits
-            engine._send_command_locked(f"kata-set-param maxVisits {mv}")
-            engine.current_visits = visits
-            engine._send_command_locked(f"kata-set-param maxTime {time_limit}")
-            resp = engine._send_command_locked(f"genmove {color}", timeout=max(60, time_limit + 15))
-            engine._send_command_locked("kata-set-param maxTime -1")
-            return resp
-
-    resp = await run_in_executor(_genmove_atomic)
+    resp = await _ai_generate_move(color, visits, time_limit)
     return resp.replace("=", "").strip()
 
 
