@@ -186,7 +186,7 @@ async def collect_messages(fn, *args, **kwargs):
 
 
 async def smoke_activate_rogue_cards():
-    for card_id in s.ROGUE_CARDS:
+    for card_id in card_data.ROGUE_CARDS:
         game = make_game()
         seed_board(game)
         sent = []
@@ -200,7 +200,7 @@ async def smoke_activate_rogue_cards():
 
 
 async def smoke_player_rogue_effects():
-    cards = list(s.ROGUE_CARDS.keys())
+    cards = list(card_data.ROGUE_CARDS.keys())
     for card_id in cards:
         game = make_game()
         seed_board(game)
@@ -290,7 +290,7 @@ async def smoke_puppet_flow():
 
 
 async def smoke_ai_rogue_cards():
-    for card_id in s.ROGUE_CARDS:
+    for card_id in card_data.ROGUE_CARDS:
         game = make_game()
         seed_board(game)
         game.rogue_card = card_id
@@ -624,11 +624,11 @@ async def smoke_featured_pools():
 
     assert len(rogue) == 3
     assert len(set(rogue)) == 3
-    assert any(card in s.ROGUE_FEATURED_CARDS for card in rogue)
+    assert any(card in card_data.ROGUE_FEATURED_CARDS for card in rogue)
 
     assert len(ultimate) == 3
     assert len(set(ultimate)) == 3
-    assert any(card in s.ULTIMATE_FEATURED_CARDS for card in ultimate)
+    assert any(card in card_data.ULTIMATE_FEATURED_CARDS for card in ultimate)
 
 
 async def smoke_suboptimal_extended():
@@ -974,7 +974,7 @@ async def smoke_foolish_wisdom_ultimate():
     assert modified is True
     assert len(game.ultimate_fool_shapes) >= 1
     assert sum(1 for row in game.board for cell in row if cell == 1) >= 23
-    assert "foolish_wisdom" not in s.AI_ULTIMATE_POOL
+    assert "foolish_wisdom" not in card_data.AI_ULTIMATE_POOL
 
 
 async def smoke_two_player_rogue_shared_cards():
@@ -1019,9 +1019,9 @@ async def smoke_two_player_rogue_shared_cards():
     assert black_support >= 3
     assert any(msg.get("type") == "rogue_event" for msg in sent)
 
-    choices = s.pick_rogue_choices(3, pool=s.TWO_PLAYER_ROGUE_POOL)
+    choices = s.pick_rogue_choices(3, pool=card_data.TWO_PLAYER_ROGUE_POOL)
     assert len(choices) == 3
-    assert all(card in s.TWO_PLAYER_ROGUE_POOL for card in choices)
+    assert all(card in card_data.TWO_PLAYER_ROGUE_POOL for card in choices)
 
 
 async def smoke_ai_rogue_support():
@@ -1259,7 +1259,7 @@ async def smoke_seal_fallback():
 
 
 async def smoke_ultimate_effects():
-    for card_id in s.ULTIMATE_CARDS:
+    for card_id in card_data.ULTIMATE_CARDS:
         game = make_game()
         game.ultimate = True
         seed_board(game)
@@ -1358,8 +1358,8 @@ async def smoke_challenge_beta_set_bonuses():
     game.challenge_beta = True
     game.challenge_cards = ["twin", "exchange"]
     await s._apply_challenge_rogue_loadout(game, send)
-    assert game.rogue_uses["twin"] == s.ROGUE_CARDS["twin"]["uses"] + 1
-    assert game.rogue_uses["exchange"] == s.ROGUE_CARDS["exchange"]["uses"] + 1
+    assert game.rogue_uses["twin"] == card_data.ROGUE_CARDS["twin"]["uses"] + 1
+    assert game.rogue_uses["exchange"] == card_data.ROGUE_CARDS["exchange"]["uses"] + 1
 
     game = make_game(size=9)
     game.challenge_beta = True

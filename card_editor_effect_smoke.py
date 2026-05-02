@@ -250,19 +250,19 @@ async def verify_direct_configured_effects() -> dict[str, Any]:
     assert errors == []
     assert card_data.validate_card_catalog() == []
 
-    for card_id in s.ROGUE_CARDS:
-        summary = s.rogue_card_summary(card_id)
+    for card_id in card_data.ROGUE_CARDS:
+        summary = card_data.rogue_card_summary(card_id)
         assert summary["name"] == marker("rogue", card_id)
         assert summary["desc"] == desc_marker("rogue", card_id)
         assert summary["i18n"]["name"]["zh-CN"] == marker("rogue", card_id)
 
-    for card_id in s.ULTIMATE_CARDS:
-        summary = s.ultimate_card_summary(card_id)
+    for card_id in card_data.ULTIMATE_CARDS:
+        summary = card_data.ultimate_card_summary(card_id)
         assert summary["name"] == marker("ultimate", card_id)
         assert summary["desc"] == desc_marker("ultimate", card_id)
         assert summary["i18n"]["name"]["zh-CN"] == marker("ultimate", card_id)
 
-    for card_id, cdef in s.ROGUE_CARDS.items():
+    for card_id, cdef in card_data.ROGUE_CARDS.items():
         game = base_smoke.make_game()
         base_smoke.seed_board(game)
         sent: list[dict[str, Any]] = []
@@ -276,7 +276,7 @@ async def verify_direct_configured_effects() -> dict[str, Any]:
         if "uses" in cdef:
             assert game.rogue_uses[card_id] == 3
 
-    for card_id in s.ULTIMATE_CARDS:
+    for card_id in card_data.ULTIMATE_CARDS:
         game = base_smoke.make_game()
         game.ultimate = True
         sent: list[dict[str, Any]] = []
@@ -374,8 +374,8 @@ async def verify_direct_configured_effects() -> dict[str, Any]:
         s.engine = old_engine
 
     return {
-        "rogue_cards": len(s.ROGUE_CARDS),
-        "ultimate_cards": len(s.ULTIMATE_CARDS),
+        "rogue_cards": len(card_data.ROGUE_CARDS),
+        "ultimate_cards": len(card_data.ULTIMATE_CARDS),
         "base_effect_smokes": len(BASE_SMOKE_NAMES),
     }
 

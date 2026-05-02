@@ -27,7 +27,6 @@ from app.config.gameplay import (
     CHALLENGE_DERIVATIVE_BONUS_CHANCE,
     CHALLENGE_RESTRICTION_DECAY_CHANCE,
     CHALLENGE_SET_MIN_COUNT,
-    CHALLENGE_STAGE_BIAS_WEIGHT,
     CHALLENGE_TRAP_EXTRA_TURN_CHANCE,
     CHALLENGE_ZONE_EXPAND_RADIUS,
     CPU_MAX_VISITS,
@@ -123,36 +122,26 @@ from app.config.gpu_tiers import (
     GPU_TIERS as _GPU_TIERS,
 )
 from app.data.cards import (
-    AI_ROGUE_POOL,
-    AI_ULTIMATE_POOL,
-    CHALLENGE_BETA_HANDICAPS,
-    CHALLENGE_BETA_POOL,
-    CHALLENGE_CATEGORY_MAP,
-    ROGUE_CARDS,
-    ROGUE_FEATURED_CARDS,
-    TWO_PLAYER_ROGUE_POOL,
-    ULTIMATE_CARDS,
-    ULTIMATE_FEATURED_CARDS,
-    ai_rogue_cards,
-    ai_ultimate_cards,
     challenge_card_category,
     challenge_category_counts,
-    featured_rogue_cards,
-    featured_ultimate_cards,
     get_card_config_editor_payload,
     get_gameplay_tuning_specs,
     get_gameplay_tuning_values,
     get_rogue_card,
-    rogue_card_summary,
     rogue_card_ids,
     reload_card_catalog,
     reset_card_config,
     save_card_config,
-    ultimate_card_summary,
-    ultimate_card_ids,
 )
 from app.domain.coordinates import coord_to_gtp, gtp_to_coord
 from app.domain.game_state import GoGame
+from app.gameplay.card_selection import (
+    pick_ai_rogue_card,
+    pick_ai_ultimate_card,
+    pick_challenge_beta_choices,
+    pick_rogue_choices,
+    pick_ultimate_choices,
+)
 from app.runtime.engine import KataGoEngine
 from app.runtime.game_store import ActiveGameStore
 from app.runtime.startup import EnginePaths, EngineStartupManager
@@ -277,124 +266,8 @@ def get_game_visits(level: str, move_count: int = -1,
     return visits
 
 
-def pick_rogue_choices(n: int = 3, pool: Optional[list[str]] = None) -> list[str]:
-    """Pick n random unique card IDs."""
-    import time
-    rng = random.Random(time.time_ns())
-    keys = rogue_card_ids(pool)
-    rng.shuffle(keys)
-    choices = keys[:n]
-    if choices and not any(card in ROGUE_FEATURED_CARDS for card in choices):
-        featured_pool = featured_rogue_cards(keys)
-        if featured_pool:
-            choices[-1] = rng.choice(featured_pool)
-    unique_choices = []
-    for card in choices:
-        if card not in unique_choices:
-            unique_choices.append(card)
-    for card in keys:
-        if len(unique_choices) >= n:
-            break
-        if card not in unique_choices:
-            unique_choices.append(card)
-    return unique_choices[:n]
-
-
 def _challenge_card_category(card_id: str) -> Optional[str]:
     return challenge_card_category(card_id)
-
-
-def _challenge_category_counts_from_cards(cards: list[str]) -> dict[str, int]:
-    return challenge_category_counts(cards)
-
-
-def _challenge_weighted_unique_sample(
-    pool: list[str],
-    n: int,
-    weights: dict[str, float],
-    rng: random.Random,
-) -> list[str]:
-    available = list(pool)
-    chosen: list[str] = []
-    while available and len(chosen) < n:
-        total = sum(max(0.01, weights.get(card_id, 1.0)) for card_id in available)
-        roll = rng.random() * total
-        upto = 0.0
-        picked = available[-1]
-        for card_id in available:
-            upto += max(0.01, weights.get(card_id, 1.0))
-            if upto >= roll:
-                picked = card_id
-                break
-        chosen.append(picked)
-        available.remove(picked)
-    return chosen
-
-
-def pick_challenge_beta_choices(
-    selected_cards: list[str],
-    n: int = 3,
-    pool: Optional[list[str]] = None,
-) -> list[str]:
-    import time
-
-    rng = random.Random(time.time_ns())
-    base_pool = rogue_card_ids(pool or CHALLENGE_BETA_POOL, exclude=selected_cards)
-    if len(base_pool) <= n:
-        return base_pool[:n]
-
-    weights = {card_id: 1.0 for card_id in base_pool}
-    counts = _challenge_category_counts_from_cards(selected_cards)
-    for card_id in base_pool:
-        category = _challenge_card_category(card_id)
-        if category and counts.get(category, 0) > 0:
-            weights[card_id] += CHALLENGE_STAGE_BIAS_WEIGHT * counts[category]
-
-    choices = _challenge_weighted_unique_sample(base_pool, n, weights, rng)
-    if choices and not any(card in ROGUE_FEATURED_CARDS for card in choices):
-        featured_pool = featured_rogue_cards(base_pool)
-        if featured_pool:
-            choices[-1] = rng.choice(featured_pool)
-    return choices
-
-
-def pick_ai_rogue_card(exclude: Optional[list[str]] = None) -> str:
-    import time
-    rng = random.Random(time.time_ns())
-    pool = ai_rogue_cards(exclude)
-    return rng.choice(pool or ai_rogue_cards())
-
-
-def pick_ultimate_choices(n: int = 3, exclude: list = None) -> list[str]:
-    """Pick n random unique ultimate card IDs, excluding given keys."""
-    import time
-    rng = random.Random(time.time_ns())
-    keys = ultimate_card_ids(exclude)
-    rng.shuffle(keys)
-    choices = keys[:n]
-    if choices and not any(card in ULTIMATE_FEATURED_CARDS for card in choices):
-        featured_pool = featured_ultimate_cards(keys)
-        if featured_pool:
-            choices[-1] = rng.choice(featured_pool)
-    unique_choices = []
-    for card in choices:
-        if card not in unique_choices:
-            unique_choices.append(card)
-    for card in keys:
-        if len(unique_choices) >= n:
-            break
-        if card not in unique_choices:
-            unique_choices.append(card)
-    return unique_choices[:n]
-
-
-def pick_ai_ultimate_card(exclude: list = None) -> str:
-    """Pick 1 random AI card from the simple brute-force pool."""
-    import time
-    rng = random.Random(time.time_ns())
-    pool = ai_ultimate_cards(exclude)
-    return rng.choice(pool or ai_ultimate_cards())
-
 
 def _is_loopback_host(host: str) -> bool:
     host = (host or "").strip().lower()
@@ -1905,7 +1778,7 @@ def _challenge_remaining(game: GoGame, key: str) -> int:
 
 
 def _challenge_category_counts(game: GoGame) -> dict[str, int]:
-    return _challenge_category_counts_from_cards(list(getattr(game, "challenge_cards", [])))
+    return challenge_category_counts(list(getattr(game, "challenge_cards", [])))
 
 
 def _challenge_has_set(game: GoGame, category: str, need: int = CHALLENGE_SET_MIN_COUNT) -> bool:
