@@ -142,6 +142,25 @@ from app.gameplay.card_selection import (
     pick_rogue_choices,
     pick_ultimate_choices,
 )
+from app.gameplay.effect_utils import (
+    adjacent8_points as _adjacent8_points,
+    adjacent_points as _adjacent_points,
+    count_stones as _count_stones,
+    diamond_points as _diamond_points,
+    find_exact_five_lines as _find_exact_five_lines,
+    get_blackhole_points as _get_blackhole_points,
+    get_golden_corner_points as _get_golden_corner_points,
+    get_sansan_points as _get_sansan_points,
+    get_square_points as _get_square_points,
+    get_star_points as _get_star_points,
+    is_lowline as _is_lowline,
+    line_endpoints as _line_endpoints,
+    line_key as _line_key,
+    line_points_between as _line_points_between,
+    mirror_coord as _mirror_coord,
+    pick_joseki_targets as _pick_joseki_targets,
+    random_hidden_center as _random_hidden_center,
+)
 from app.runtime.engine import KataGoEngine
 from app.runtime.game_store import ActiveGameStore
 from app.runtime.startup import EnginePaths, EngineStartupManager
@@ -841,108 +860,6 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
             pass
 
 
-def _get_star_points(size: int) -> list[tuple[int, int]]:
-    """Return star points + tengen for a given board size."""
-    if size == 19:
-        pts = [(3, 3), (9, 3), (15, 3), (3, 9), (9, 9), (15, 9),
-               (3, 15), (9, 15), (15, 15)]
-    elif size == 13:
-        pts = [(3, 3), (6, 3), (9, 3), (3, 6), (6, 6), (9, 6),
-               (3, 9), (6, 9), (9, 9)]
-    elif size == 9:
-        pts = [(2, 2), (4, 2), (6, 2), (2, 4), (4, 4), (6, 4),
-               (2, 6), (4, 6), (6, 6)]
-    else:
-        c = size // 2
-        pts = [(c, c)]
-    return pts
-
-
-def _get_blackhole_points(size: int) -> list[tuple[int, int]]:
-    """Return a diamond (manhattan ≤ 2) centered on tengen = 13 points."""
-    c = size // 2
-    pts = []
-    for dy in range(-2, 3):
-        for dx in range(-2, 3):
-            if abs(dx) + abs(dy) <= 2:
-                nx, ny = c + dx, c + dy
-                if 0 <= nx < size and 0 <= ny < size:
-                    pts.append((nx, ny))
-    return pts
-
-
-def _get_golden_corner_points(size: int, corner: int, span: int = 5) -> list[tuple[int, int]]:
-    """Return a corner forbidden zone (0=TL, 1=TR, 2=BL, 3=BR)."""
-    pts = []
-    for dy in range(span):
-        for dx in range(span):
-            if corner == 0:
-                pts.append((dx, dy))
-            elif corner == 1:
-                pts.append((size - 1 - dx, dy))
-            elif corner == 2:
-                pts.append((dx, size - 1 - dy))
-            else:
-                pts.append((size - 1 - dx, size - 1 - dy))
-    return pts
-
-
-def _get_sansan_points(size: int) -> list[tuple[int, int]]:
-    """Return all four 3-3 points."""
-    return [(2, 2), (size - 3, 2), (2, size - 3), (size - 3, size - 3)]
-
-
-def _pick_joseki_targets(size: int, n: int = 8) -> list[tuple[int, int]]:
-    """Pick n joseki-ish corner points for joseki_ocd."""
-    import time
-    rng = random.Random(time.time_ns())
-    offsets = [(2, 2), (2, 3), (3, 2), (3, 3), (2, 4), (4, 2), (3, 4), (4, 3)]
-    candidates = []
-    for bx in (0, size - 1):
-        for by in (0, size - 1):
-            for ox, oy in offsets:
-                x = ox if bx == 0 else size - 1 - ox
-                y = oy if by == 0 else size - 1 - oy
-                if 0 <= x < size and 0 <= y < size:
-                    candidates.append((x, y))
-    candidates = list(dict.fromkeys(candidates))
-    rng.shuffle(candidates)
-    return candidates[:n]
-
-
-def _is_lowline(x: int, y: int, size: int) -> bool:
-    """Check if a coord is on the 3rd line or lower (edge-adjacent)."""
-    return x <= 2 or x >= size - 3 or y <= 2 or y >= size - 3
-
-
-def _mirror_coord(x: int, y: int, size: int) -> tuple[int, int]:
-    """Mirror a coordinate about tengen (center)."""
-    return (size - 1 - x, size - 1 - y)
-
-
-def _adjacent_points(x: int, y: int, size: int) -> list[tuple[int, int]]:
-    """Return orthogonally adjacent points within the board."""
-    pts = []
-    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-        nx, ny = x + dx, y + dy
-        if 0 <= nx < size and 0 <= ny < size:
-            pts.append((nx, ny))
-    return pts
-
-
-def _adjacent8_points(x: int, y: int, size: int) -> list[tuple[int, int]]:
-    """Return the 8 neighboring points around a coordinate."""
-    pts = []
-    for dy in (-1, 0, 1):
-        for dx in (-1, 0, 1):
-            if dx == 0 and dy == 0:
-                continue
-            nx, ny = x + dx, y + dy
-            if 0 <= nx < size and 0 <= ny < size:
-                pts.append((nx, ny))
-    return pts
-
-
 def _set_points_to_color(game: GoGame, points: list[tuple[int, int]], color: str) -> list[tuple[int, int]]:
     """Apply a batch color change and stabilize nearby groups immediately."""
     return _apply_magic_points(game, points, color, overwrite_enemy=True)
@@ -1065,11 +982,6 @@ def _apply_score_penalty(game: GoGame, offender: str, amount: float) -> None:
         game.komi += amount
     else:
         game.komi -= amount
-
-
-def _count_stones(game: GoGame, color_val: int) -> int:
-    """Count how many stones of *color_val* (1=B, 2=W) are on the board."""
-    return sum(cell == color_val for row in game.board for cell in row)
 
 
 async def _check_capture_foul(game: GoGame, send_fn, offender: str, captured: int, *, ultimate: bool) -> None:
@@ -1209,41 +1121,6 @@ def _collect_joseki_burst_points(
     return chosen
 
 
-def _diamond_points(
-    cx: int,
-    cy: int,
-    radius: int,
-    size: int,
-    *,
-    boundary_only: bool = False,
-    include_center: bool = True,
-) -> list[tuple[int, int]]:
-    pts = []
-    for dy in range(-radius, radius + 1):
-        for dx in range(-radius, radius + 1):
-            dist = abs(dx) + abs(dy)
-            if dist > radius:
-                continue
-            if boundary_only and dist != radius:
-                continue
-            if not include_center and dist == 0:
-                continue
-            nx, ny = cx + dx, cy + dy
-            if 0 <= nx < size and 0 <= ny < size:
-                pts.append((nx, ny))
-    return pts
-
-
-def _get_square_points(cx: int, cy: int, radius: int, size: int) -> list[tuple[int, int]]:
-    pts = []
-    for dy in range(-radius, radius + 1):
-        for dx in range(-radius, radius + 1):
-            nx, ny = cx + dx, cy + dy
-            if 0 <= nx < size and 0 <= ny < size:
-                pts.append((nx, ny))
-    return pts
-
-
 def _pick_fog_mask(size: int, rng: random.Random) -> list[tuple[int, int]]:
     cx = rng.randint(0, size - 1)
     cy = rng.randint(0, size - 1)
@@ -1326,12 +1203,6 @@ def _find_new_fool_shapes(
     return found
 
 
-def _random_hidden_center(size: int, radius: int, rng: random.Random) -> tuple[int, int]:
-    low = max(radius, 0)
-    high = max(low, size - radius - 1)
-    return (rng.randint(low, high), rng.randint(low, high))
-
-
 def _get_corner_square_points(size: int, corner: int, span: int) -> list[tuple[int, int]]:
     pts = []
     for dy in range(span):
@@ -1398,53 +1269,6 @@ def _find_corner_with_min_stones(
         if own >= count:
             return corner
     return None
-
-
-def _line_key(points: list[tuple[int, int]] | tuple[tuple[int, int], ...]) -> tuple[tuple[int, int], ...]:
-    return tuple(sorted(points))
-
-
-def _find_exact_five_lines(game: GoGame, color: str) -> list[tuple[tuple[int, int], ...]]:
-    cv = 1 if color == "B" else 2
-    lines = []
-    seen = set()
-    directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
-    for y in range(game.size):
-        for x in range(game.size):
-            if game.board[y][x] != cv:
-                continue
-            for dx, dy in directions:
-                px, py = x - dx, y - dy
-                if 0 <= px < game.size and 0 <= py < game.size and game.board[py][px] == cv:
-                    continue
-                run = []
-                cx, cy = x, y
-                while 0 <= cx < game.size and 0 <= cy < game.size and game.board[cy][cx] == cv:
-                    run.append((cx, cy))
-                    cx += dx
-                    cy += dy
-                if len(run) != 5:
-                    continue
-                key = _line_key(run)
-                if key in seen:
-                    continue
-                seen.add(key)
-                lines.append(key)
-    return lines
-
-
-def _line_endpoints(
-    line: tuple[tuple[int, int], ...]
-) -> tuple[Optional[tuple[int, int]], Optional[tuple[int, int]]]:
-    if len(line) != 5:
-        return None, None
-    sorted_line = sorted(line)
-    x1, y1 = sorted_line[0]
-    x2, y2 = sorted_line[1]
-    dx, dy = x2 - x1, y2 - y1
-    start = (x1 - dx, y1 - dy)
-    end = (sorted_line[-1][0] + dx, sorted_line[-1][1] + dy)
-    return start, end
 
 
 def _spawn_random_owned_stones(
@@ -1685,28 +1509,6 @@ async def _trigger_ultimate_five_in_row(game: GoGame, send_fn, color: str):
             "msg": f"🎯 五子连珠爆发连锁 {chain_count} 次：随机清除 {total_cleared} 颗敌子，并补下 {total_spawned} 颗己棋",
         })
     return chain_count > 0
-
-
-def _line_points_between(x1: int, y1: int, x2: int, y2: int) -> list[tuple[int, int]]:
-    pts: list[tuple[int, int]] = []
-    dx = abs(x2 - x1)
-    dy = abs(y2 - y1)
-    sx = 1 if x1 < x2 else -1
-    sy = 1 if y1 < y2 else -1
-    err = dx - dy
-    x, y = x1, y1
-    while True:
-        pts.append((x, y))
-        if x == x2 and y == y2:
-            break
-        e2 = err * 2
-        if e2 > -dy:
-            err -= dy
-            x += sx
-        if e2 < dx:
-            err += dx
-            y += sy
-    return pts
 
 
 def _player_non_pass_coords(game: GoGame, color: str, limit: Optional[int] = None) -> list[tuple[int, int]]:
