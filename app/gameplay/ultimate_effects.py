@@ -1,6 +1,18 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+import random
+import time
 from typing import Any
+
+import app.config.gameplay as gameplay_config
+from app.gameplay.effect_utils import set_points_to_color, spawn_bonus_points
+
+
+@dataclass
+class BoardEffectResult:
+    modified: bool
+    messages: list[str]
 
 
 def reset_ultimate_effect_state(game: Any) -> None:
@@ -18,3 +30,246 @@ def reset_ultimate_effect_state(game: Any) -> None:
     game.ultimate_quickthink_turn_counted = False
     game.ultimate_fool_shapes = set()
     game.ultimate_shadow_clone_links = []
+
+
+def apply_ultimate_board_effect(
+    game: Any,
+    *,
+    x: int,
+    y: int,
+    color: str,
+    card: str,
+) -> BoardEffectResult | None:
+    rng = random.Random(time.time_ns())
+    size = game.size
+    color_val = 1 if color == "B" else 2
+    opponent_val = 3 - color_val
+    messages: list[str] = []
+    modified = False
+
+    if card == "proliferate":
+        candidates = [
+            (nx, ny)
+            for ny in range(max(0, y - 2), min(size, y + 3))
+            for nx in range(max(0, x - 2), min(size, x + 3))
+            if game.board[ny][nx] == 0
+        ]
+        rng.shuffle(candidates)
+        placed = len(spawn_bonus_points(game, candidates[:5], color))
+        if placed > 0:
+            modified = True
+            messages.append(f"🦠 无限增生！生成 {placed} 颗棋子")
+
+    elif card == "wildgrow":
+        own_stones = [
+            (sx, sy)
+            for sy in range(size)
+            for sx in range(size)
+            if game.board[sy][sx] == color_val
+        ]
+        rng.shuffle(own_stones)
+        growth_targets = []
+        for sx, sy in own_stones:
+            if len(growth_targets) >= gameplay_config.ULTIMATE_WILDGROW_MAX_GROWTH:
+                break
+            adjacent_empty = [
+                (nx, ny)
+                for ny in range(max(0, sy - 1), min(size, sy + 2))
+                for nx in range(max(0, sx - 1), min(size, sx + 2))
+                if game.board[ny][nx] == 0
+            ]
+            if adjacent_empty:
+                growth_targets.append(rng.choice(adjacent_empty))
+        grown = len(spawn_bonus_points(game, growth_targets, color))
+        if grown > 0:
+            modified = True
+            messages.append(f"🌿 狂野生长！{grown} 颗棋子生长出新子")
+
+    elif card == "rejection":
+        pushed = 0
+        destroyed = 0
+        for dy in range(-1, 2):
+            for dx in range(-1, 2):
+                if dx == 0 and dy == 0:
+                    continue
+                nx, ny = x + dx, y + dy
+                if not (0 <= nx < size and 0 <= ny < size):
+                    continue
+                if game.board[ny][nx] != opponent_val:
+                    continue
+                push_x, push_y = nx + dx, ny + dy
+                game.board[ny][nx] = 0
+                if (
+                    0 <= push_x < size
+                    and 0 <= push_y < size
+                    and game.board[push_y][push_x] == 0
+                ):
+                    game.board[push_y][push_x] = opponent_val
+                    pushed += 1
+                else:
+                    destroyed += 1
+                modified = True
+        if pushed + destroyed > 0:
+            msg = "💥 排异反应！"
+            if pushed:
+                msg += f"挤走 {pushed} 子"
+            if destroyed:
+                msg += f"{'，' if pushed else ''}摧毁 {destroyed} 子"
+            messages.append(msg)
+
+    elif card == "plague":
+        targets = [
+            (nx, ny)
+            for ny in range(max(0, y - 2), min(size, y + 3))
+            for nx in range(max(0, x - 2), min(size, x + 3))
+            if game.board[ny][nx] == opponent_val
+        ]
+        converted = len(set_points_to_color(game, targets, color))
+        if converted > 0:
+            modified = True
+            messages.append(f"☠️ 瘟疫蔓延！感染 {converted} 颗敌子")
+
+    elif card == "meteor":
+        enemies = [
+            (sx, sy)
+            for sy in range(size)
+            for sx in range(size)
+            if game.board[sy][sx] == opponent_val
+        ]
+        rng.shuffle(enemies)
+        destroyed = 0
+        for ex, ey in enemies[:gameplay_config.ULTIMATE_METEOR_DESTROY_COUNT]:
+            game.board[ey][ex] = 0
+            destroyed += 1
+        if destroyed > 0:
+            modified = True
+            messages.append(f"☄️ 陨石雨！摧毁 {destroyed} 颗对方棋子")
+
+    elif card == "quantum":
+        empties = [
+            (sx, sy)
+            for sy in range(size)
+            for sx in range(size)
+            if game.board[sy][sx] == 0
+        ]
+        rng.shuffle(empties)
+        placed = len(spawn_bonus_points(
+            game,
+            empties[:gameplay_config.ULTIMATE_QUANTUM_PLACE_COUNT],
+            color,
+        ))
+        if placed > 0:
+            modified = True
+            messages.append(f"⚛️ 量子纠缠！在 {placed} 个位置出现棋子")
+
+    elif card == "devour":
+        eaten = 0
+        for ny in range(max(0, y - 2), min(size, y + 3)):
+            for nx in range(max(0, x - 2), min(size, x + 3)):
+                if game.board[ny][nx] == opponent_val:
+                    game.board[ny][nx] = 0
+                    eaten += 1
+        if eaten > 0:
+            modified = True
+            messages.append(f"👹 吞噬之口！吃掉 {eaten} 颗对方棋子")
+
+    elif card == "blackout":
+        destroyed = 0
+        for d in range(-2, 3):
+            for nx, ny in ((x + d, y), (x, y + d)):
+                if 0 <= nx < size and 0 <= ny < size and game.board[ny][nx] == opponent_val:
+                    game.board[ny][nx] = 0
+                    destroyed += 1
+                    modified = True
+        if destroyed > 0:
+            messages.append(f"🌋 天崩地裂！十字清除 {destroyed} 颗敌子")
+
+    elif card == "magnet":
+        own_stones = [
+            (sx, sy)
+            for sy in range(size)
+            for sx in range(size)
+            if game.board[sy][sx] == color_val and (sx, sy) != (x, y)
+        ]
+        own_stones.sort(key=lambda p: abs(p[0] - x) + abs(p[1] - y))
+        moved = 0
+        crushed = 0
+        for sx, sy in own_stones:
+            cx, cy = sx, sy
+            for _ in range(3):
+                dx_dir = 0 if cx == x else (1 if cx < x else -1)
+                dy_dir = 0 if cy == y else (1 if cy < y else -1)
+                if dx_dir == 0 and dy_dir == 0:
+                    break
+                nx, ny = cx + dx_dir, cy + dy_dir
+                if not (0 <= nx < size and 0 <= ny < size):
+                    break
+                if game.board[ny][nx] == opponent_val:
+                    game.board[ny][nx] = 0
+                    crushed += 1
+                if game.board[ny][nx] == 0:
+                    game.board[cy][cx] = 0
+                    game.board[ny][nx] = color_val
+                    cx, cy = nx, ny
+                    modified = True
+                else:
+                    break
+            if (cx, cy) != (sx, sy):
+                moved += 1
+        if moved + crushed > 0:
+            msg = f"🧲 磁力吸附！{moved} 子飞奔"
+            if crushed:
+                msg += f"，碾碎 {crushed} 颗敌子"
+            messages.append(msg)
+
+    elif card == "necro":
+        empties = [
+            (sx, sy)
+            for sy in range(size)
+            for sx in range(size)
+            if game.board[sy][sx] == 0
+        ]
+        rng.shuffle(empties)
+        spawned = len(spawn_bonus_points(game, empties[:3], color))
+        enemies = [
+            (sx, sy)
+            for sy in range(size)
+            for sx in range(size)
+            if game.board[sy][sx] == opponent_val
+        ]
+        rng.shuffle(enemies)
+        converted = len(set_points_to_color(game, enemies[:2], color))
+        if spawned + converted > 0:
+            modified = True
+            messages.append(f"💀 亡灵召唤！召唤 {spawned} 子，转化 {converted} 子")
+
+    elif card == "wall":
+        if random.random() < gameplay_config.ULTIMATE_WALL_TRIGGER_CHANCE:
+            row_slots = sum(1 for fx in range(size) if game.board[y][fx] == 0)
+            col_slots = sum(1 for fy in range(size) if game.board[fy][x] == 0)
+            if row_slots >= col_slots:
+                placed = len(spawn_bonus_points(
+                    game,
+                    [(fx, y) for fx in range(size) if game.board[y][fx] == 0],
+                    color,
+                ))
+                if placed > 0:
+                    modified = True
+                    messages.append(f"🧱 万里长城发动！第 {size - y} 行筑起 {placed} 子")
+            else:
+                placed = len(spawn_bonus_points(
+                    game,
+                    [(x, fy) for fy in range(size) if game.board[fy][x] == 0],
+                    color,
+                ))
+                if placed > 0:
+                    modified = True
+                    cols = "ABCDEFGHJKLMNOPQRST"
+                    messages.append(f"🧱 万里长城发动！{cols[x]} 列筑起 {placed} 子")
+        else:
+            messages.append("🧱 万里长城未能成型，这次没有筑起城墙")
+
+    else:
+        return None
+
+    return BoardEffectResult(modified=modified, messages=messages)

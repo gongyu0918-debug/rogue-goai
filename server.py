@@ -97,13 +97,9 @@ from app.config.gameplay import (
     ULTIMATE_LAST_STAND_CLEAR_COUNT,
     ULTIMATE_LAST_STAND_SPAWN_COUNT,
     ULTIMATE_LAST_STAND_THRESHOLD,
-    ULTIMATE_METEOR_DESTROY_COUNT,
-    ULTIMATE_QUANTUM_PLACE_COUNT,
     ULTIMATE_QUICKTHINK_SECONDS,
     ULTIMATE_TERRITORY_RADIUS,
     ULTIMATE_TIMEWARP_TRIGGER_CHANCE,
-    ULTIMATE_WALL_TRIGGER_CHANCE,
-    ULTIMATE_WILDGROW_MAX_GROWTH,
     get_balance_editor_payload,
     reset_balance_overrides,
     save_balance_overrides,
@@ -170,6 +166,7 @@ from app.gameplay.rogue_effects import (
     rogue_has as _rogue_has,
 )
 from app.services.card_config_service import CardConfigService
+from app.gameplay.ultimate_effects import apply_ultimate_board_effect
 from app.runtime.engine import KataGoEngine
 from app.runtime.game_store import ActiveGameStore
 from app.runtime.startup import EnginePaths, EngineStartupManager
@@ -1773,74 +1770,13 @@ async def _apply_ultimate_effect(game: GoGame, send_fn, x: int, y: int,
     ov = 3 - cv
     modified = False
 
-    if card == "proliferate":
-        # Spawn 5 same-color stones in 5×5 area
-        candidates = []
-        for dy in range(-2, 3):
-            for dx in range(-2, 3):
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < size and 0 <= ny < size and game.board[ny][nx] == 0:
-                    candidates.append((nx, ny))
-        rng.shuffle(candidates)
-        placed_points = _spawn_bonus_points(game, candidates[:5], color)
-        placed = len(placed_points)
-        if placed > 0:
-            modified = True
-            await send_fn({"type": "rogue_event",
-                           "msg": f"🦠 无限增生！生成 {placed} 颗棋子"})
-
-    elif card == "wildgrow":
-        # Pick 3 random existing stones of this color, each grows a neighbor
-        own_stones = [(sx, sy) for sy in range(size) for sx in range(size)
-                      if game.board[sy][sx] == cv]
-        rng.shuffle(own_stones)
-        growth_targets = []
-        for sx, sy in own_stones:
-            if len(growth_targets) >= ULTIMATE_WILDGROW_MAX_GROWTH:
-                break
-            adj = []
-            for dy in range(-1, 2):
-                for dx in range(-1, 2):
-                    nx, ny = sx + dx, sy + dy
-                    if 0 <= nx < size and 0 <= ny < size and game.board[ny][nx] == 0:
-                        adj.append((nx, ny))
-            if adj:
-                growth_targets.append(rng.choice(adj))
-        grown = len(_spawn_bonus_points(game, growth_targets, color))
-        if grown > 0:
-            modified = True
-            await send_fn({"type": "rogue_event",
-                           "msg": f"🌿 狂野生长！{grown} 颗棋子生长出新子"})
-
-    elif card == "rejection":
-        # Push all opponent stones in 3×3 away from placed stone
-        pushed = 0
-        destroyed = 0
-        for dy in range(-1, 2):
-            for dx in range(-1, 2):
-                if dx == 0 and dy == 0:
-                    continue
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < size and 0 <= ny < size and game.board[ny][nx] == ov:
-                    # Push direction: away from (x,y)
-                    push_x, push_y = nx + dx, ny + dy
-                    game.board[ny][nx] = 0  # remove from original
-                    if (0 <= push_x < size and 0 <= push_y < size
-                            and game.board[push_y][push_x] == 0):
-                        game.board[push_y][push_x] = ov
-                        pushed += 1
-                    else:
-                        destroyed += 1
-                    modified = True
-        if pushed + destroyed > 0:
-            msg = f"💥 排异反应！"
-            if pushed:
-                msg += f"挤走 {pushed} 子"
-            if destroyed:
-                msg += f"{'，' if pushed else ''}摧毁 {destroyed} 子"
+    board_effect = apply_ultimate_board_effect(game, x=x, y=y, color=color, card=card)
+    if board_effect is not None:
+        for msg in board_effect.messages:
             await send_fn({"type": "rogue_event", "msg": msg})
+        return board_effect.modified
 
-    elif card == "shadow_clone":
+    if card == "shadow_clone":
         # Place at the symmetric point, then force a delayed line between the
         # original move and its mirror on the next turn.
         mx, my = size - 1 - x, size - 1 - y
@@ -1871,60 +1807,6 @@ async def _apply_ultimate_effect(game: GoGame, send_fn, x: int, y: int,
                 await send_fn({"type": "rogue_event",
                                "msg": f"👥 影分身！在 {coord_to_gtp(tx, ty, size)} 出现分身，下一回合会连成镜像线"})
 
-    elif card == "plague":
-        # Convert ALL enemy stones in 3×3 area
-        targets = []
-        for dy in range(-2, 3):
-            for dx in range(-2, 3):
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < size and 0 <= ny < size and game.board[ny][nx] == ov:
-                    targets.append((nx, ny))
-        converted = len(_set_points_to_color(game, targets, color))
-        if converted > 0:
-            modified = True
-        if converted > 0:
-            await send_fn({"type": "rogue_event",
-                           "msg": f"☠️ 瘟疫蔓延！感染 {converted} 颗敌子"})
-
-    elif card == "meteor":
-        # Destroy 4 random enemy stones
-        enemies = [(sx, sy) for sy in range(size) for sx in range(size)
-                   if game.board[sy][sx] == ov]
-        rng.shuffle(enemies)
-        destroyed = 0
-        for ex, ey in enemies[:ULTIMATE_METEOR_DESTROY_COUNT]:
-            game.board[ey][ex] = 0
-            destroyed += 1
-        if destroyed > 0:
-            modified = True
-            await send_fn({"type": "rogue_event",
-                           "msg": f"☄️ 陨石雨！摧毁 {destroyed} 颗对方棋子"})
-
-    elif card == "quantum":
-        # Place on 4 random empty points
-        empties = [(sx, sy) for sy in range(size) for sx in range(size)
-                   if game.board[sy][sx] == 0]
-        rng.shuffle(empties)
-        placed = len(_spawn_bonus_points(game, empties[:ULTIMATE_QUANTUM_PLACE_COUNT], color))
-        if placed > 0:
-            modified = True
-            await send_fn({"type": "rogue_event",
-                           "msg": f"⚛️ 量子纠缠！在 {placed} 个位置出现棋子"})
-
-    elif card == "devour":
-        # Eat all opponent stones in 5×5
-        eaten = 0
-        for dy in range(-2, 3):
-            for dx in range(-2, 3):
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < size and 0 <= ny < size and game.board[ny][nx] == ov:
-                    game.board[ny][nx] = 0
-                    eaten += 1
-        if eaten > 0:
-            modified = True
-            await send_fn({"type": "rogue_event",
-                           "msg": f"👹 吞噬之口！吃掉 {eaten} 颗对方棋子"})
-
     elif card == "timewarp":
         # 70% chance to undo opponent's last 2 moves
         if rng.random() < ULTIMATE_TIMEWARP_TRIGGER_CHANCE:
@@ -1945,71 +1827,6 @@ async def _apply_ultimate_effect(game: GoGame, send_fn, x: int, y: int,
             if erased > 0:
                 await send_fn({"type": "rogue_event",
                                "msg": f"⏳ 时空裂缝！抹去对方 {erased} 手棋"})
-
-    elif card == "blackout":
-        # Cross pattern: 5 tiles horizontal + 5 tiles vertical centered on (x,y)
-        destroyed = 0
-        for d in range(-2, 3):
-            for nx, ny in [(x + d, y), (x, y + d)]:
-                if 0 <= nx < size and 0 <= ny < size and game.board[ny][nx] == ov:
-                    game.board[ny][nx] = 0
-                    destroyed += 1
-                    modified = True
-        if destroyed > 0:
-            await send_fn({"type": "rogue_event",
-                           "msg": f"🌋 天崩地裂！十字清除 {destroyed} 颗敌子"})
-
-    elif card == "magnet":
-        # Pull all own stones 3 steps toward (x,y), destroying enemies in path
-        own_stones = [(sx, sy) for sy in range(size) for sx in range(size)
-                      if game.board[sy][sx] == cv and (sx, sy) != (x, y)]
-        # Sort by distance so closest move first (avoid collisions)
-        own_stones.sort(key=lambda p: abs(p[0] - x) + abs(p[1] - y))
-        moved = 0
-        crushed = 0
-        for sx, sy in own_stones:
-            cx, cy = sx, sy
-            for _ in range(3):
-                dx_dir = (0 if cx == x else (1 if cx < x else -1))
-                dy_dir = (0 if cy == y else (1 if cy < y else -1))
-                if dx_dir == 0 and dy_dir == 0:
-                    break
-                nx, ny = cx + dx_dir, cy + dy_dir
-                if not (0 <= nx < size and 0 <= ny < size):
-                    break
-                if game.board[ny][nx] == ov:
-                    game.board[ny][nx] = 0  # crush enemy
-                    crushed += 1
-                if game.board[ny][nx] == 0:
-                    game.board[cy][cx] = 0
-                    game.board[ny][nx] = cv
-                    cx, cy = nx, ny
-                    modified = True
-                else:
-                    break  # blocked by own stone
-            if (cx, cy) != (sx, sy):
-                moved += 1
-        if moved + crushed > 0:
-            msg = f"🧲 磁力吸附！{moved} 子飞奔"
-            if crushed:
-                msg += f"，碾碎 {crushed} 颗敌子"
-            await send_fn({"type": "rogue_event", "msg": msg})
-
-    elif card == "necro":
-        # Spawn 3 own stones on random empty + convert 2 enemy stones
-        empties = [(sx, sy) for sy in range(size) for sx in range(size)
-                   if game.board[sy][sx] == 0]
-        rng.shuffle(empties)
-        spawned = len(_spawn_bonus_points(game, empties[:3], color))
-        enemies = [(sx, sy) for sy in range(size) for sx in range(size)
-                   if game.board[sy][sx] == ov]
-        rng.shuffle(enemies)
-        converted = len(_set_points_to_color(game, enemies[:2], color))
-        if spawned + converted > 0:
-            modified = True
-        if spawned + converted > 0:
-            await send_fn({"type": "rogue_event",
-                           "msg": f"💀 亡灵召唤！召唤 {spawned} 子，转化 {converted} 子"})
 
     elif card == "joseki_burst":
         if not game.ultimate_joseki_targets:
@@ -2161,36 +1978,6 @@ async def _apply_ultimate_effect(game: GoGame, send_fn, x: int, y: int,
         if total_generated > 0:
             await send_fn({"type": "rogue_event",
                            "msg": f"🪤 大智若愚连锁结束，本次共生成 {total_generated} 颗己方棋子"})
-
-    elif card == "wall":
-        if random.random() < ULTIMATE_WALL_TRIGGER_CHANCE:
-            row_slots = sum(1 for fx in range(size) if game.board[y][fx] == 0)
-            col_slots = sum(1 for fy in range(size) if game.board[fy][x] == 0)
-            choose_row = row_slots >= col_slots
-            if choose_row:
-                placed = len(_spawn_bonus_points(
-                    game,
-                    [(fx, y) for fx in range(size) if game.board[y][fx] == 0],
-                    color,
-                ))
-                if placed > 0:
-                    modified = True
-                    await send_fn({"type": "rogue_event",
-                                   "msg": f"🧱 万里长城发动！第 {size - y} 行筑起 {placed} 子"})
-            else:
-                placed = len(_spawn_bonus_points(
-                    game,
-                    [(x, fy) for fy in range(size) if game.board[fy][x] == 0],
-                    color,
-                ))
-                if placed > 0:
-                    modified = True
-                    cols = "ABCDEFGHJKLMNOPQRST"
-                    await send_fn({"type": "rogue_event",
-                                   "msg": f"🧱 万里长城发动！{cols[x]} 列筑起 {placed} 子"})
-        else:
-            await send_fn({"type": "rogue_event",
-                           "msg": "🧱 万里长城未能成型，这次没有筑起城墙"})
 
     return modified
 
