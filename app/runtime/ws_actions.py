@@ -27,6 +27,7 @@ from app.data.cards import (
     rogue_card_summary,
     ultimate_card_summary,
 )
+from app.gameplay.ultimate_effects import reset_ultimate_effect_state
 
 
 @dataclass
@@ -786,19 +787,7 @@ async def handle_ultimate_select_card(ctx: WebSocketActionContext, data: dict) -
     if card_id not in ULTIMATE_CARDS:
         return
     game.ultimate_player_card = card_id
-    game.ultimate_joseki_targets = []
-    game.ultimate_joseki_hits = 0
-    game.ultimate_joseki_done = False
-    game.ultimate_godhand_center = None
-    game.ultimate_godhand_trigger = []
-    game.ultimate_godhand_done = False
-    game.ultimate_corner_helper_done = set()
-    game.ultimate_sanrensei_done = False
-    game.ultimate_five_in_row_seen = set()
-    game.ultimate_last_stand_done = {"B": False, "W": False}
-    ctx.finish_ultimate_quickthink_turn(game)
-    game.ultimate_fool_shapes = set()
-    game.ultimate_shadow_clone_links = []
+    reset_ultimate_effect_state(game)
     if card_id == "joseki_burst":
         game.ultimate_joseki_targets = ctx.pick_joseki_targets(game.size, ULTIMATE_JOSEKI_TARGET_COUNT)
     elif card_id == "god_hand":
