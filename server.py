@@ -162,6 +162,7 @@ from app.gameplay.effect_utils import (
     spawn_random_owned_stones as _spawn_random_owned_stones,
     try_spawn_bonus_stone as _try_spawn_bonus_stone,
 )
+from app.gameplay.rogue_effects import apply_rogue_card_uses, reset_rogue_effect_state
 from app.services.card_config_service import CardConfigService
 from app.runtime.engine import KataGoEngine
 from app.runtime.game_store import ActiveGameStore
@@ -1423,29 +1424,8 @@ async def _activate_rogue_card(game: GoGame, send_fn, card_id: str):
     """Apply immediate effects when the player picks a rogue card."""
     cdef = get_rogue_card(card_id)
     game.rogue_card = card_id
-    game.rogue_joseki_targets = []
-    game.rogue_joseki_hits = 0
-    game.rogue_joseki_done = False
-    game.rogue_godhand_center = None
-    game.rogue_godhand_trigger = []
-    game.rogue_godhand_done = False
-    game.rogue_sansan_trap_done = False
-    game.rogue_corner_helper_done = set()
-    game.rogue_sanrensei_done = False
-    game.rogue_puppet_target = None
-    game.rogue_five_in_row_seen = set()
-    game.rogue_last_stand_done = {"B": False, "W": False}
-    game.rogue_capture_foul_progress = {"B": 0, "W": 0}
-    game.rogue_coach_moves_left = 0
-    game.rogue_coach_bonus_checked = False
-    game.rogue_quickthink_stage = 0
-    game.rogue_fool_shapes = set()
-    if card_id != "seal":
-        game.rogue_waiting_seal = False
-    if card_id not in {"seal", "blackhole", "golden_corner", "fog"}:
-        game.rogue_seal_points = []
-    if "uses" in cdef:
-        game.rogue_uses[card_id] = cdef["uses"]
+    reset_rogue_effect_state(game)
+    apply_rogue_card_uses(game, card_id, cdef)
 
     if card_id == "komi_relief":
         if game.player_color == "B":
@@ -1523,36 +1503,17 @@ async def _activate_ai_rogue_card(game: GoGame, send_fn, card_id: str):
 async def _apply_challenge_rogue_loadout(game: GoGame, send_fn):
     cards = rogue_card_ids(game.challenge_cards)
     game.rogue_card = cards[-1] if cards else None
-    game.rogue_uses = {}
-    game.rogue_waiting_seal = False
-    game.rogue_skip_ai = False
-    game.rogue_joseki_targets = []
-    game.rogue_joseki_hits = 0
-    game.rogue_joseki_done = False
-    game.rogue_godhand_center = None
-    game.rogue_godhand_trigger = []
-    game.rogue_godhand_done = False
-    game.rogue_sansan_trap_done = False
-    game.rogue_corner_helper_done = set()
-    game.rogue_sanrensei_done = False
-    game.rogue_puppet_target = None
-    game.rogue_five_in_row_seen = set()
-    game.rogue_last_stand_done = {"B": False, "W": False}
-    game.rogue_capture_foul_progress = {"B": 0, "W": 0}
-    game.rogue_coach_moves_left = 0
-    game.rogue_coach_bonus_checked = False
-    game.rogue_quickthink_stage = 0
-    game.rogue_fool_shapes = set()
-    game.rogue_handicap_passes = 0
-    game.rogue_handicap_active = False
-    game.rogue_handicap_bonuses = 0
-    game.rogue_seal_points = []
+    reset_rogue_effect_state(game, reset_uses=True, reset_handicap=True)
     game.rogue_enabled = bool(cards)
 
     for card_id in cards:
         cdef = get_rogue_card(card_id)
-        if "uses" in cdef:
-            game.rogue_uses[card_id] = cdef["uses"] + _challenge_active_use_bonus(game, card_id)
+        apply_rogue_card_uses(
+            game,
+            card_id,
+            cdef,
+            bonus=_challenge_active_use_bonus(game, card_id),
+        )
         if card_id == "komi_relief":
             if game.player_color == "B":
                 game.komi = max(0.5, game.komi - 7.0)
