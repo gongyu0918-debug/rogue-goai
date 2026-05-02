@@ -47,6 +47,20 @@ New-Item -ItemType Directory -Force -Path $ReleaseDir | Out-Null
 
 Push-Location $RepoRoot
 try {
+    $frontendPackage = Join-Path $RepoRoot "frontend\package.json"
+    if (Test-Path $frontendPackage) {
+        $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
+        if (-not $npmCmd) {
+            throw "npm not found. Install Node.js before building the React frontend."
+        }
+
+        Write-Host "==> Installing frontend dependencies"
+        npm ci --prefix (Join-Path $RepoRoot "frontend")
+
+        Write-Host "==> Building React frontend"
+        npm run build --prefix (Join-Path $RepoRoot "frontend")
+    }
+
     Write-Host "==> Building launcher EXE"
     python -m PyInstaller --noconfirm --distpath $DistDir --workpath $BuildDir rogue-go-arena.spec
 

@@ -550,6 +550,18 @@ async def root():
     return FileResponse(str(index_path))
 
 
+@app.get("/react-preview")
+async def react_preview():
+    preview_path = STATIC_DIR / "react" / "index.html"
+    if not preview_path.exists():
+        return Response(
+            content="static/react/index.html not found. Run npm run build --prefix frontend.",
+            media_type="text/plain; charset=utf-8",
+            status_code=404,
+        )
+    return FileResponse(str(preview_path))
+
+
 @app.get("/balance-lab")
 async def balance_lab():
     lab_path = STATIC_DIR / "card_editor.html"
