@@ -155,6 +155,7 @@ from app.gameplay.rogue_effects import (
     challenge_remaining as _challenge_remaining,
     challenge_should_bonus_derivative as _challenge_should_bonus_derivative,
     challenge_zone_points as _challenge_zone_points,
+    apply_player_rogue_board_effects,
     reset_rogue_effect_state,
     rogue_card_ids as _rogue_card_ids,
     rogue_has as _rogue_has,
@@ -1505,121 +1506,21 @@ async def _apply_player_rogue_move_effects(game: GoGame, send_fn,
         await send_fn({"type": "rogue_event",
                        "msg": f"蚕食触发：提掉 {captured} 子，当前贴目变为 {game.komi}"})
 
-    if _rogue_has(game, "sprout") and captured > 0:
-            adj = _adjacent_points(x, y, game.size)
-            empty_adj = [(ax, ay) for ax, ay in adj if game.board[ay][ax] == 0]
-            if empty_adj:
-                bx, by = random.choice(empty_adj)
-                changed = _spawn_bonus_points(game, [(bx, by)], color)
-                if changed:
-                    if engine.ready:
-                        await _sync_board_to_katago(game)
-                    await send_fn({"type": "rogue_event",
-                                   "msg": f"萌芽触发：在 {coord_to_gtp(bx, by, game.size)} 额外长出一颗己方棋子"})
-
-    if (_rogue_has(game, "joseki_ocd")
-            and not game.rogue_joseki_done):
-        if (x, y) in game.rogue_joseki_targets:
-            game.rogue_joseki_hits += 1
-            await send_fn({"type": "rogue_event",
-                           "msg": f"定式命中 ({game.rogue_joseki_hits}/{ROGUE_JOSEKI_REQUIRED_HITS})"})
-        if game.rogue_joseki_hits >= ROGUE_JOSEKI_REQUIRED_HITS:
-            game.rogue_joseki_done = True
-            remaining_targets = [
-                (tx, ty)
-                for tx, ty in game.rogue_joseki_targets
-                if game.board[ty][tx] != (1 if color == "B" else 2)
-            ]
-            changed = _set_points_to_color(game, remaining_targets, color)
-            if changed and engine.ready:
-                await _sync_board_to_katago(game)
-            await send_fn({"type": "rogue_event",
-                           "msg": f"定式强迫症完成，自动补上 {len(changed)} 颗同色棋"})
-
-    if (_rogue_has(game, "god_hand")
-            and not game.rogue_godhand_done
-            and (x, y) in game.rogue_godhand_trigger):
-        game.rogue_godhand_done = True
-        center = game.rogue_godhand_center or (x, y)
-        area = _get_square_points(center[0], center[1], ROGUE_GODHAND_RADIUS, game.size)
-        random.shuffle(area)
-        targets = [(px, py) for px, py in area if game.board[py][px] == 0][:ROGUE_GODHAND_FILL_COUNT]
-        changed = _set_points_to_color(game, targets, color)
-        if changed and engine.ready:
-            await _sync_board_to_katago(game)
-        await send_fn({"type": "rogue_event",
-                       "msg": f"✨ 神之一手发动，在暗点周围爆发 {len(changed)} 颗同色棋"})
-        await _challenge_apply_trap_bonus(game, send_fn, "神之一手")
-
-    if (game.two_player
-            and _rogue_has(game, "sansan_trap")
-            and not game.rogue_sansan_trap_done
-            and (x, y) in _get_sansan_points(game.size)):
-        mover_opening = len(_player_non_pass_coords(game, color, limit=2)) == 1
-        if not mover_opening:
-            nearby = []
-        else:
-            trigger_color = "W" if color == "B" else "B"
-            nearby = [(nx, ny) for nx, ny in _adjacent8_points(x, y, game.size) if game.board[ny][nx] == 0]
-        random.shuffle(nearby)
-        changed = _spawn_bonus_points(game, nearby[:ROGUE_SANSAN_TRAP_STONES], trigger_color) if nearby else []
-        if changed:
-            game.rogue_sansan_trap_done = True
-            if engine.ready:
-                await _sync_board_to_katago(game)
-            await send_fn({"type": "rogue_event",
-                           "msg": f"△ 三三陷阱发动，在 {coord_to_gtp(x, y, game.size)} 周围反打 {len(changed)} 子"})
-
-    if _rogue_has(game, "corner_helper"):
-        corner = _find_corner_with_min_stones(
-            game,
-            color,
-            5,
-            ROGUE_CORNER_HELPER_TRIGGER_STONES,
-            exclude=list(game.rogue_corner_helper_done),
-        )
-        if corner is not None:
-            candidates = [
-                (px, py)
-                for px, py in _get_corner_helper_spawn_points(game.size, corner, 5)
-                if game.board[py][px] == 0
-            ]
-            random.shuffle(candidates)
-            changed = _spawn_bonus_points(game, candidates[:ROGUE_CORNER_HELPER_STONES], color)
-            if changed:
-                game.rogue_corner_helper_done.add(corner)
-                if engine.ready:
-                    await _sync_board_to_katago(game)
-                await send_fn({"type": "rogue_event",
-                               "msg": f"🏯 守角辅助补强了 {len(changed)} 颗角部援军"})
-
-    if _rogue_has(game, "sanrensei") and not game.rogue_sanrensei_done:
-        player_moves = _player_non_pass_coords(game, color, limit=ROGUE_SANRENSEI_OPENING_MOVES)
-        star_set = set(_get_star_points(game.size))
-        first_moves = player_moves[:ROGUE_SANRENSEI_REQUIRED_STARS]
-        if len(first_moves) >= ROGUE_SANRENSEI_REQUIRED_STARS and all(pt in star_set for pt in first_moves):
-            choices = [pt for pt in first_moves if game.board[pt[1]][pt[0]] == 0]
-            if len(choices) < ROGUE_SANRENSEI_BONUS_STONES:
-                choices.extend([pt for pt in star_set if game.board[pt[1]][pt[0]] == 0 and pt not in choices])
-            random.shuffle(choices)
-            changed = _spawn_bonus_points(game, choices[:ROGUE_SANRENSEI_BONUS_STONES], color)
-            support_pool = []
-            for sx, sy in (first_moves + changed):
-                for px, py in _adjacent8_points(sx, sy, game.size):
-                    if game.board[py][px] == 0 and (px, py) not in support_pool:
-                        support_pool.append((px, py))
-            random.shuffle(support_pool)
-            if support_pool:
-                changed.extend(_spawn_bonus_points(game, support_pool[:ROGUE_SANRENSEI_SUPPORT_STONES], color))
-            if changed and _challenge_should_bonus_derivative(game):
-                extra_pool = [pt for pt in star_set if game.board[pt[1]][pt[0]] == 0 and pt not in changed]
-                random.shuffle(extra_pool)
-                changed.extend(_spawn_bonus_points(game, extra_pool[:1], color))
-            game.rogue_sanrensei_done = True
-            if changed and engine.ready:
-                await _sync_board_to_katago(game)
-            await send_fn({"type": "rogue_event",
-                           "msg": f"✦ 三连星发动，自动补出 {len(changed)} 颗星位棋"})
+    board_effect = apply_player_rogue_board_effects(
+        game,
+        x=x,
+        y=y,
+        color=color,
+        captured=captured,
+        coord_to_gtp=coord_to_gtp,
+        gtp_to_coord=gtp_to_coord,
+    )
+    if board_effect.modified and engine.ready:
+        await _sync_board_to_katago(game)
+    for msg in board_effect.messages:
+        await send_fn({"type": "rogue_event", "msg": msg})
+    for source_name in board_effect.trap_bonus_sources:
+        await _challenge_apply_trap_bonus(game, send_fn, source_name)
 
     if _rogue_has(game, "no_regret") and random.random() < ROGUE_NO_REGRET_CHANCE:
         bonus = await _pick_second_best_point(game, color)
@@ -1663,20 +1564,6 @@ async def _apply_player_rogue_move_effects(game: GoGame, send_fn,
 
     if _rogue_has(game, "last_stand"):
         await _trigger_rogue_last_stand(game, send_fn, color, (x, y))
-
-    if (_rogue_has(game, "handicap_quest")
-            and game.rogue_handicap_active
-            and game.rogue_handicap_bonuses < ROGUE_HANDICAP_MAX_BONUSES
-            and not game.two_player):
-        p_moves = sum(1 for c, m in game.moves
-                      if c == game.player_color and m.upper() != "PASS")
-        if (p_moves > 0
-                and p_moves % ROGUE_HANDICAP_BONUS_INTERVAL == 0):
-            game.rogue_skip_ai = True
-            game.rogue_handicap_bonuses += 1
-            await send_fn({"type": "rogue_event",
-                           "msg": f"让子任务奖励触发：每满 {ROGUE_HANDICAP_BONUS_INTERVAL} 手获得一次奖励，"
-                                  f"当前进度 {game.rogue_handicap_bonuses}/{ROGUE_HANDICAP_MAX_BONUSES}，AI 将虚手一次"})
 
     await _challenge_maybe_reduce_ai_level(game, send_fn)
 

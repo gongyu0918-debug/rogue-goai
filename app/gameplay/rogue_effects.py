@@ -1,15 +1,29 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import random
 from typing import Any
 
-from app.config.gameplay import (
-    CHALLENGE_ACTIVE_USE_BONUS,
-    CHALLENGE_DERIVATIVE_BONUS_CHANCE,
-    CHALLENGE_SET_MIN_COUNT,
-    CHALLENGE_ZONE_EXPAND_RADIUS,
+import app.config.gameplay as gameplay_config
+from app.gameplay.effect_utils import (
+    adjacent8_points,
+    adjacent_points,
+    find_corner_with_min_stones,
+    get_corner_helper_spawn_points,
+    get_sansan_points,
+    get_square_points,
+    get_star_points,
+    set_points_to_color,
+    spawn_bonus_points,
 )
 from app.data.cards import challenge_card_category, challenge_category_counts
+
+
+@dataclass
+class RogueBoardEffectResult:
+    modified: bool
+    messages: list[str]
+    trap_bonus_sources: list[str]
 
 
 def reset_rogue_effect_state(
@@ -74,10 +88,12 @@ def challenge_category_counts_for_game(game: Any) -> dict[str, int]:
 def challenge_has_set(
     game: Any,
     category: str,
-    need: int = CHALLENGE_SET_MIN_COUNT,
+    need: int | None = None,
 ) -> bool:
     if not getattr(game, "challenge_beta", False):
         return False
+    if need is None:
+        need = gameplay_config.CHALLENGE_SET_MIN_COUNT
     return challenge_category_counts_for_game(game).get(category, 0) >= need
 
 
@@ -86,8 +102,9 @@ def challenge_zone_points(game: Any, points: list[tuple[int, int]]) -> list[tupl
         return list(points)
     expanded: set[tuple[int, int]] = set()
     for px, py in points:
-        for dy in range(-CHALLENGE_ZONE_EXPAND_RADIUS, CHALLENGE_ZONE_EXPAND_RADIUS + 1):
-            for dx in range(-CHALLENGE_ZONE_EXPAND_RADIUS, CHALLENGE_ZONE_EXPAND_RADIUS + 1):
+        radius = gameplay_config.CHALLENGE_ZONE_EXPAND_RADIUS
+        for dy in range(-radius, radius + 1):
+            for dx in range(-radius, radius + 1):
                 nx, ny = px + dx, py + dy
                 if 0 <= nx < game.size and 0 <= ny < game.size:
                     expanded.add((nx, ny))
@@ -97,11 +114,238 @@ def challenge_zone_points(game: Any, points: list[tuple[int, int]]) -> list[tupl
 def challenge_active_use_bonus(game: Any, card_id: str) -> int:
     if not challenge_has_set(game, "active"):
         return 0
-    return CHALLENGE_ACTIVE_USE_BONUS if challenge_card_category(card_id) == "active" else 0
+    if challenge_card_category(card_id) != "active":
+        return 0
+    return gameplay_config.CHALLENGE_ACTIVE_USE_BONUS
 
 
 def challenge_should_bonus_derivative(game: Any) -> bool:
     return (
         challenge_has_set(game, "derivative")
-        and random.random() < CHALLENGE_DERIVATIVE_BONUS_CHANCE
+        and random.random() < gameplay_config.CHALLENGE_DERIVATIVE_BONUS_CHANCE
     )
+
+
+def apply_player_rogue_board_effects(
+    game: Any,
+    *,
+    x: int,
+    y: int,
+    color: str,
+    captured: int,
+    coord_to_gtp: Any,
+    gtp_to_coord: Any,
+) -> RogueBoardEffectResult:
+    messages: list[str] = []
+    trap_bonus_sources: list[str] = []
+    modified = False
+
+    if rogue_has(game, "sprout") and captured > 0:
+        empty_adj = [
+            (ax, ay)
+            for ax, ay in adjacent_points(x, y, game.size)
+            if game.board[ay][ax] == 0
+        ]
+        if empty_adj:
+            bx, by = random.choice(empty_adj)
+            changed = spawn_bonus_points(game, [(bx, by)], color)
+            if changed:
+                modified = True
+                messages.append(
+                    f"萌芽触发：在 {coord_to_gtp(bx, by, game.size)} 额外长出一颗己方棋子"
+                )
+
+    if rogue_has(game, "joseki_ocd") and not game.rogue_joseki_done:
+        if (x, y) in game.rogue_joseki_targets:
+            game.rogue_joseki_hits += 1
+            messages.append(
+                f"定式命中 ({game.rogue_joseki_hits}/{gameplay_config.ROGUE_JOSEKI_REQUIRED_HITS})"
+            )
+        if game.rogue_joseki_hits >= gameplay_config.ROGUE_JOSEKI_REQUIRED_HITS:
+            game.rogue_joseki_done = True
+            color_val = 1 if color == "B" else 2
+            remaining_targets = [
+                (tx, ty)
+                for tx, ty in game.rogue_joseki_targets
+                if game.board[ty][tx] != color_val
+            ]
+            changed = set_points_to_color(game, remaining_targets, color)
+            if changed:
+                modified = True
+            messages.append(f"定式强迫症完成，自动补上 {len(changed)} 颗同色棋")
+
+    if (
+        rogue_has(game, "god_hand")
+        and not game.rogue_godhand_done
+        and (x, y) in game.rogue_godhand_trigger
+    ):
+        game.rogue_godhand_done = True
+        center = game.rogue_godhand_center or (x, y)
+        area = get_square_points(
+            center[0],
+            center[1],
+            gameplay_config.ROGUE_GODHAND_RADIUS,
+            game.size,
+        )
+        random.shuffle(area)
+        targets = [
+            (px, py)
+            for px, py in area
+            if game.board[py][px] == 0
+        ][:gameplay_config.ROGUE_GODHAND_FILL_COUNT]
+        changed = set_points_to_color(game, targets, color)
+        if changed:
+            modified = True
+        messages.append(f"✨ 神之一手发动，在暗点周围爆发 {len(changed)} 颗同色棋")
+        trap_bonus_sources.append("神之一手")
+
+    if (
+        game.two_player
+        and rogue_has(game, "sansan_trap")
+        and not game.rogue_sansan_trap_done
+        and (x, y) in get_sansan_points(game.size)
+    ):
+        mover_opening = len(_player_non_pass_coords(game, color, gtp_to_coord, limit=2)) == 1
+        nearby = []
+        trigger_color = "W" if color == "B" else "B"
+        if mover_opening:
+            nearby = [
+                (nx, ny)
+                for nx, ny in adjacent8_points(x, y, game.size)
+                if game.board[ny][nx] == 0
+            ]
+        random.shuffle(nearby)
+        changed = spawn_bonus_points(
+            game,
+            nearby[:gameplay_config.ROGUE_SANSAN_TRAP_STONES],
+            trigger_color,
+        ) if nearby else []
+        if changed:
+            game.rogue_sansan_trap_done = True
+            modified = True
+            messages.append(
+                f"△ 三三陷阱发动，在 {coord_to_gtp(x, y, game.size)} 周围反打 {len(changed)} 子"
+            )
+
+    if rogue_has(game, "corner_helper"):
+        corner = find_corner_with_min_stones(
+            game,
+            color,
+            5,
+            gameplay_config.ROGUE_CORNER_HELPER_TRIGGER_STONES,
+            exclude=list(game.rogue_corner_helper_done),
+        )
+        if corner is not None:
+            candidates = [
+                (px, py)
+                for px, py in get_corner_helper_spawn_points(game.size, corner, 5)
+                if game.board[py][px] == 0
+            ]
+            random.shuffle(candidates)
+            changed = spawn_bonus_points(
+                game,
+                candidates[:gameplay_config.ROGUE_CORNER_HELPER_STONES],
+                color,
+            )
+            if changed:
+                game.rogue_corner_helper_done.add(corner)
+                modified = True
+                messages.append(f"🏯 守角辅助补强了 {len(changed)} 颗角部援军")
+
+    if rogue_has(game, "sanrensei") and not game.rogue_sanrensei_done:
+        player_moves = _player_non_pass_coords(
+            game,
+            color,
+            gtp_to_coord,
+            limit=gameplay_config.ROGUE_SANRENSEI_OPENING_MOVES,
+        )
+        star_set = set(get_star_points(game.size))
+        first_moves = player_moves[:gameplay_config.ROGUE_SANRENSEI_REQUIRED_STARS]
+        if (
+            len(first_moves) >= gameplay_config.ROGUE_SANRENSEI_REQUIRED_STARS
+            and all(pt in star_set for pt in first_moves)
+        ):
+            choices = [pt for pt in first_moves if game.board[pt[1]][pt[0]] == 0]
+            if len(choices) < gameplay_config.ROGUE_SANRENSEI_BONUS_STONES:
+                choices.extend([
+                    pt
+                    for pt in star_set
+                    if game.board[pt[1]][pt[0]] == 0 and pt not in choices
+                ])
+            random.shuffle(choices)
+            changed = spawn_bonus_points(
+                game,
+                choices[:gameplay_config.ROGUE_SANRENSEI_BONUS_STONES],
+                color,
+            )
+            support_pool = []
+            for sx, sy in (first_moves + changed):
+                for px, py in adjacent8_points(sx, sy, game.size):
+                    if game.board[py][px] == 0 and (px, py) not in support_pool:
+                        support_pool.append((px, py))
+            random.shuffle(support_pool)
+            if support_pool:
+                changed.extend(spawn_bonus_points(
+                    game,
+                    support_pool[:gameplay_config.ROGUE_SANRENSEI_SUPPORT_STONES],
+                    color,
+                ))
+            if changed and challenge_should_bonus_derivative(game):
+                extra_pool = [
+                    pt
+                    for pt in star_set
+                    if game.board[pt[1]][pt[0]] == 0 and pt not in changed
+                ]
+                random.shuffle(extra_pool)
+                changed.extend(spawn_bonus_points(game, extra_pool[:1], color))
+            game.rogue_sanrensei_done = True
+            if changed:
+                modified = True
+            messages.append(f"✦ 三连星发动，自动补出 {len(changed)} 颗星位棋")
+
+    if (
+        rogue_has(game, "handicap_quest")
+        and game.rogue_handicap_active
+        and game.rogue_handicap_bonuses < gameplay_config.ROGUE_HANDICAP_MAX_BONUSES
+        and not game.two_player
+    ):
+        player_moves = sum(
+            1
+            for move_color, gtp in game.moves
+            if move_color == game.player_color and gtp.upper() != "PASS"
+        )
+        if (
+            player_moves > 0
+            and player_moves % gameplay_config.ROGUE_HANDICAP_BONUS_INTERVAL == 0
+        ):
+            game.rogue_skip_ai = True
+            game.rogue_handicap_bonuses += 1
+            messages.append(
+                f"让子任务奖励触发：每满 {gameplay_config.ROGUE_HANDICAP_BONUS_INTERVAL} 手获得一次奖励，"
+                f"当前进度 {game.rogue_handicap_bonuses}/{gameplay_config.ROGUE_HANDICAP_MAX_BONUSES}，AI 将虚手一次"
+            )
+
+    return RogueBoardEffectResult(
+        modified=modified,
+        messages=messages,
+        trap_bonus_sources=trap_bonus_sources,
+    )
+
+
+def _player_non_pass_coords(
+    game: Any,
+    color: str,
+    gtp_to_coord: Any,
+    *,
+    limit: int | None = None,
+) -> list[tuple[int, int]]:
+    coords = []
+    for move_color, gtp in game.moves:
+        if move_color != color or gtp.upper() == "PASS":
+            continue
+        coord = gtp_to_coord(gtp, game.size)
+        if coord:
+            coords.append(coord)
+        if limit is not None and len(coords) >= limit:
+            break
+    return coords
