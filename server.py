@@ -140,10 +140,16 @@ from app.gameplay.ai_moves import compute_game_visits, choose_ai_style_move
 from app.gameplay.effect_utils import (
     adjacent8_points as _adjacent8_points,
     adjacent_points as _adjacent_points,
+    clear_random_enemy_stones as _clear_random_enemy_stones,
+    collect_joseki_burst_points as _collect_joseki_burst_points,
     count_stones as _count_stones,
     diamond_points as _diamond_points,
     find_exact_five_lines as _find_exact_five_lines,
+    find_corner_with_min_stones as _find_corner_with_min_stones,
     get_blackhole_points as _get_blackhole_points,
+    get_corner_boundary_points as _get_corner_boundary_points,
+    get_corner_helper_spawn_points as _get_corner_helper_spawn_points,
+    get_corner_square_points as _get_corner_square_points,
     get_golden_corner_points as _get_golden_corner_points,
     get_sansan_points as _get_sansan_points,
     get_square_points as _get_square_points,
@@ -155,6 +161,10 @@ from app.gameplay.effect_utils import (
     mirror_coord as _mirror_coord,
     pick_joseki_targets as _pick_joseki_targets,
     random_hidden_center as _random_hidden_center,
+    set_points_to_color as _set_points_to_color,
+    spawn_bonus_points as _spawn_bonus_points,
+    spawn_random_owned_stones as _spawn_random_owned_stones,
+    try_spawn_bonus_stone as _try_spawn_bonus_stone,
 )
 from app.runtime.engine import KataGoEngine
 from app.runtime.game_store import ActiveGameStore
@@ -841,104 +851,6 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
             pass
 
 
-def _set_points_to_color(game: GoGame, points: list[tuple[int, int]], color: str) -> list[tuple[int, int]]:
-    """Apply a batch color change and stabilize nearby groups immediately."""
-    return _apply_magic_points(game, points, color, overwrite_enemy=True)
-
-
-def _remove_dead_groups(game: GoGame, seeds: list[tuple[int, int]], color_value: int) -> list[tuple[int, int]]:
-    removed = []
-    seen = set()
-    for x, y in seeds:
-        if not (0 <= x < game.size and 0 <= y < game.size):
-            continue
-        if game.board[y][x] != color_value or (x, y) in seen:
-            continue
-        grp = game.get_group(x, y)
-        seen.update(grp)
-        if grp and not game.has_liberty(grp):
-            for gx, gy in grp:
-                game.board[gy][gx] = 0
-                removed.append((gx, gy))
-    return removed
-
-
-def _apply_magic_points(
-    game: GoGame,
-    points: list[tuple[int, int]],
-    color: str,
-    *,
-    overwrite_enemy: bool,
-) -> list[tuple[int, int]]:
-    """Apply multi-stone effects as one stabilized batch so later turns don't
-    unexpectedly delete or flip those stones.
-    """
-    cv = 1 if color == "B" else 2
-    ov = 3 - cv
-    touched = []
-    seen = set()
-    for x, y in points:
-        if (x, y) in seen:
-            continue
-        seen.add((x, y))
-        if not (0 <= x < game.size and 0 <= y < game.size):
-            continue
-        cell = game.board[y][x]
-        if cell == cv:
-            continue
-        if cell == ov and not overwrite_enemy:
-            continue
-        if cell not in (0, ov):
-            continue
-        game.board[y][x] = cv
-        touched.append((x, y))
-
-    if not touched:
-        return []
-
-    frontier = set(touched)
-    for x, y in touched:
-        frontier.update(game.neighbors(x, y))
-    frontier_list = list(frontier)
-    _remove_dead_groups(game, frontier_list, ov)
-    _remove_dead_groups(game, frontier_list, cv)
-    game.ko_point = None
-    return [(x, y) for x, y in touched if game.board[y][x] == cv]
-
-
-def _try_spawn_bonus_stone(game: GoGame, x: int, y: int, color: str) -> bool:
-    """Place a bonus stone conservatively so later turns don't "eat" invalid spawns."""
-    if not (0 <= x < game.size and 0 <= y < game.size):
-        return False
-    if game.board[y][x] != 0:
-        return False
-
-    cv = 1 if color == "B" else 2
-    ov = 3 - cv
-    game.board[y][x] = cv
-
-    for nx, ny in game.neighbors(x, y):
-        if game.board[ny][nx] != ov:
-            continue
-        grp = game.get_group(nx, ny)
-        if not game.has_liberty(grp):
-            for gx, gy in grp:
-                game.board[gy][gx] = 0
-
-    own_group = game.get_group(x, y)
-    if not own_group or not game.has_liberty(own_group):
-        game.board[y][x] = 0
-        game.ko_point = None
-        return False
-    game.ko_point = None
-    return True
-
-
-def _spawn_bonus_points(game: GoGame, points: list[tuple[int, int]], color: str) -> list[tuple[int, int]]:
-    """Spawn bonus stones as a stabilized batch without overwriting enemy stones."""
-    return _apply_magic_points(game, points, color, overwrite_enemy=False)
-
-
 def _record_ultimate_turn(game: GoGame) -> None:
     game.ultimate_move_count += 1
 
@@ -1022,40 +934,6 @@ async def _check_capture_foul(game: GoGame, send_fn, offender: str, captured: in
         await run_in_executor(engine.send_command, f"komi {game.komi}")
 
 
-def _collect_joseki_burst_points(
-    game: GoGame,
-    anchors: list[tuple[int, int]],
-    color: str,
-    count: int,
-    rng: random.Random,
-) -> list[tuple[int, int]]:
-    """Collect flashy bonus points around joseki anchors for ultimate mode."""
-    cv = 1 if color == "B" else 2
-    nearby = []
-    seen = set()
-    for ax, ay in anchors:
-        for dy in range(-2, 3):
-            for dx in range(-2, 3):
-                nx, ny = ax + dx, ay + dy
-                if 0 <= nx < game.size and 0 <= ny < game.size:
-                    if (nx, ny) in seen or game.board[ny][nx] == cv:
-                        continue
-                    seen.add((nx, ny))
-                    nearby.append((nx, ny))
-    rng.shuffle(nearby)
-    chosen = nearby[:count]
-    if len(chosen) < count:
-        leftovers = [
-            (x, y)
-            for y in range(game.size)
-            for x in range(game.size)
-            if game.board[y][x] != cv and (x, y) not in seen
-        ]
-        rng.shuffle(leftovers)
-        chosen.extend(leftovers[: count - len(chosen)])
-    return chosen
-
-
 def _pick_fog_mask(size: int, rng: random.Random) -> list[tuple[int, int]]:
     cx = rng.randint(0, size - 1)
     cy = rng.randint(0, size - 1)
@@ -1136,134 +1014,6 @@ def _find_new_fool_shapes(
                 found_keys.add(shape)
 
     return found
-
-
-def _get_corner_square_points(size: int, corner: int, span: int) -> list[tuple[int, int]]:
-    pts = []
-    for dy in range(span):
-        for dx in range(span):
-            if corner == 0:
-                pts.append((dx, dy))
-            elif corner == 1:
-                pts.append((size - span + dx, dy))
-            elif corner == 2:
-                pts.append((dx, size - span + dy))
-            else:
-                pts.append((size - span + dx, size - span + dy))
-    return pts
-
-
-def _get_corner_helper_spawn_points(size: int, corner: int, span: int = 5) -> list[tuple[int, int]]:
-    inner = span - 1
-    min_line = 2
-    pts = []
-    if corner == 0:
-        pts.extend((x, inner) for x in range(min_line, span))
-        pts.extend((inner, y) for y in range(min_line, span - 1))
-    elif corner == 1:
-        pts.extend((x, inner) for x in range(size - span, size - min_line))
-        pts.extend((size - span, y) for y in range(min_line, span - 1))
-    elif corner == 2:
-        pts.extend((x, size - span) for x in range(min_line, span))
-        pts.extend((inner, y) for y in range(size - span + 1, size - min_line))
-    else:
-        pts.extend((x, size - span) for x in range(size - span, size - min_line))
-        pts.extend((size - span, y) for y in range(size - span + 1, size - min_line))
-    return list(dict.fromkeys(pts))
-
-
-def _get_corner_boundary_points(size: int, corner: int, span: int) -> list[tuple[int, int]]:
-    pts = []
-    for x, y in _get_corner_square_points(size, corner, span):
-        min_x = 0 if corner in (0, 2) else size - span
-        max_x = span - 1 if corner in (0, 2) else size - 1
-        min_y = 0 if corner in (0, 1) else size - span
-        max_y = span - 1 if corner in (0, 1) else size - 1
-        if x in (min_x, max_x) or y in (min_y, max_y):
-            pts.append((x, y))
-    return pts
-
-
-def _find_corner_with_min_stones(
-    game: GoGame,
-    color: str,
-    span: int,
-    count: int,
-    exclude: Optional[list[int]] = None,
-) -> Optional[int]:
-    cv = 1 if color == "B" else 2
-    excluded = set(exclude or [])
-    for corner in range(4):
-        if corner in excluded:
-            continue
-        own = sum(
-            1
-            for x, y in _get_corner_square_points(game.size, corner, span)
-            if game.board[y][x] == cv
-        )
-        if own >= count:
-            return corner
-    return None
-
-
-def _spawn_random_owned_stones(
-    game: GoGame,
-    color: str,
-    count: int,
-    rng: random.Random,
-    *,
-    area: Optional[list[tuple[int, int]]] = None,
-    forbidden: Optional[set[tuple[int, int]]] = None,
-) -> list[tuple[int, int]]:
-    forbidden = forbidden or set()
-    candidates = list(area) if area is not None else [
-        (x, y)
-        for y in range(game.size)
-        for x in range(game.size)
-    ]
-    unique = []
-    seen = set()
-    for point in candidates:
-        if point in seen or point in forbidden:
-            continue
-        seen.add(point)
-        x, y = point
-        if game.board[y][x] == 0:
-            unique.append(point)
-    rng.shuffle(unique)
-    return _spawn_bonus_points(game, unique[:count], color)
-
-
-def _clear_random_enemy_stones(
-    game: GoGame,
-    color: str,
-    count: int,
-    rng: random.Random,
-    *,
-    area: Optional[list[tuple[int, int]]] = None,
-) -> list[tuple[int, int]]:
-    ov = 2 if color == "B" else 1
-    candidates = list(area) if area is not None else [
-        (x, y)
-        for y in range(game.size)
-        for x in range(game.size)
-    ]
-    enemies = []
-    seen = set()
-    for point in candidates:
-        if point in seen:
-            continue
-        seen.add(point)
-        x, y = point
-        if game.board[y][x] == ov:
-            enemies.append(point)
-    rng.shuffle(enemies)
-    cleared = enemies[:count]
-    for x, y in cleared:
-        game.board[y][x] = 0
-    if cleared:
-        game.ko_point = None
-    return cleared
 
 
 def _get_player_bonus_forbidden_points(game: GoGame, color: str) -> set[tuple[int, int]]:
