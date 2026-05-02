@@ -6,6 +6,13 @@ from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
 import app.config.gameplay as gameplay_config
+from app.gameplay.effect_utils import (
+    adjacent_points,
+    get_blackhole_points,
+    get_sansan_points,
+    get_star_points,
+    is_lowline,
+)
 
 
 @dataclass(frozen=True)
@@ -16,6 +23,19 @@ class AiMovePlan:
     time_limit: float
     move_count: int
     ai_move_count: int
+
+
+@dataclass(frozen=True)
+class AiTargetPlan:
+    coord: tuple[int, int]
+    message: str
+
+
+@dataclass(frozen=True)
+class AiPointRestriction:
+    kind: str
+    points: list[tuple[int, int]]
+    message: str
 
 
 def compute_game_visits(
@@ -80,6 +100,126 @@ def plan_rogue_ai_search(
         move_count=move_count,
         ai_move_count=ai_move_count,
     )
+
+
+def choose_tengen_target(game: Any, ai_move_count: int) -> Optional[AiTargetPlan]:
+    if ai_move_count >= gameplay_config.ROGUE_TENGEN_AI_MOVES:
+        return None
+    if ai_move_count == 0:
+        c = game.size // 2
+        return AiTargetPlan((c, c), "天元触发，AI 优先抢下天元")
+
+    star_pts = get_star_points(game.size)
+    available = [
+        (x, y)
+        for x, y in star_pts
+        if game.board[y][x] == 0 and (x, y) != (game.size // 2, game.size // 2)
+    ]
+    if not available:
+        return None
+    return AiTargetPlan(random.choice(available), "天元触发，AI 优先补下星位")
+
+
+def gravity_allowed_points(game: Any, ai_move_count: int) -> Optional[AiPointRestriction]:
+    if ai_move_count >= gameplay_config.ROGUE_GRAVITY_AI_MOVES:
+        return None
+    available = [(x, y) for x, y in get_star_points(game.size) if game.board[y][x] == 0]
+    if not available:
+        return None
+    return AiPointRestriction("allow_only", available, "引力触发，AI 被限制在星位附近落子")
+
+
+def lowline_allowed_points(game: Any, ai_move_count: int) -> Optional[AiPointRestriction]:
+    if ai_move_count >= gameplay_config.ROGUE_LOWLINE_AI_MOVES:
+        return None
+    allowed = [
+        (x, y)
+        for x in range(game.size)
+        for y in range(game.size)
+        if is_lowline(x, y, game.size) and game.board[y][x] == 0
+    ]
+    if not allowed:
+        return None
+    return AiPointRestriction("allow_only", allowed, "低空飞行触发，AI 继续在低线路落子")
+
+
+def sansan_opening_restriction(game: Any, ai_move_count: int) -> Optional[AiPointRestriction]:
+    if ai_move_count < 2:
+        available = [
+            (x, y)
+            for x, y in get_sansan_points(game.size)
+            if game.board[y][x] == 0
+        ]
+        if not available:
+            return None
+        return AiPointRestriction("allow_only", available, "三三开局触发，AI 优先抢角三三")
+
+    if ai_move_count >= 4:
+        return None
+
+    corner_ban = []
+    for cy in (0, game.size - 4):
+        for cx in (0, game.size - 4):
+            for dy in range(4):
+                for dx in range(4):
+                    corner_ban.append((cx + dx, cy + dy))
+    return AiPointRestriction("avoid", corner_ban, "三三开局后半段生效，AI 暂时避开角部 4x4")
+
+
+def shadow_followup_points(
+    game: Any,
+    color: str,
+    ai_move_count: int,
+    *,
+    gtp_to_coord: Callable[[str, int], Optional[tuple[int, int]]],
+) -> Optional[AiPointRestriction]:
+    if ai_move_count not in gameplay_config.ROGUE_SHADOW_AI_MOVE_INDEXES:
+        return None
+
+    prev_ai_gtp = None
+    for move_color, move_gtp in reversed(game.moves):
+        if move_color == color and move_gtp.upper() != "PASS":
+            prev_ai_gtp = move_gtp
+            break
+    if not prev_ai_gtp:
+        return None
+
+    coord = gtp_to_coord(prev_ai_gtp, game.size)
+    if not coord:
+        return None
+    available = [
+        (x, y)
+        for x, y in adjacent_points(coord[0], coord[1], game.size)
+        if game.board[y][x] == 0
+    ]
+    if not available:
+        return None
+    return AiPointRestriction("allow_only", available, "影子触发，AI 贴着自己的上一手继续下")
+
+
+def rogue_forbidden_points(
+    game: Any,
+    rogue_cards: set[str],
+    ai_move_count: int,
+    *,
+    challenge_zone_points: Callable[[Any, list[tuple[int, int]]], list[tuple[int, int]]],
+) -> list[tuple[int, int]]:
+    if "seal" in rogue_cards and game.rogue_seal_points:
+        return list(game.rogue_seal_points)
+    if "fog" in rogue_cards and game.rogue_seal_points:
+        return list(game.rogue_seal_points)
+    if (
+        "blackhole" in rogue_cards
+        and ai_move_count < gameplay_config.ROGUE_BLACKHOLE_AI_MOVES
+    ):
+        return challenge_zone_points(game, get_blackhole_points(game.size))
+    if (
+        "golden_corner" in rogue_cards
+        and game.rogue_seal_points
+        and ai_move_count < gameplay_config.ROGUE_GOLDEN_CORNER_AI_MOVES
+    ):
+        return list(game.rogue_seal_points)
+    return []
 
 
 def choose_ai_style_move(

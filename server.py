@@ -29,7 +29,6 @@ from app.config.gameplay import (
     OPENING_MOVE_THRESHOLD,
     RANK_LABELS,
     RANK_VISITS,
-    ROGUE_BLACKHOLE_AI_MOVES,
     ROGUE_CAPTURE_FOUL_BASE,
     ROGUE_CAPTURE_FOUL_KOMI_PENALTY,
     ROGUE_CAPTURE_FOUL_STEP,
@@ -49,9 +48,7 @@ from app.config.gameplay import (
     ROGUE_FOOLISH_FILL_COUNT,
     ROGUE_GODHAND_FILL_COUNT,
     ROGUE_GODHAND_RADIUS,
-    ROGUE_GOLDEN_CORNER_AI_MOVES,
     ROGUE_GOLDEN_CORNER_SPAN,
-    ROGUE_GRAVITY_AI_MOVES,
     ROGUE_HANDICAP_BONUS_INTERVAL,
     ROGUE_HANDICAP_MAX_BONUSES,
     ROGUE_HANDICAP_REQUIRED_PASSES,
@@ -60,7 +57,6 @@ from app.config.gameplay import (
     ROGUE_LAST_STAND_CLEAR_COUNT,
     ROGUE_LAST_STAND_SPAWN_COUNT,
     ROGUE_LAST_STAND_THRESHOLD,
-    ROGUE_LOWLINE_AI_MOVES,
     ROGUE_MIRROR_CHANCE,
     ROGUE_NERF_BACKUP_AI_MOVES,
     ROGUE_NERF_BACKUP_CHANCE,
@@ -74,11 +70,9 @@ from app.config.gameplay import (
     ROGUE_SANRENSEI_REQUIRED_STARS,
     ROGUE_SANRENSEI_SUPPORT_STONES,
     ROGUE_SEAL_POINT_COUNT,
-    ROGUE_SHADOW_AI_MOVE_INDEXES,
     ROGUE_SHADOW_CHANCE,
     ROGUE_SLIP_CHANCE,
     ROGUE_SUBOPTIMAL_AI_MOVES,
-    ROGUE_TENGEN_AI_MOVES,
     ROGUE_TIME_PRESS_BACKUP_AI_MOVES,
     ROGUE_TIME_PRESS_BACKUP_CHANCE,
     ROGUE_TIME_PRESS_MAX_TIME,
@@ -124,7 +118,13 @@ from app.gameplay.ai_moves import (
     AiMoveService,
     compute_game_visits,
     choose_ai_style_move,
+    choose_tengen_target,
+    gravity_allowed_points,
+    lowline_allowed_points,
     plan_rogue_ai_search,
+    rogue_forbidden_points,
+    sansan_opening_restriction,
+    shadow_followup_points,
 )
 from app.gameplay.effect_utils import (
     adjacent8_points as _adjacent8_points,
@@ -141,7 +141,6 @@ from app.gameplay.effect_utils import (
     get_sansan_points as _get_sansan_points,
     get_square_points as _get_square_points,
     get_star_points as _get_star_points,
-    is_lowline as _is_lowline,
     line_endpoints as _line_endpoints,
     line_key as _line_key,
     line_points_between as _line_points_between,
@@ -1984,24 +1983,10 @@ async def _ai_move(game: GoGame, send_fn):
         if game.rogue_seal_points:
             await send_fn({"type": "rogue_event", "msg": fog_msg})
 
-    if "tengen" in rogue_cards and ai_move_count < ROGUE_TENGEN_AI_MOVES:
-        if ai_move_count == 0:
-            c = game.size // 2
-            target = (c, c)
-            msg = "天元触发，AI 优先抢下天元"
-        else:
-            star_pts = _get_star_points(game.size)
-            available = [(x, y) for x, y in star_pts
-                         if game.board[y][x] == 0
-                         and (x, y) != (game.size // 2, game.size // 2)]
-            if available:
-                target = random.choice(available)
-                msg = "天元触发，AI 优先补下星位"
-            else:
-                target = None
-                msg = None
-        if target:
-            tx, ty = target
+    if "tengen" in rogue_cards:
+        target_plan = choose_tengen_target(game, ai_move_count)
+        if target_plan:
+            tx, ty = target_plan.coord
             if game.board[ty][tx] == 0 and not game.is_ko(tx, ty, color):
                 t_gtp = coord_to_gtp(tx, ty, game.size)
                 resp = await run_in_executor(
@@ -2015,79 +2000,61 @@ async def _ai_move(game: GoGame, send_fn):
                     await send_fn({"type": "game_state", **game.to_state()})
                     await send_fn({"type": "ai_move", "gtp": t_gtp,
                                     "color": color, "x": tx, "y": ty})
-                    if msg:
-                        await send_fn({"type": "rogue_event", "msg": msg})
+                    await send_fn({"type": "rogue_event", "msg": target_plan.message})
                     return
 
-    if "gravity" in rogue_cards and ai_move_count < ROGUE_GRAVITY_AI_MOVES:
-        star_pts = _get_star_points(game.size)
-        available = [(x, y) for x, y in star_pts if game.board[y][x] == 0]
-        if available:
+    if "gravity" in rogue_cards:
+        restriction = gravity_allowed_points(game, ai_move_count)
+        if restriction:
             gtp_move = await _ai_move_avoid_points_allow_only(
-                game, color, visits, time_limit, available)
+                game, color, visits, time_limit, restriction.points)
             if gtp_move:
                 await _finish_ai_move(game, send_fn, color, card, gtp_move,
-                                      "引力触发，AI 被限制在星位附近落子")
+                                      restriction.message)
                 return
 
-    if "lowline" in rogue_cards and ai_move_count < ROGUE_LOWLINE_AI_MOVES:
-        allowed = [(x, y) for x in range(game.size) for y in range(game.size)
-                   if _is_lowline(x, y, game.size) and game.board[y][x] == 0]
-        if allowed:
+    if "lowline" in rogue_cards:
+        restriction = lowline_allowed_points(game, ai_move_count)
+        if restriction:
             gtp_move = await _ai_move_avoid_points_allow_only(
-                game, color, visits, time_limit, allowed)
+                game, color, visits, time_limit, restriction.points)
             if gtp_move:
                 await _finish_ai_move(game, send_fn, color, card, gtp_move,
-                                      "低空飞行触发，AI 继续在低线路落子")
+                                      restriction.message)
                 return
 
     if "sansan" in rogue_cards:
-        if ai_move_count < 2:
-            sansan_pts = _get_sansan_points(game.size)
-            available = [(x, y) for x, y in sansan_pts if game.board[y][x] == 0]
-            if available:
+        restriction = sansan_opening_restriction(game, ai_move_count)
+        if restriction:
+            if restriction.kind == "allow_only":
                 gtp_move = await _ai_move_avoid_points_allow_only(
-                    game, color, visits, time_limit, available)
+                    game, color, visits, time_limit, restriction.points)
                 if gtp_move:
                     await _finish_ai_move(game, send_fn, color, card, gtp_move,
-                                          "三三开局触发，AI 优先抢角三三")
+                                          restriction.message)
                     return
-        elif ai_move_count < 4:
-            corner_ban = []
-            for cy in (0, game.size - 4):
-                for cx in (0, game.size - 4):
-                    for dy in range(4):
-                        for dx in range(4):
-                            corner_ban.append((cx + dx, cy + dy))
             gtp_move = await _ai_move_avoid_points(
-                game, color, visits, time_limit, corner_ban)
-            await _finish_ai_move(game, send_fn, color, card, gtp_move,
-                                  "三三开局后半段生效，AI 暂时避开角部 4x4")
+                game, color, visits, time_limit, restriction.points)
+            await _finish_ai_move(game, send_fn, color, card, gtp_move, restriction.message)
             return
 
     if (
         "shadow" in rogue_cards
-        and ai_move_count in ROGUE_SHADOW_AI_MOVE_INDEXES
-        and random.random() < ROGUE_SHADOW_CHANCE
+        and ai_move_count in gameplay_config.ROGUE_SHADOW_AI_MOVE_INDEXES
+        and random.random() < gameplay_config.ROGUE_SHADOW_CHANCE
     ):
-        prev_ai_gtp = None
-        for mc, mg in reversed(game.moves):
-            if mc == color and mg.upper() != "PASS":
-                prev_ai_gtp = mg
-                break
-        if prev_ai_gtp:
-            fc = gtp_to_coord(prev_ai_gtp, game.size)
-            if fc:
-                adj = _adjacent_points(fc[0], fc[1], game.size)
-                available = [(x, y) for x, y in adj if game.board[y][x] == 0]
-                if available:
-                    gtp_move = await _ai_move_avoid_points_allow_only(
-                        game, color, visits, time_limit, available)
-                    if gtp_move:
-                        await _finish_ai_move(game, send_fn, color, card,
-                                              gtp_move,
-                                              "影子触发，AI 贴着自己的上一手继续下")
-                        return
+        restriction = shadow_followup_points(
+            game,
+            color,
+            ai_move_count,
+            gtp_to_coord=gtp_to_coord,
+        )
+        if restriction:
+            gtp_move = await _ai_move_avoid_points_allow_only(
+                game, color, visits, time_limit, restriction.points)
+            if gtp_move:
+                await _finish_ai_move(game, send_fn, color, card, gtp_move, restriction.message)
+                return
 
     if ("nerf" in rogue_cards
             and ai_move_count < ROGUE_NERF_BACKUP_AI_MOVES
@@ -2114,15 +2081,12 @@ async def _ai_move(game: GoGame, send_fn):
                                   "次优之选触发，AI 采用了较弱备选点")
             return
 
-    forbidden = []
-    if "seal" in rogue_cards and game.rogue_seal_points:
-        forbidden = game.rogue_seal_points
-    elif "fog" in rogue_cards and game.rogue_seal_points:
-        forbidden = game.rogue_seal_points
-    elif "blackhole" in rogue_cards and ai_move_count < ROGUE_BLACKHOLE_AI_MOVES:
-        forbidden = _challenge_zone_points(game, _get_blackhole_points(game.size))
-    elif "golden_corner" in rogue_cards and game.rogue_seal_points and ai_move_count < ROGUE_GOLDEN_CORNER_AI_MOVES:
-        forbidden = game.rogue_seal_points
+    forbidden = rogue_forbidden_points(
+        game,
+        rogue_cards,
+        ai_move_count,
+        challenge_zone_points=_challenge_zone_points,
+    )
 
     if forbidden:
         gtp_move = await _ai_move_avoid_points(
