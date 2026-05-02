@@ -90,16 +90,13 @@ from app.config.gameplay import (
     ULTIMATE_FIVE_IN_ROW_SPAWN_COUNT,
     ULTIMATE_FOOLISH_CHAIN_DELAY,
     ULTIMATE_FOOLISH_FILL_COUNT,
-    ULTIMATE_GODHAND_FILL_COUNT,
     ULTIMATE_JOSEKI_BONUS_STONES,
     ULTIMATE_JOSEKI_REQUIRED_HITS,
-    ULTIMATE_JOSEKI_TARGET_COUNT,
     ULTIMATE_LAST_STAND_CLEAR_COUNT,
     ULTIMATE_LAST_STAND_SPAWN_COUNT,
     ULTIMATE_LAST_STAND_THRESHOLD,
     ULTIMATE_QUICKTHINK_SECONDS,
     ULTIMATE_TERRITORY_RADIUS,
-    ULTIMATE_TIMEWARP_TRIGGER_CHANCE,
     get_balance_editor_payload,
     reset_balance_overrides,
     save_balance_overrides,
@@ -128,15 +125,12 @@ from app.gameplay.effect_utils import (
     adjacent8_points as _adjacent8_points,
     adjacent_points as _adjacent_points,
     clear_random_enemy_stones as _clear_random_enemy_stones,
-    collect_joseki_burst_points as _collect_joseki_burst_points,
     count_stones as _count_stones,
     diamond_points as _diamond_points,
     find_exact_five_lines as _find_exact_five_lines,
     find_corner_with_min_stones as _find_corner_with_min_stones,
     get_blackhole_points as _get_blackhole_points,
-    get_corner_boundary_points as _get_corner_boundary_points,
     get_corner_helper_spawn_points as _get_corner_helper_spawn_points,
-    get_corner_square_points as _get_corner_square_points,
     get_golden_corner_points as _get_golden_corner_points,
     get_sansan_points as _get_sansan_points,
     get_square_points as _get_square_points,
@@ -166,7 +160,7 @@ from app.gameplay.rogue_effects import (
     rogue_has as _rogue_has,
 )
 from app.services.card_config_service import CardConfigService
-from app.gameplay.ultimate_effects import apply_ultimate_board_effect
+from app.gameplay.ultimate_effects import apply_ultimate_board_effect, apply_ultimate_state_effect
 from app.runtime.engine import KataGoEngine
 from app.runtime.game_store import ActiveGameStore
 from app.runtime.startup import EnginePaths, EngineStartupManager
@@ -1766,8 +1760,6 @@ async def _apply_ultimate_effect(game: GoGame, send_fn, x: int, y: int,
     import time as _time
     rng = random.Random(_time.time_ns())
     size = game.size
-    cv = 1 if color == "B" else 2
-    ov = 3 - cv
     modified = False
 
     board_effect = apply_ultimate_board_effect(game, x=x, y=y, color=color, card=card)
@@ -1776,177 +1768,27 @@ async def _apply_ultimate_effect(game: GoGame, send_fn, x: int, y: int,
             await send_fn({"type": "rogue_event", "msg": msg})
         return board_effect.modified
 
-    if card == "shadow_clone":
-        # Place at the symmetric point, then force a delayed line between the
-        # original move and its mirror on the next turn.
-        mx, my = size - 1 - x, size - 1 - y
-        clone_target = None
-        if game.board[my][mx] == 0:
-            clone_target = (mx, my)
-        else:
-            nearby = []
-            for dy in (-1, 0, 1):
-                for dx in (-1, 0, 1):
-                    nx, ny = mx + dx, my + dy
-                    if 0 <= nx < size and 0 <= ny < size and game.board[ny][nx] == 0:
-                        nearby.append((nx, ny))
-            if nearby:
-                nearby.sort(key=lambda p: abs(p[0] - mx) + abs(p[1] - my))
-                clone_target = nearby[0]
-        if clone_target:
-            tx, ty = clone_target
-            placed = _spawn_bonus_points(game, [(tx, ty)], color)
-            if placed:
-                modified = True
-                game.ultimate_shadow_clone_links.append({
-                    "trigger_move": game.ultimate_move_count + 1,
-                    "color": cv,
-                    "from": (x, y),
-                    "to": (tx, ty),
-                })
-                await send_fn({"type": "rogue_event",
-                               "msg": f"👥 影分身！在 {coord_to_gtp(tx, ty, size)} 出现分身，下一回合会连成镜像线"})
+    state_effect = apply_ultimate_state_effect(
+        game,
+        x=x,
+        y=y,
+        color=color,
+        card=card,
+        coord_to_gtp=coord_to_gtp,
+        gtp_to_coord=gtp_to_coord,
+    )
+    if state_effect is not None:
+        for msg in state_effect.messages:
+            await send_fn({"type": "rogue_event", "msg": msg})
+        return state_effect.modified
 
-    elif card == "timewarp":
-        # 70% chance to undo opponent's last 2 moves
-        if rng.random() < ULTIMATE_TIMEWARP_TRIGGER_CHANCE:
-            opp_color = "W" if color == "B" else "B"
-            erased = 0
-            for i in range(len(game.moves) - 1, -1, -1):
-                if erased >= 2:
-                    break
-                mc, mg = game.moves[i]
-                if mc == opp_color and mg.upper() != "PASS":
-                    coord_t = gtp_to_coord(mg, size)
-                    if coord_t:
-                        ox, oy = coord_t
-                        if game.board[oy][ox] == (1 if mc == "B" else 2):
-                            game.board[oy][ox] = 0
-                            erased += 1
-                            modified = True
-            if erased > 0:
-                await send_fn({"type": "rogue_event",
-                               "msg": f"⏳ 时空裂缝！抹去对方 {erased} 手棋"})
-
-    elif card == "joseki_burst":
-        if not game.ultimate_joseki_targets:
-            game.ultimate_joseki_targets = _pick_joseki_targets(
-                game.size, ULTIMATE_JOSEKI_TARGET_COUNT)
-        if not game.ultimate_joseki_done and (x, y) in game.ultimate_joseki_targets:
-            game.ultimate_joseki_hits += 1
-            await send_fn({"type": "rogue_event",
-                           "msg": f"定式爆发命中 ({game.ultimate_joseki_hits}/{ULTIMATE_JOSEKI_REQUIRED_HITS})"})
-        if not game.ultimate_joseki_done and game.ultimate_joseki_hits >= ULTIMATE_JOSEKI_REQUIRED_HITS:
-            game.ultimate_joseki_done = True
-            remaining_targets = [
-                (tx, ty)
-                for tx, ty in game.ultimate_joseki_targets
-                if game.board[ty][tx] != cv
-            ]
-            changed = _set_points_to_color(game, remaining_targets, color)
-            burst_points = _collect_joseki_burst_points(
-                game,
-                game.ultimate_joseki_targets,
-                color,
-                ULTIMATE_JOSEKI_BONUS_STONES,
-                rng,
-            )
-            changed.extend(_spawn_bonus_points(game, burst_points, color))
-            if changed:
-                modified = True
-                await send_fn({"type": "rogue_event",
-                               "msg": f"定式爆发完成：补满 {len(remaining_targets)} 个目标点，并额外爆发 {len(changed) - len(remaining_targets)} 颗棋子"})
-
-    elif card == "five_in_row":
+    if card == "five_in_row":
         if await _trigger_ultimate_five_in_row(game, send_fn, color):
             modified = True
 
     elif card == "last_stand":
         if await _trigger_ultimate_last_stand(game, send_fn, color):
             modified = True
-
-    elif card == "god_hand":
-        if not game.ultimate_godhand_trigger:
-            game.ultimate_godhand_center = _random_hidden_center(game.size, 2, rng)
-            game.ultimate_godhand_trigger = _diamond_points(
-                game.ultimate_godhand_center[0],
-                game.ultimate_godhand_center[1],
-                2,
-                game.size,
-            )
-        if not game.ultimate_godhand_done and (x, y) in game.ultimate_godhand_trigger:
-            game.ultimate_godhand_done = True
-            cleared = 0
-            for sy in range(size):
-                for sx in range(size):
-                    if game.board[sy][sx] == ov:
-                        game.board[sy][sx] = 0
-                        cleared += 1
-                        modified = True
-            empties = [(sx, sy) for sy in range(size) for sx in range(size) if game.board[sy][sx] == 0]
-            rng.shuffle(empties)
-            filled = len(_spawn_bonus_points(game, empties[:ULTIMATE_GODHAND_FILL_COUNT], color))
-            if filled > 0:
-                modified = True
-            await send_fn({"type": "rogue_event",
-                           "msg": f"✨ 神之一手发动，清空 {cleared} 颗敌子并洒下 {filled} 颗同色棋"})
-
-    elif card == "corner_helper":
-        corner = None
-        for candidate in range(4):
-            if candidate in game.ultimate_corner_helper_done:
-                continue
-            own = sum(
-                1
-                for px, py in _get_corner_square_points(size, candidate, 5)
-                if game.board[py][px] == cv
-            )
-            if own >= 2:
-                corner = candidate
-                break
-        if corner is not None:
-            cleared = 0
-            for px, py in _get_corner_square_points(size, corner, 8):
-                if game.board[py][px] == ov:
-                    game.board[py][px] = 0
-                    cleared += 1
-                    modified = True
-            boundary = _get_corner_boundary_points(size, corner, 8)
-            placed = _spawn_bonus_points(game, boundary, color)
-            if placed:
-                modified = True
-            if cleared or placed:
-                game.ultimate_corner_helper_done.add(corner)
-                await send_fn({"type": "rogue_event",
-                               "msg": f"🏯 守角要塞封锁角部，清空 {cleared} 子并筑边 {len(placed)} 子"})
-
-    elif card == "sanrensei":
-        if not game.ultimate_sanrensei_done:
-            first_three = _player_non_pass_coords(game, color, limit=3)
-            star_set = set(_get_star_points(size))
-            if len(first_three) >= 3 and all(pt in star_set for pt in first_three[:3]):
-                changed = []
-                cleared = 0
-                seen = set()
-                for sx, sy in star_set:
-                    for px, py in _diamond_points(sx, sy, 2, size):
-                        if (px, py) in seen:
-                            continue
-                        seen.add((px, py))
-                        if game.board[py][px] == ov:
-                            game.board[py][px] = 0
-                            cleared += 1
-                            modified = True
-                    changed.extend(_spawn_bonus_points(
-                        game,
-                        _diamond_points(sx, sy, 2, size, boundary_only=True) + [(sx, sy)],
-                        color,
-                    ))
-                if changed:
-                    modified = True
-                game.ultimate_sanrensei_done = True
-                await send_fn({"type": "rogue_event",
-                               "msg": f"✦ 三连星爆发，清空 {cleared} 子并扩张 {len(changed)} 颗星位势力"})
 
     elif card == "foolish_wisdom":
         pending_shapes = _find_new_fool_shapes(game, color, game.ultimate_fool_shapes)
