@@ -118,14 +118,10 @@ from app.config.gpu_tiers import (
 from app.data.cards import (
     challenge_card_category,
     challenge_category_counts,
-    get_card_config_editor_payload,
     get_gameplay_tuning_specs,
     get_gameplay_tuning_values,
     get_rogue_card,
     rogue_card_ids,
-    reload_card_catalog,
-    reset_card_config,
-    save_card_config,
 )
 from app.domain.coordinates import coord_to_gtp, gtp_to_coord
 from app.domain.game_state import GoGame
@@ -166,6 +162,7 @@ from app.gameplay.effect_utils import (
     spawn_random_owned_stones as _spawn_random_owned_stones,
     try_spawn_bonus_stone as _try_spawn_bonus_stone,
 )
+from app.services.card_config_service import CardConfigService
 from app.runtime.engine import KataGoEngine
 from app.runtime.game_store import ActiveGameStore
 from app.runtime.startup import EnginePaths, EngineStartupManager
@@ -224,18 +221,16 @@ def _sync_balance_globals() -> None:
             setattr(ws_actions_module, key, getattr(gameplay_config, key))
 
 
+card_config_service = CardConfigService(
+    get_tuning_values=get_gameplay_tuning_values,
+    get_tuning_specs=get_gameplay_tuning_specs,
+    apply_balance_values=gameplay_config.apply_balance_values,
+    sync_balance_globals=_sync_balance_globals,
+)
+
+
 def reload_live_card_config() -> list[str]:
-    errors = reload_card_catalog()
-    if errors:
-        return errors
-    errors = gameplay_config.apply_balance_values(
-        get_gameplay_tuning_values(),
-        get_gameplay_tuning_specs(),
-    )
-    if errors:
-        return errors
-    _sync_balance_globals()
-    return []
+    return card_config_service.reload_live_config()
 
 
 CARD_CONFIG_STARTUP_ERRORS = reload_live_card_config()
@@ -464,14 +459,12 @@ async def card_editor():
 
 @app.get("/api/card-config")
 async def get_card_config_payload():
-    reload_live_card_config()
-    return get_card_config_editor_payload()
+    return card_config_service.get_payload()
 
 
 @app.get("/api/card-config/schema")
 async def get_card_config_schema():
-    payload = get_card_config_editor_payload()
-    return payload.get("schema", {})
+    return card_config_service.get_schema()
 
 
 @app.post("/api/card-config")
@@ -484,11 +477,7 @@ async def save_card_config_payload(request: Request):
             status_code=400,
         )
     config = body.get("config") if isinstance(body, dict) else None
-    result = save_card_config(config)
-    if result.get("ok"):
-        live_errors = reload_live_card_config()
-        if live_errors:
-            result = {"ok": False, "errors": live_errors, "payload": get_card_config_editor_payload()}
+    result = card_config_service.save_payload(config)
     if not result.get("ok"):
         return JSONResponse(result, status_code=400)
     return result
@@ -496,11 +485,7 @@ async def save_card_config_payload(request: Request):
 
 @app.post("/api/card-config/reset")
 async def reset_card_config_payload():
-    result = reset_card_config()
-    if result.get("ok"):
-        live_errors = reload_live_card_config()
-        if live_errors:
-            result = {"ok": False, "errors": live_errors, "payload": get_card_config_editor_payload()}
+    result = card_config_service.reset_payload()
     if not result.get("ok"):
         return JSONResponse(result, status_code=400)
     return result
@@ -555,6 +540,7 @@ async def get_status():
     model_exists = engine_runtime.has_model_files()
     exe_exists = engine_runtime.has_engine_binaries()
     selected_model = engine_runtime.select_model()
+    card_config_payload = card_config_service.get_payload()
     return {
         "server_rev": SERVER_REV,
         "host": SERVER_HOST,
@@ -568,8 +554,8 @@ async def get_status():
         "no_katago": NO_KATAGO,
         "cpu_mode": engine_runtime.cpu_mode,
         "static_ready": (STATIC_DIR / "index.html").exists(),
-        "card_config": get_card_config_editor_payload().get("source"),
-        "card_config_errors": get_card_config_editor_payload().get("errors", []),
+        "card_config": card_config_payload.get("source"),
+        "card_config_errors": card_config_payload.get("errors", []),
         "engine_phase": snapshot.get("phase"),
         "engine_message": snapshot.get("message"),
         "engine_backend": snapshot.get("active_backend"),
