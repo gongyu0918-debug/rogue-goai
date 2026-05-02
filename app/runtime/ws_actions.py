@@ -7,16 +7,25 @@ import time
 from typing import Any, Awaitable, Callable, Optional
 
 from app.config.gameplay import (
+    AI_STYLE_OPTIONS,
+    RANK_VISITS,
     ROGUE_COACH_BASE_TURNS,
+    ROGUE_HANDICAP_BONUS_INTERVAL,
+    ROGUE_HANDICAP_REQUIRED_PASSES,
     ROGUE_SEAL_POINT_COUNT,
+    ULTIMATE_CHAIN_EXTRA_TURN_CHANCE,
     ULTIMATE_JOSEKI_TARGET_COUNT,
 )
 from app.data.cards import (
+    CHALLENGE_BETA_HANDICAPS,
     CHALLENGE_BETA_POOL,
     ROGUE_CARDS,
+    TWO_PLAYER_ROGUE_POOL,
     ULTIMATE_CARDS,
     get_rogue_card,
     get_ultimate_card,
+    rogue_card_summary,
+    ultimate_card_summary,
 )
 
 
@@ -33,7 +42,13 @@ class WebSocketActionContext:
     run_in_executor: Callable[..., Awaitable[Any]]
     GoGame: type
     coord_to_gtp: Callable[[int, int, int], Optional[str]]
+    gtp_to_coord: Callable[[str, int], Optional[tuple[int, int]]]
+    engine_state_snapshot: Callable[[], dict]
+    start_engine_background: Callable[[str], None]
+    reload_live_card_config: Callable[[], list[str]]
     get_game_visits: Callable[[str, int, str], int]
+    pick_rogue_choices: Callable[..., list[str]]
+    pick_ultimate_choices: Callable[..., list[str]]
     pick_challenge_beta_choices: Callable[..., list[str]]
     pick_ai_rogue_card: Callable[..., str]
     pick_ai_ultimate_card: Callable[..., str]
@@ -44,10 +59,21 @@ class WebSocketActionContext:
     ultimate_ai_move: Callable[..., Awaitable[None]]
     ultimate_force_score: Callable[..., Awaitable[None]]
     run_coach_turn_if_needed: Callable[..., Awaitable[None]]
+    run_ai_observer_loop: Callable[..., Awaitable[None]]
     sync_board_to_katago: Callable[..., Awaitable[None]]
     challenge_remaining: Callable[[Any, str], int]
     challenge_zone_points: Callable[[Any, list[tuple[int, int]]], list[tuple[int, int]]]
     rogue_has: Callable[[Any, str], bool]
+    get_ai_rogue_forbidden_points: Callable[[Any], set[tuple[int, int]]]
+    ultimate_get_territory_forbidden: Callable[[Any, int], set]
+    record_ultimate_player_action: Callable[[Any], None]
+    check_capture_foul: Callable[..., Awaitable[None]]
+    count_stones: Callable[[Any, int], int]
+    apply_ultimate_effect: Callable[..., Awaitable[bool]]
+    resolve_pending_ultimate_shadow_links: Callable[..., Awaitable[bool]]
+    apply_player_rogue_move_effects: Callable[..., Awaitable[None]]
+    apply_ai_rogue_response_effects: Callable[..., Awaitable[None]]
+    prepare_player_turn_modifiers: Callable[[Any], None]
     finish_ultimate_quickthink_turn: Callable[[Any], None]
     pick_joseki_targets: Callable[[int, int], list[tuple[int, int]]]
     random_hidden_center: Callable[[int, int, random.Random], tuple[int, int]]
@@ -168,6 +194,382 @@ async def handle_time_expired(ctx: WebSocketActionContext, data: dict) -> None:
             "reason": "timeout",
         }
     )
+
+
+async def _send_engine_not_ready(ctx: WebSocketActionContext, snapshot: dict, fallback: str) -> None:
+    await ctx.send(
+        {
+            "type": "engine_not_ready",
+            "phase": snapshot.get("phase"),
+            "message": snapshot.get("message") or fallback,
+            "last_error": snapshot.get("last_error"),
+            "log_tail": snapshot.get("log_tail"),
+        }
+    )
+
+
+async def _wait_for_engine_ready(ctx: WebSocketActionContext, reason: str) -> bool:
+    snapshot = ctx.engine_state_snapshot()
+    if snapshot.get("phase") not in {"initializing", "ready"}:
+        ctx.start_engine_background(reason)
+        snapshot = ctx.engine_state_snapshot()
+    await _send_engine_not_ready(ctx, snapshot, "KataGo 正在随游戏启动")
+    deadline = time.time() + 120
+    while not ctx.engine.ready and time.time() < deadline:
+        await asyncio.sleep(0.5)
+        snapshot = ctx.engine_state_snapshot()
+        if snapshot.get("phase") in {"failed", "disabled", "stopped"}:
+            break
+    if ctx.engine.ready:
+        return True
+    snapshot = ctx.engine_state_snapshot()
+    await _send_engine_not_ready(ctx, snapshot, "")
+    await ctx.send_error(
+        snapshot.get("message")
+        or "KataGo未就绪，请稍候重试，或先使用两人对局模式"
+    )
+    return False
+
+
+async def handle_new_game(ctx: WebSocketActionContext, data: dict) -> None:
+    config_errors = ctx.reload_live_card_config()
+    if config_errors:
+        await ctx.send_error("卡牌配置加载失败：" + "；".join(config_errors[:6]))
+        return
+
+    if not ctx.engine.ready and not data.get("two_player", False):
+        if not await _wait_for_engine_ready(ctx, "game_start"):
+            return
+
+    ctx.active_games.prune()
+    size = int(data.get("size", 19))
+    komi = float(data.get("komi", 7.5))
+    handicap = int(data.get("handicap", 0))
+    player_color = data.get("player_color", "B")
+    level = data.get("level", "a3d")
+    two_player = bool(data.get("two_player", False))
+    ai_observer = bool(data.get("ai_observer", False)) and not two_player
+    if ai_observer:
+        two_player = False
+    rogue_enabled = bool(data.get("rogue", False))
+    ai_rogue_enabled = bool(data.get("ai_rogue", False)) and rogue_enabled and not two_player
+    challenge_beta = bool(data.get("challenge_beta", False))
+    challenge_stage = int(data.get("challenge_stage", 0) or 0)
+    challenge_cards = [
+        card_id for card_id in data.get("challenge_cards", [])
+        if card_id in CHALLENGE_BETA_POOL
+    ]
+    challenge_limits = data.get("challenge_limits", {}) or {}
+    challenge_refreshes = int(data.get("challenge_refreshes", 0) or 0)
+    if challenge_beta:
+        two_player = False
+        ai_observer = False
+        rogue_enabled = True
+        ai_rogue_enabled = False
+        handicap = CHALLENGE_BETA_HANDICAPS.get(challenge_stage, handicap)
+    ai_style = str(data.get("ai_style", "balanced"))
+    if ai_style not in AI_STYLE_OPTIONS:
+        ai_style = "balanced"
+    ai_level_black = str(data.get("ai_level_black", level))
+    if ai_level_black not in RANK_VISITS:
+        ai_level_black = level
+    ai_level_white = str(data.get("ai_level_white", level))
+    if ai_level_white not in RANK_VISITS:
+        ai_level_white = level
+    ai_style_black = str(data.get("ai_style_black", ai_style))
+    if ai_style_black not in AI_STYLE_OPTIONS:
+        ai_style_black = ai_style
+    ai_style_white = str(data.get("ai_style_white", ai_style))
+    if ai_style_white not in AI_STYLE_OPTIONS:
+        ai_style_white = ai_style
+
+    game = ctx.GoGame(size, komi, handicap, player_color, level, two_player)
+    game.ai_observer = ai_observer
+    game.ai_style = ai_style
+    game.ai_level_black = ai_level_black
+    game.ai_level_white = ai_level_white
+    game.ai_style_black = ai_style_black
+    game.ai_style_white = ai_style_white
+    game.rogue_enabled = rogue_enabled
+    game.ai_rogue_enabled = ai_rogue_enabled
+    game.challenge_beta = challenge_beta
+    game.challenge_stage = challenge_stage
+    game.challenge_cards = challenge_cards
+    game.challenge_refreshes = challenge_refreshes
+    game.challenge_limits = {
+        "undo": int(challenge_limits.get("undo", 0) or 0),
+        "hint": int(challenge_limits.get("hint", 0) or 0),
+        "coach": int(challenge_limits.get("coach", 0) or 0),
+    }
+    game.challenge_usage = {"undo": 0, "hint": 0, "coach": 0}
+    ctx.active_games.set(ctx.game_id, game)
+    ctx.game = game
+
+    if ctx.engine.ready:
+        visits = ctx.get_game_visits(level, len(game.moves))
+        await ctx.run_in_executor(ctx.engine.set_visits, visits)
+        await ctx.run_in_executor(ctx.engine.send_command, f"boardsize {size}")
+        await ctx.run_in_executor(ctx.engine.send_command, "clear_board")
+        await ctx.run_in_executor(ctx.engine.send_command, f"komi {komi}")
+        rules = "chinese" if komi == 7.5 else "japanese"
+        await ctx.run_in_executor(ctx.engine.send_command, f"kata-set-rules {rules}")
+
+    if handicap > 0 and ctx.engine.ready:
+        resp = await ctx.run_in_executor(ctx.engine.send_command, f"fixed_handicap {handicap}")
+        if resp.startswith("="):
+            for gtp in resp[1:].strip().split():
+                coord = ctx.gtp_to_coord(gtp, size)
+                if coord:
+                    game.place_stone(coord[0], coord[1], "B")
+                    game.moves.append(("B", gtp))
+            game.current_player = "W"
+    if challenge_beta and challenge_cards:
+        await ctx.apply_challenge_rogue_loadout(game, ctx.send)
+    game.reset_history()
+
+    await ctx.send({"type": "game_start", **game.to_state()})
+
+    ultimate = bool(data.get("ultimate", False))
+    if ultimate and not two_player and ctx.engine.ready:
+        game.ultimate = True
+        choices = ctx.pick_ultimate_choices(3)
+        cards_data = [ultimate_card_summary(cid) for cid in choices]
+        await ctx.send({"type": "ultimate_offer", "cards": cards_data})
+    elif rogue_enabled and (two_player or ctx.engine.ready):
+        should_offer_rogue = True
+        if challenge_beta and len(challenge_cards) >= max(1, challenge_stage):
+            should_offer_rogue = False
+        if should_offer_rogue:
+            if challenge_beta:
+                rogue_pool = [card_id for card_id in CHALLENGE_BETA_POOL if card_id not in challenge_cards]
+                choices = ctx.pick_challenge_beta_choices(challenge_cards, 3, pool=rogue_pool)
+            else:
+                rogue_pool = TWO_PLAYER_ROGUE_POOL if two_player else None
+                choices = ctx.pick_rogue_choices(3, pool=rogue_pool)
+            game.challenge_offer_cards = choices if challenge_beta else []
+            cards_data = [rogue_card_summary(cid) for cid in choices]
+            await ctx.send(
+                {
+                    "type": "rogue_offer",
+                    "cards": cards_data,
+                    "challenge_beta": challenge_beta,
+                    "challenge_stage": challenge_stage,
+                    "refresh_remaining": challenge_refreshes,
+                }
+            )
+        else:
+            if ai_observer and ctx.engine.ready:
+                asyncio.create_task(ctx.run_ai_observer_loop(game, ctx.send))
+            elif not two_player and ctx.engine.ready and game.ai_color == game.current_player:
+                await ctx.ai_move(game, ctx.send)
+    else:
+        if ai_observer and ctx.engine.ready:
+            asyncio.create_task(ctx.run_ai_observer_loop(game, ctx.send))
+        elif not two_player and ctx.engine.ready and game.ai_color == game.current_player:
+            await ctx.ai_move(game, ctx.send)
+
+    if not game.game_over and ctx.engine.ready:
+        asyncio.create_task(ctx.do_analysis_bg(game))
+
+
+async def handle_play(ctx: WebSocketActionContext, data: dict) -> None:
+    game = ctx.restore_game()
+    if not game or game.game_over:
+        await ctx.send_error("暂无进行中的对局")
+        return
+    if not game.two_player and game.rogue_card == "coach_mode" and game.rogue_coach_moves_left > 0:
+        await ctx.send_error("代练上号接管中，请等待强化 AI 完成代打")
+        return
+
+    if game.two_player:
+        color = game.current_player
+    else:
+        if not ctx.engine.ready:
+            snapshot = ctx.engine_state_snapshot()
+            await ctx.send_error(snapshot.get("message") or "KataGo尚未就绪，当前不能进行 AI 对局")
+            return
+        if game.current_player != game.player_color:
+            await ctx.send_error("还没轮到你")
+            return
+        color = game.player_color
+
+    if game.ultimate and not game.two_player:
+        await _handle_ultimate_play(ctx, game, data, color)
+        return
+
+    if (
+        game.rogue_card == "handicap_quest"
+        and not game.two_player
+        and game.rogue_handicap_passes < ROGUE_HANDICAP_REQUIRED_PASSES
+    ):
+        await ctx.send_error(
+            f"🏋️ 让子棋任务：还需虚手 "
+            f"{ROGUE_HANDICAP_REQUIRED_PASSES - game.rogue_handicap_passes} 次才能落子"
+        )
+        return
+
+    point = _board_point_from_data(data, game.size)
+    if point is None:
+        await ctx.send_error("落点超出棋盘范围")
+        return
+    x, y = point
+    gtp = ctx.coord_to_gtp(x, y, game.size)
+    if gtp is None:
+        await ctx.send_error("落点超出棋盘范围")
+        return
+    if game.board[y][x] != 0:
+        await ctx.send_error("该位置已有棋子")
+        return
+    if game.is_ko(x, y, color):
+        await ctx.send_error("打劫禁着：不能立即提回")
+        return
+    player_forbidden = ctx.get_ai_rogue_forbidden_points(game)
+    if not game.two_player and (x, y) in player_forbidden:
+        await ctx.send_error("这里已被 AI 的 Rogue 卡限制，当前不能落子")
+        return
+    if not game.two_player and game.rogue_card == "puppet" and game.rogue_puppet_target == (x, y):
+        await ctx.send_error("该点已被傀儡术预留给 AI")
+        return
+
+    if ctx.engine.ready:
+        resp = await ctx.run_in_executor(ctx.engine.send_command, f"play {color} {gtp}")
+        if "?" in resp:
+            await ctx.send_error(f"无效落子: {gtp}")
+            return
+
+    captured = game.place_stone(x, y, color)
+    if captured == -1:
+        if ctx.engine.ready:
+            await ctx.run_in_executor(ctx.engine.send_command, "undo")
+        await ctx.send_error("打劫禁着：不能立即提回")
+        return
+    if captured == -2:
+        if ctx.engine.ready:
+            await ctx.run_in_executor(ctx.engine.send_command, "undo")
+        await ctx.send_error("这手属于自杀禁着，不能这样下")
+        return
+    game.moves.append((color, gtp))
+    game.passed[color] = False
+    game.current_player = "W" if color == "B" else "B"
+    await ctx.check_capture_foul(game, ctx.send, color, captured, ultimate=False)
+    await ctx.apply_player_rogue_move_effects(game, ctx.send, x, y, color, captured)
+    await ctx.apply_ai_rogue_response_effects(game, ctx.send, x, y, color)
+
+    quickthink_bonus = False
+    if game.rogue_card == "quickthink" and not game.two_player:
+        if game.rogue_quickthink_stage == 1:
+            game.rogue_quickthink_stage = 2
+            game.current_player = game.player_color
+            quickthink_bonus = True
+        else:
+            game.rogue_quickthink_stage = 0
+
+    game.push_history()
+    await ctx.send({"type": "game_state", **game.to_state()})
+
+    if game.rogue_skip_ai:
+        game.rogue_skip_ai = False
+        game.current_player = game.player_color
+        await ctx.send({"type": "game_state", **game.to_state()})
+        skip_msgs = {
+            "twin": "⚡ 双子星辰！你可以继续落子",
+            "exchange": "🔄 乾坤挪移！你可以继续落子",
+            "handicap_quest": "🏋️ 奖励回合！你可以继续落子",
+        }
+        await ctx.send({"type": "rogue_event", "msg": skip_msgs.get(game.rogue_card, "你可以继续落子")})
+    elif not game.two_player and ctx.engine.ready:
+        if quickthink_bonus:
+            await ctx.send({"type": "rogue_event", "msg": "⚡ 快速思考：2 秒追加手已开启"})
+        else:
+            await ctx.ai_move(game, ctx.send)
+
+    if not game.game_over and ctx.engine.ready:
+        asyncio.create_task(ctx.do_analysis_bg(game))
+
+
+async def _handle_ultimate_play(ctx: WebSocketActionContext, game: Any, data: dict, color: str) -> None:
+    point = _board_point_from_data(data, game.size)
+    if point is None:
+        await ctx.send_error("落点超出棋盘范围")
+        return
+    x, y = point
+
+    if game.ultimate_ai_card == "territory":
+        cv_player = 1 if color == "B" else 2
+        if (x, y) in ctx.ultimate_get_territory_forbidden(game, cv_player):
+            await ctx.send_error("这里已被绝对领地封锁，不能在 AI 的禁区内落子")
+            return
+
+    if game.board[y][x] != 0:
+        await ctx.send_error("该位置已有棋子")
+        return
+    if game.is_ko(x, y, color):
+        await ctx.send_error("打劫禁着：不能立即提回")
+        return
+    gtp = ctx.coord_to_gtp(x, y, game.size)
+    if gtp is None:
+        await ctx.send_error("落点超出棋盘范围")
+        return
+    captured = game.place_stone(x, y, color)
+    if captured == -1:
+        await ctx.send_error("打劫禁着：不能立即提回")
+        return
+    if captured == -2:
+        await ctx.send_error("这手属于自杀禁着，不能这样下")
+        return
+    was_double_pending = game.ultimate_double_pending
+    ctx.record_ultimate_player_action(game)
+    game.moves.append((color, gtp))
+    game.passed[color] = False
+    await ctx.check_capture_foul(game, ctx.send, color, captured, ultimate=True)
+
+    p_card = game.ultimate_player_card
+    if p_card == "quickthink":
+        if not game.ultimate_quickthink_active:
+            game.ultimate_quickthink_token += 1
+        game.ultimate_quickthink_active = True
+        game.current_player = game.player_color
+        await ctx.send({"type": "game_state", **game.to_state()})
+        if game.ultimate_move_count >= 20:
+            ctx.finish_ultimate_quickthink_turn(game)
+            await ctx.ultimate_force_score(game, ctx.send)
+        return
+
+    board_modified = False
+    opp_val = 2 if color == "B" else 1
+    opp_before = ctx.count_stones(game, opp_val)
+    if p_card:
+        board_modified = await ctx.apply_ultimate_effect(game, ctx.send, x, y, color, p_card)
+    pending_modified = await ctx.resolve_pending_ultimate_shadow_links(game, ctx.send)
+    if board_modified or pending_modified:
+        await ctx.sync_board_to_katago(game)
+        effect_removed = max(0, opp_before - ctx.count_stones(game, opp_val))
+        if effect_removed > 0:
+            await ctx.check_capture_foul(game, ctx.send, color, effect_removed, ultimate=True)
+
+    chain_bonus = p_card == "chain" and random.random() < ULTIMATE_CHAIN_EXTRA_TURN_CHANCE
+    double_bonus = p_card == "double" and not was_double_pending
+    game.ultimate_extra_turn = chain_bonus or double_bonus
+    game.ultimate_double_pending = bool(double_bonus)
+    game.current_player = game.player_color if (chain_bonus or double_bonus) else game.ai_color
+    game.push_history()
+    await ctx.send({"type": "game_state", **game.to_state()})
+
+    if game.ultimate_move_count >= 20:
+        await ctx.ultimate_force_score(game, ctx.send)
+        return
+    if chain_bonus:
+        await ctx.send({"type": "rogue_event", "msg": "连珠棋触发成功，你可以继续落子"})
+        return
+    if double_bonus:
+        await ctx.send({"type": "rogue_event", "msg": "双刀流触发成功，你可以继续落子"})
+        return
+
+    game.ultimate_extra_turn = False
+    if ctx.engine.ready:
+        await ctx.ultimate_ai_move(game, ctx.send)
+    if not game.game_over and ctx.engine.ready:
+        asyncio.create_task(ctx.do_analysis_bg(game))
 
 
 async def handle_rogue_select_card(ctx: WebSocketActionContext, data: dict) -> None:
@@ -454,6 +856,120 @@ async def handle_ultimate_quickthink_end(ctx: WebSocketActionContext, data: dict
         asyncio.create_task(ctx.do_analysis_bg(game))
 
 
+async def handle_pass(ctx: WebSocketActionContext, data: dict) -> None:
+    game = ctx.restore_game()
+    if not game or game.game_over:
+        return
+    if not game.two_player and game.rogue_card == "coach_mode" and game.rogue_coach_moves_left > 0:
+        await ctx.send_error("代练上号接管中，请等待强化 AI 完成代打")
+        return
+
+    if game.two_player:
+        color = game.current_player
+    else:
+        if game.current_player != game.player_color:
+            return
+        color = game.player_color
+
+    if game.ultimate and not game.two_player:
+        if game.ultimate_player_card == "quickthink" and game.ultimate_quickthink_active:
+            ctx.finish_ultimate_quickthink_turn(game)
+            game.current_player = game.ai_color
+            game.push_history()
+            await ctx.send({"type": "game_state", **game.to_state()})
+            if game.ultimate_move_count >= 20:
+                await ctx.ultimate_force_score(game, ctx.send)
+            elif ctx.engine.ready:
+                await ctx.ultimate_ai_move(game, ctx.send)
+            if not game.game_over and ctx.engine.ready:
+                asyncio.create_task(ctx.do_analysis_bg(game))
+            return
+        ctx.record_ultimate_player_action(game)
+        game.moves.append((color, "pass"))
+        game.passed[color] = True
+        game.current_player = "W" if color == "B" else "B"
+        game.ultimate_double_pending = False
+        ctx.finish_ultimate_quickthink_turn(game)
+        game.push_history()
+        await ctx.send({"type": "game_state", **game.to_state()})
+        if game.ultimate_move_count >= 20:
+            await ctx.ultimate_force_score(game, ctx.send)
+        elif ctx.engine.ready:
+            await ctx.ultimate_ai_move(game, ctx.send)
+        if not game.game_over and ctx.engine.ready:
+            asyncio.create_task(ctx.do_analysis_bg(game))
+        return
+
+    if ctx.engine.ready:
+        await ctx.run_in_executor(ctx.engine.send_command, f"play {color} pass")
+    game.moves.append((color, "pass"))
+    game.passed[color] = True
+    game.current_player = "W" if color == "B" else "B"
+    if game.rogue_card == "quickthink":
+        game.rogue_quickthink_stage = 0
+
+    if (
+        game.rogue_card == "handicap_quest"
+        and not game.two_player
+        and color == game.player_color
+        and not game.rogue_handicap_active
+    ):
+        game.rogue_handicap_passes += 1
+        if game.rogue_handicap_passes >= ROGUE_HANDICAP_REQUIRED_PASSES:
+            game.rogue_handicap_active = True
+            await ctx.send(
+                {
+                    "type": "rogue_event",
+                    "msg": "🏋️ 让子棋任务完成！"
+                    f"现在每 {ROGUE_HANDICAP_BONUS_INTERVAL} 手可多下一手",
+                }
+            )
+        else:
+            await ctx.send(
+                {
+                    "type": "rogue_event",
+                    "msg": f"🏋️ 虚手 {game.rogue_handicap_passes}/{ROGUE_HANDICAP_REQUIRED_PASSES}",
+                }
+            )
+
+    game.push_history()
+    await ctx.send({"type": "game_state", **game.to_state()})
+
+    if not game.two_player and ctx.engine.ready:
+        await ctx.ai_move(game, ctx.send)
+    if not game.game_over and ctx.engine.ready:
+        asyncio.create_task(ctx.do_analysis_bg(game))
+
+
+async def handle_undo(ctx: WebSocketActionContext, data: dict) -> None:
+    game = ctx.restore_game()
+    if not game or not game.moves:
+        return
+    if game.rogue_card in {"no_regret", "quickthink"}:
+        await ctx.send_error("这张卡会禁用悔棋")
+        return
+
+    if game.challenge_beta:
+        if ctx.challenge_remaining(game, "undo") <= 0:
+            await ctx.send_error("测试版闯关：悔棋次数已用完")
+            return
+        game.challenge_usage["undo"] += 1
+
+    undo_count = 1 if game.two_player else (2 if len(game.moves) >= 2 else 1)
+    if not game.undo_history(undo_count):
+        return
+    game.game_over = False
+    game.winner = None
+    if ctx.engine.ready:
+        await ctx.sync_board_to_katago(game)
+    ctx.prepare_player_turn_modifiers(game)
+    await ctx.send({"type": "game_state", **game.to_state()})
+
+    if ctx.engine.ready:
+        analysis = await ctx.do_analysis(game)
+        await ctx.send({"type": "analysis", **analysis})
+
+
 async def handle_score(ctx: WebSocketActionContext, data: dict) -> None:
     game = ctx.restore_game()
     if not game:
@@ -478,6 +994,10 @@ async def handle_score(ctx: WebSocketActionContext, data: dict) -> None:
 
 
 WS_ACTION_HANDLERS: dict[str, Callable[[WebSocketActionContext, dict], Awaitable[None]]] = {
+    "new_game": handle_new_game,
+    "play": handle_play,
+    "pass": handle_pass,
+    "undo": handle_undo,
     "reconnect": handle_reconnect,
     "resign": handle_resign,
     "request_hint": handle_request_hint,
