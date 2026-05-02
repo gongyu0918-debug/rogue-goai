@@ -132,7 +132,7 @@ from app.gameplay.card_selection import (
     pick_rogue_choices,
     pick_ultimate_choices,
 )
-from app.gameplay.ai_moves import compute_game_visits, choose_ai_style_move
+from app.gameplay.ai_moves import AiMoveService, compute_game_visits, choose_ai_style_move
 from app.gameplay.effect_utils import (
     adjacent8_points as _adjacent8_points,
     adjacent_points as _adjacent_points,
@@ -665,6 +665,15 @@ async def export_sgf(game_id: str):
 async def run_in_executor(func, *args):
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, func, *args)
+
+
+ai_move_service = AiMoveService(
+    engine=engine,
+    run_in_executor=run_in_executor,
+    engine_log=_engine_log,
+    coord_to_gtp=coord_to_gtp,
+    gtp_to_coord=gtp_to_coord,
+)
 
 
 @app.websocket("/ws/{game_id}")
@@ -2346,32 +2355,7 @@ async def _pick_nonpass_fallback_move(
     visits: int,
     forbidden: Optional[set[tuple[int, int]]] = None,
 ) -> Optional[str]:
-    forbidden = forbidden or set()
-    try:
-        lines, _ = engine.analyze(
-            color,
-            visits=max(100, min(visits, 1200)),
-            interval=50,
-            duration=1.5,
-            extra_args=["rootInfo", "true"],
-        )
-        result = engine.parse_analysis(lines, [], game.size, to_move_color=color)
-        for item in result.get("top_moves", []):
-            gtp = (item.get("move") or item.get("gtp") or "").strip()
-            if not gtp or gtp.upper() in {"PASS", "RESIGN"}:
-                continue
-            coord = gtp_to_coord(gtp, game.size)
-            if not coord or game.board[coord[1]][coord[0]] != 0:
-                continue
-            if coord in forbidden or not game.is_legal_move(coord[0], coord[1], color):
-                continue
-            with engine.command_lock:
-                resp = engine._send_command_locked(f"play {color} {gtp}")
-                if "?" not in resp:
-                    return gtp
-    except Exception as exc:
-        _engine_log(f"non-pass fallback failed: {exc}")
-    return None
+    return await ai_move_service.pick_nonpass_fallback_move(game, color, visits, forbidden)
 
 
 async def _pick_ranked_legal_move(
@@ -2382,38 +2366,13 @@ async def _pick_ranked_legal_move(
     *,
     time_limit: float = 1.5,
 ) -> Optional[str]:
-    forbidden = forbidden or set()
-    try:
-        lines, _ = await run_in_executor(
-            engine.analyze,
-            color,
-            max(120, min(visits, 1400)),
-            50,
-            time_limit,
-            ["rootInfo", "true"],
-        )
-        result = engine.parse_analysis(lines, [], game.size, to_move_color=color)
-        candidates = []
-        for item in result.get("top_moves", []):
-            gtp = (item.get("move") or item.get("gtp") or "").strip()
-            if not gtp or gtp.upper() in {"PASS", "RESIGN"}:
-                continue
-            coord = gtp_to_coord(gtp, game.size)
-            if (
-                coord
-                and coord not in forbidden
-                and game.board[coord[1]][coord[0]] == 0
-                and game.is_legal_move(coord[0], coord[1], color)
-            ):
-                candidates.append(gtp)
-        for gtp in candidates:
-            with engine.command_lock:
-                resp = engine._send_command_locked(f"play {color} {gtp}")
-                if "?" not in resp:
-                    return gtp
-    except Exception as exc:
-        _engine_log(f"ranked legal fallback failed: {exc}")
-    return None
+    return await ai_move_service.pick_ranked_legal_move(
+        game,
+        color,
+        visits,
+        forbidden,
+        time_limit=time_limit,
+    )
 
 
 async def _ultimate_ai_move(game: GoGame, send_fn,
@@ -2975,225 +2934,31 @@ async def _ai_move(game: GoGame, send_fn):
 
 
 async def _ai_move_avoid_points(game, color, visits, time_limit, forbidden):
-    """Generate an AI move while avoiding forbidden points (seal card)."""
-    forbidden_gtp = set()
-    for x, y in forbidden:
-        forbidden_gtp.add(coord_to_gtp(x, y, game.size))
-    forbidden_gtp_upper = {s.upper() for s in forbidden_gtp}
-    forbidden_coords = set(forbidden)
-
-    def _analyze_and_pick():
-        with engine.command_lock:
-            mv = 10000000 if visits == 0 else visits
-            engine._send_command_locked(f"kata-set-param maxVisits {mv}")
-            engine.current_visits = visits
-            engine._send_command_locked(
-                f"kata-set-param maxTime {time_limit}")
-            # Use genmove first
-            resp = engine._send_command_locked(
-                f"genmove {color}", timeout=max(60, time_limit + 15))
-            engine._send_command_locked("kata-set-param maxTime -1")
-
-            gtp_move = resp.replace("=", "").strip()
-            # If move is not on a forbidden point, use it
-            if gtp_move.upper() not in ("PASS", "RESIGN") and \
-               gtp_move.upper() not in forbidden_gtp_upper:
-                return gtp_move
-
-            # Move hit a sealed point — undo and try with reduced visits
-            if gtp_move.upper() not in ("PASS", "RESIGN"):
-                engine._send_command_locked("undo")
-            # Try a few times with randomization
-            for attempt in range(5):
-                v = max(50, visits // (2 + attempt))
-                engine._send_command_locked(f"kata-set-param maxVisits {v}")
-                resp2 = engine._send_command_locked(
-                    f"genmove {color}", timeout=20)
-                m = resp2.replace("=", "").strip()
-                if m.upper() not in ("PASS", "RESIGN") and \
-                   m.upper() not in forbidden_gtp_upper:
-                    return m
-                if m.upper() not in ("PASS", "RESIGN"):
-                    engine._send_command_locked("undo")
-            return None
-
-    picked = await run_in_executor(_analyze_and_pick)
-    if picked:
-        return picked
-
-    ranked = await _pick_ranked_legal_move(game, color, visits, forbidden_coords, time_limit=1.3)
-    if ranked:
-        return ranked
-
-    def _last_resort():
-        with engine.command_lock:
-            allowed = [(x, y) for y in range(game.size) for x in range(game.size)
-                       if game.board[y][x] == 0
-                       and (x, y) not in forbidden_coords
-                       and game.is_legal_move(x, y, color)]
-            random.shuffle(allowed)
-            for ax, ay in allowed:
-                gtp = coord_to_gtp(ax, ay, game.size)
-                r = engine._send_command_locked(f"play {color} {gtp}")
-                if "?" not in r:
-                    return gtp
-            engine._send_command_locked(f"play {color} pass")
-            return "pass"
-
-    return await run_in_executor(_last_resort)
+    return await ai_move_service.avoid_points(game, color, visits, time_limit, forbidden)
 
 
 async def _ai_move_avoid_points_allow_only(game, color, visits, time_limit,
                                            allowed: list[tuple[int, int]]):
-    """Generate AI move restricted to a set of allowed coordinates.
-
-    Uses genmove then retries if the move isn't in the allowed set.
-    Falls back to random pick from allowed if KataGo keeps choosing outside.
-    """
-    allowed_gtp = {coord_to_gtp(x, y, game.size).upper() for x, y in allowed}
-
-    def _pick():
-        with engine.command_lock:
-            mv = max(50, min(visits, 2000))  # lower visits for faster retry
-            engine._send_command_locked(f"kata-set-param maxVisits {mv}")
-            engine.current_visits = mv
-            engine._send_command_locked(
-                f"kata-set-param maxTime {min(time_limit, 3.0)}")
-
-            for attempt in range(6):
-                v = max(50, mv // (1 + attempt))
-                engine._send_command_locked(f"kata-set-param maxVisits {v}")
-                resp = engine._send_command_locked(
-                    f"genmove {color}", timeout=15)
-                m = resp.replace("=", "").strip()
-                if m.upper() in ("PASS", "RESIGN"):
-                    engine._send_command_locked("kata-set-param maxTime -1")
-                    return m
-                if m.upper() in allowed_gtp:
-                    engine._send_command_locked("kata-set-param maxTime -1")
-                    return m
-                engine._send_command_locked("undo")
-
-            # Fallback: pick a random allowed point
-            engine._send_command_locked("kata-set-param maxTime -1")
-            random.shuffle(allowed)
-            for ax, ay in allowed:
-                if game.board[ay][ax] == 0:
-                    gtp = coord_to_gtp(ax, ay, game.size)
-                    r = engine._send_command_locked(f"play {color} {gtp}")
-                    if "?" not in r:
-                        return gtp
-            # Nothing worked, let AI play freely
-            resp = engine._send_command_locked(f"genmove {color}", timeout=15)
-            return resp.replace("=", "").strip()
-
-    return await run_in_executor(_pick)
+    return await ai_move_service.allow_only_points(game, color, visits, time_limit, allowed)
 
 
 async def _ai_move_suboptimal(game, color, visits, time_limit, start_idx=2, end_idx=5):
-    """Use kata-analyze to pick from a weaker band of candidate moves."""
-
-    def _analyze_pick():
-        # analyze() takes command_lock internally, so don't hold it here
-        mv = max(200, min(visits, 3000))
-        lines, _ = engine.analyze(
-            color, visits=mv, interval=50, duration=2.0,
-            extra_args=["rootInfo", "true"])
-        result = engine.parse_analysis(
-            lines, [], game.size, to_move_color=color)
-
-        top = result.get("top_moves", [])
-        if len(top) < end_idx:
-            return None
-
-        candidates = top[start_idx:end_idx]
-        pick = random.choice(candidates)
-        gtp = pick.get("move") or pick.get("gtp")
-        if not gtp:
-            return None
-
-        # Play the chosen move in KataGo
-        with engine.command_lock:
-            resp = engine._send_command_locked(f"play {color} {gtp}")
-            if "?" in resp:
-                return None
-        return gtp
-
-    return await run_in_executor(_analyze_pick)
+    return await ai_move_service.suboptimal_move(
+        game,
+        color,
+        visits,
+        time_limit,
+        start_idx=start_idx,
+        end_idx=end_idx,
+    )
 
 
 async def _ai_move_no_resign(game, color: str) -> str:
-    """Retry genmove with low randomized visits to avoid resignation.
-    Falls back to pass if AI still wants to resign."""
-
-    def _retry():
-        with engine.command_lock:
-            for v in (100, 30, 10):
-                engine._send_command_locked(f"kata-set-param maxVisits {v}")
-                engine._send_command_locked("kata-set-param maxTime 2")
-                resp = engine._send_command_locked(
-                    f"genmove {color}", timeout=10)
-                engine._send_command_locked("kata-set-param maxTime -1")
-                m = resp.replace("=", "").strip()
-                if m.upper() != "RESIGN":
-                    return m
-                engine._send_command_locked("undo")
-            # All retries still resign → force pass
-            engine._send_command_locked(f"play {color} pass")
-            return "pass"
-
-    return await run_in_executor(_retry)
+    return await ai_move_service.no_resign_move(game, color)
 
 
 async def _ai_retry_avoiding_ko(game, color):
-    """When AI's genmove landed on a ko point, undo and pick a different move.
-
-    Retries ``genmove`` with progressively lower visits (more randomisation).
-    If all retries still hit the ko point, falls back to a random legal
-    non-ko point.  Only passes as an absolute last resort.
-    """
-
-    def _retry():
-        with engine.command_lock:
-            # Undo the ko-violating genmove that KataGo already played
-            engine._send_command_locked("undo")
-
-            for attempt in range(5):
-                v = max(50, 800 // (2 + attempt))
-                engine._send_command_locked(f"kata-set-param maxVisits {v}")
-                engine._send_command_locked(
-                    f"kata-set-param maxTime 3")
-                resp = engine._send_command_locked(
-                    f"genmove {color}", timeout=10)
-                engine._send_command_locked("kata-set-param maxTime -1")
-                m = resp.replace("=", "").strip()
-                if m.upper() in ("PASS", "RESIGN"):
-                    return m
-                c = gtp_to_coord(m, game.size)
-                if not c or not game.is_ko(c[0], c[1], color):
-                    return m
-                # Still hitting ko — undo and try again
-                engine._send_command_locked("undo")
-
-            # All retries failed — pick a random legal non-ko point
-            empties = [
-                (x, y)
-                for y in range(game.size) for x in range(game.size)
-                if game.board[y][x] == 0
-                and game.is_legal_move(x, y, color)
-            ]
-            random.shuffle(empties)
-            for ax, ay in empties:
-                gtp = coord_to_gtp(ax, ay, game.size)
-                r = engine._send_command_locked(f"play {color} {gtp}")
-                if "?" not in r:
-                    return gtp
-
-            # Absolute last resort — pass
-            engine._send_command_locked(f"play {color} pass")
-            return "pass"
-
-    return await run_in_executor(_retry)
+    return await ai_move_service.retry_avoiding_ko(game, color)
 
 
 async def _finish_ai_move(game, send_fn, color, card, gtp_move, rogue_msg=None):
