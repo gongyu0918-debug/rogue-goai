@@ -22,17 +22,13 @@ import uvicorn
 import app.config.gameplay as gameplay_config
 import app.runtime.ws_actions as ws_actions_module
 from app.config.gameplay import (
-    AI_STYLE_OPTIONS,
     CHALLENGE_ACTIVE_USE_BONUS,
     CHALLENGE_DERIVATIVE_BONUS_CHANCE,
     CHALLENGE_RESTRICTION_DECAY_CHANCE,
     CHALLENGE_SET_MIN_COUNT,
     CHALLENGE_TRAP_EXTRA_TURN_CHANCE,
     CHALLENGE_ZONE_EXPAND_RADIUS,
-    CPU_MAX_VISITS,
-    MAX_GAME_VISITS,
     MAX_MOVE_TIME,
-    OPENING_MAX_VISITS,
     OPENING_MOVE_THRESHOLD,
     RANK_LABELS,
     RANK_VISITS,
@@ -68,7 +64,6 @@ from app.config.gameplay import (
     ROGUE_LAST_STAND_SPAWN_COUNT,
     ROGUE_LAST_STAND_THRESHOLD,
     ROGUE_LOWLINE_AI_MOVES,
-    ROGUE_MAX_VISITS,
     ROGUE_MIRROR_CHANCE,
     ROGUE_NERF_BACKUP_AI_MOVES,
     ROGUE_NERF_BACKUP_CHANCE,
@@ -105,7 +100,6 @@ from app.config.gameplay import (
     ULTIMATE_LAST_STAND_CLEAR_COUNT,
     ULTIMATE_LAST_STAND_SPAWN_COUNT,
     ULTIMATE_LAST_STAND_THRESHOLD,
-    ULTIMATE_MAX_VISITS,
     ULTIMATE_METEOR_DESTROY_COUNT,
     ULTIMATE_QUANTUM_PLACE_COUNT,
     ULTIMATE_QUICKTHINK_SECONDS,
@@ -142,6 +136,7 @@ from app.gameplay.card_selection import (
     pick_rogue_choices,
     pick_ultimate_choices,
 )
+from app.gameplay.ai_moves import compute_game_visits, choose_ai_style_move
 from app.gameplay.effect_utils import (
     adjacent8_points as _adjacent8_points,
     adjacent_points as _adjacent_points,
@@ -263,26 +258,12 @@ def _runtime_config_path(source_config: Path) -> Path:
 
 def get_game_visits(level: str, move_count: int = -1,
                     mode: str = "normal") -> int:
-    """Cap visits so even the strongest rank finishes within MAX_MOVE_TIME.
-    In the opening, use a hard cap for instant response.
-    mode: 'normal', 'rogue', or 'ultimate'."""
-    raw = RANK_VISITS.get(level, 800)
-    if raw == 0:
-        visits = MAX_GAME_VISITS   # p9d: use the cap, not unlimited
-    else:
-        visits = min(raw, MAX_GAME_VISITS)
-    # Rogue / Ultimate: cap visits — chaotic boards don't need deep search
-    if mode == "rogue":
-        visits = min(visits, ROGUE_MAX_VISITS)
-    elif mode == "ultimate":
-        visits = min(visits, ULTIMATE_MAX_VISITS)
-    # CPU mode: hard cap to keep response time acceptable
-    if engine_runtime.cpu_mode:
-        visits = min(visits, CPU_MAX_VISITS)
-    # Opening speed: hard cap — NN raw policy already plays strong openings
-    if 0 <= move_count < OPENING_MOVE_THRESHOLD and visits > OPENING_MAX_VISITS:
-        visits = OPENING_MAX_VISITS
-    return visits
+    return compute_game_visits(
+        level,
+        move_count,
+        mode,
+        cpu_mode=engine_runtime.cpu_mode,
+    )
 
 
 def _challenge_card_category(card_id: str) -> Optional[str]:
@@ -1039,52 +1020,6 @@ async def _check_capture_foul(game: GoGame, send_fn, offender: str, captured: in
     })
     if engine.ready:
         await run_in_executor(engine.send_command, f"komi {game.komi}")
-
-
-def _ai_style_target_score(game: GoGame, color: str, coord: tuple[int, int], style: str) -> float:
-    x, y = coord
-    center = (game.size - 1) / 2.0
-    edge_dist = min(x, y, game.size - 1 - x, game.size - 1 - y)
-    center_dist = abs(x - center) + abs(y - center)
-    own = 1 if color == "B" else 2
-    opp = 3 - own
-    own_adj = 0
-    opp_adj = 0
-    for nx, ny in game.neighbors(x, y):
-        cell = game.board[ny][nx]
-        if cell == own:
-            own_adj += 1
-        elif cell == opp:
-            opp_adj += 1
-    if style == "territory":
-        return -edge_dist * 3 + own_adj - opp_adj * 0.25
-    if style == "influence":
-        return -center_dist * 2 + opp_adj * 0.4
-    if style == "attack":
-        return opp_adj * 4 + own_adj * 0.5 - edge_dist * 0.3
-    if style == "defense":
-        return own_adj * 4 + opp_adj * 0.2 - center_dist * 0.2
-    return 0.0
-
-
-def _choose_ai_style_move(game: GoGame, color: str, top_moves: list[dict], style: str) -> Optional[str]:
-    if style not in AI_STYLE_OPTIONS or style == "balanced":
-        return None
-    best_move = None
-    best_score = None
-    for item in top_moves[:8]:
-        gtp = (item.get("move") or "").strip()
-        coord = gtp_to_coord(gtp, game.size)
-        if not coord:
-            continue
-        x, y = coord
-        if game.board[y][x] != 0:
-            continue
-        score = _ai_style_target_score(game, color, coord, style)
-        if best_score is None or score > best_score:
-            best_score = score
-            best_move = gtp
-    return best_move
 
 
 def _collect_joseki_burst_points(
@@ -3166,7 +3101,13 @@ async def _ai_move(game: GoGame, send_fn):
         if not rogue_cards and game.ai_style != "balanced":
             try:
                 analysis = await do_analysis(game)
-                gtp_move = _choose_ai_style_move(game, color, analysis.get("top_moves", []), game.ai_style)
+                gtp_move = choose_ai_style_move(
+                    game,
+                    color,
+                    analysis.get("top_moves", []),
+                    game.ai_style,
+                    gtp_to_coord=gtp_to_coord,
+                )
             except Exception:
                 gtp_move = None
         if not gtp_move:
@@ -3596,7 +3537,13 @@ async def _generate_ai_style_move(game: GoGame, color: str, visits: int, time_li
     if style != "balanced":
         try:
             analysis = await do_analysis(game)
-            chosen = _choose_ai_style_move(game, color, analysis.get("top_moves", []), style)
+            chosen = choose_ai_style_move(
+                game,
+                color,
+                analysis.get("top_moves", []),
+                style,
+                gtp_to_coord=gtp_to_coord,
+            )
         except Exception:
             chosen = None
     if chosen:
