@@ -9,7 +9,9 @@ export const initialPreviewState: PreviewState = {
     { x: 15, y: 3, color: "white" }
   ],
   nextColor: "black",
-  lastClick: null
+  lastClick: null,
+  serverStatus: null,
+  serverStatusError: null
 };
 
 export function previewReducer(state: PreviewState, action: PreviewAction): PreviewState {
@@ -46,6 +48,18 @@ export function previewReducer(state: PreviewState, action: PreviewAction): Prev
         stones: [],
         nextColor: "black",
         lastClick: null
+      };
+    case "set-server-status":
+      return {
+        ...state,
+        serverStatus: action.status,
+        serverStatusError: null
+      };
+    case "set-server-status-error":
+      return {
+        ...state,
+        serverStatus: null,
+        serverStatusError: action.error
       };
     default:
       return state;

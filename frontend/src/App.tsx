@@ -1,4 +1,5 @@
-import { useCallback, useReducer } from "react";
+import { useCallback, useEffect, useReducer } from "react";
+import { getStatus } from "./api/client";
 import { BoardCanvas } from "./board/BoardCanvas";
 import { initialPreviewState, previewReducer } from "./state/previewReducer";
 import type { BoardClick } from "./types/game";
@@ -7,6 +8,27 @@ const BOARD_SIZES = [9, 13, 19] as const;
 
 export function App() {
   const [state, dispatch] = useReducer(previewReducer, initialPreviewState);
+
+  useEffect(() => {
+    let cancelled = false;
+    getStatus()
+      .then((status) => {
+        if (!cancelled) {
+          dispatch({ type: "set-server-status", status });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          dispatch({
+            type: "set-server-status-error",
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handlePointClick = useCallback((point: BoardClick) => {
     dispatch({ type: "place-stone", point });
@@ -63,6 +85,25 @@ export function App() {
                 <dd data-testid="last-click">{state.lastClick?.coord ?? "none"}</dd>
               </div>
             </dl>
+          </div>
+
+          <div className="panel-section">
+            <h2>Server Contract</h2>
+            <dl className="probe-list">
+              <div>
+                <dt>Revision</dt>
+                <dd data-testid="server-revision">{state.serverStatus?.server_rev ?? "pending"}</dd>
+              </div>
+              <div>
+                <dt>Engine</dt>
+                <dd data-testid="engine-phase">{state.serverStatus?.engine_phase ?? "pending"}</dd>
+              </div>
+            </dl>
+            {state.serverStatusError ? (
+              <p className="error-text" data-testid="server-status-error">
+                {state.serverStatusError}
+              </p>
+            ) : null}
           </div>
 
           <div className="panel-section">

@@ -117,6 +117,11 @@ h2 {
   line-height: 1.5;
 }
 
+.panel-section .error-text {
+  margin-top: 10px;
+  color: #ffb3a6;
+}
+
 .segmented {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

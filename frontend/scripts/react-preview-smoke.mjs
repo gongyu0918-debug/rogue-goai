@@ -50,6 +50,7 @@ try {
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     const last = await page.locator("[data-testid=last-click]").innerText();
     const stones = await page.locator("[data-testid=stone-count]").innerText();
+    const serverRevision = await page.locator("[data-testid=server-revision]").innerText();
 
     results.push({
       viewport: viewport.name,
@@ -61,6 +62,7 @@ try {
       },
       last,
       stones,
+      serverRevision,
       errors
     });
 
@@ -76,6 +78,9 @@ for (const result of results) {
   }
   if (result.last === "none") {
     throw new Error(`${result.viewport} click did not register`);
+  }
+  if (result.serverRevision === "pending") {
+    throw new Error(`${result.viewport} server status did not load`);
   }
   if (result.errors.length > 0) {
     throw new Error(`${result.viewport} browser errors: ${result.errors.join("; ")}`);
