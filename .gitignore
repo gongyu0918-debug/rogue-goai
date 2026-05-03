@@ -3,6 +3,11 @@ __pycache__/
 *.py[cod]
 .venv/
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
 # Build outputs
 build/
 dist/

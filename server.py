@@ -22,22 +22,13 @@ import uvicorn
 import app.config.gameplay as gameplay_config
 import app.runtime.ws_actions as ws_actions_module
 from app.config.gameplay import (
-    AI_STYLE_OPTIONS,
-    CHALLENGE_ACTIVE_USE_BONUS,
-    CHALLENGE_DERIVATIVE_BONUS_CHANCE,
     CHALLENGE_RESTRICTION_DECAY_CHANCE,
     CHALLENGE_SET_MIN_COUNT,
-    CHALLENGE_STAGE_BIAS_WEIGHT,
     CHALLENGE_TRAP_EXTRA_TURN_CHANCE,
-    CHALLENGE_ZONE_EXPAND_RADIUS,
-    CPU_MAX_VISITS,
-    MAX_GAME_VISITS,
     MAX_MOVE_TIME,
-    OPENING_MAX_VISITS,
     OPENING_MOVE_THRESHOLD,
     RANK_LABELS,
     RANK_VISITS,
-    ROGUE_BLACKHOLE_AI_MOVES,
     ROGUE_CAPTURE_FOUL_BASE,
     ROGUE_CAPTURE_FOUL_KOMI_PENALTY,
     ROGUE_CAPTURE_FOUL_STEP,
@@ -57,9 +48,7 @@ from app.config.gameplay import (
     ROGUE_FOOLISH_FILL_COUNT,
     ROGUE_GODHAND_FILL_COUNT,
     ROGUE_GODHAND_RADIUS,
-    ROGUE_GOLDEN_CORNER_AI_MOVES,
     ROGUE_GOLDEN_CORNER_SPAN,
-    ROGUE_GRAVITY_AI_MOVES,
     ROGUE_HANDICAP_BONUS_INTERVAL,
     ROGUE_HANDICAP_MAX_BONUSES,
     ROGUE_HANDICAP_REQUIRED_PASSES,
@@ -68,8 +57,6 @@ from app.config.gameplay import (
     ROGUE_LAST_STAND_CLEAR_COUNT,
     ROGUE_LAST_STAND_SPAWN_COUNT,
     ROGUE_LAST_STAND_THRESHOLD,
-    ROGUE_LOWLINE_AI_MOVES,
-    ROGUE_MAX_VISITS,
     ROGUE_MIRROR_CHANCE,
     ROGUE_NERF_BACKUP_AI_MOVES,
     ROGUE_NERF_BACKUP_CHANCE,
@@ -83,11 +70,9 @@ from app.config.gameplay import (
     ROGUE_SANRENSEI_REQUIRED_STARS,
     ROGUE_SANRENSEI_SUPPORT_STONES,
     ROGUE_SEAL_POINT_COUNT,
-    ROGUE_SHADOW_AI_MOVE_INDEXES,
     ROGUE_SHADOW_CHANCE,
     ROGUE_SLIP_CHANCE,
     ROGUE_SUBOPTIMAL_AI_MOVES,
-    ROGUE_TENGEN_AI_MOVES,
     ROGUE_TIME_PRESS_BACKUP_AI_MOVES,
     ROGUE_TIME_PRESS_BACKUP_CHANCE,
     ROGUE_TIME_PRESS_MAX_TIME,
@@ -99,21 +84,13 @@ from app.config.gameplay import (
     ULTIMATE_FIVE_IN_ROW_SPAWN_COUNT,
     ULTIMATE_FOOLISH_CHAIN_DELAY,
     ULTIMATE_FOOLISH_FILL_COUNT,
-    ULTIMATE_GODHAND_FILL_COUNT,
     ULTIMATE_JOSEKI_BONUS_STONES,
     ULTIMATE_JOSEKI_REQUIRED_HITS,
-    ULTIMATE_JOSEKI_TARGET_COUNT,
     ULTIMATE_LAST_STAND_CLEAR_COUNT,
     ULTIMATE_LAST_STAND_SPAWN_COUNT,
     ULTIMATE_LAST_STAND_THRESHOLD,
-    ULTIMATE_MAX_VISITS,
-    ULTIMATE_METEOR_DESTROY_COUNT,
-    ULTIMATE_QUANTUM_PLACE_COUNT,
     ULTIMATE_QUICKTHINK_SECONDS,
     ULTIMATE_TERRITORY_RADIUS,
-    ULTIMATE_TIMEWARP_TRIGGER_CHANCE,
-    ULTIMATE_WALL_TRIGGER_CHANCE,
-    ULTIMATE_WILDGROW_MAX_GROWTH,
     get_balance_editor_payload,
     reset_balance_overrides,
     save_balance_overrides,
@@ -123,36 +100,74 @@ from app.config.gpu_tiers import (
     GPU_TIERS as _GPU_TIERS,
 )
 from app.data.cards import (
-    AI_ROGUE_POOL,
-    AI_ULTIMATE_POOL,
-    CHALLENGE_BETA_HANDICAPS,
-    CHALLENGE_BETA_POOL,
-    CHALLENGE_CATEGORY_MAP,
-    ROGUE_CARDS,
-    ROGUE_FEATURED_CARDS,
-    TWO_PLAYER_ROGUE_POOL,
-    ULTIMATE_CARDS,
-    ULTIMATE_FEATURED_CARDS,
-    ai_rogue_cards,
-    ai_ultimate_cards,
-    challenge_card_category,
-    challenge_category_counts,
-    featured_rogue_cards,
-    featured_ultimate_cards,
-    get_card_config_editor_payload,
     get_gameplay_tuning_specs,
     get_gameplay_tuning_values,
     get_rogue_card,
-    rogue_card_summary,
     rogue_card_ids,
-    reload_card_catalog,
-    reset_card_config,
-    save_card_config,
-    ultimate_card_summary,
-    ultimate_card_ids,
 )
 from app.domain.coordinates import coord_to_gtp, gtp_to_coord
 from app.domain.game_state import GoGame
+from app.gameplay.card_selection import (
+    pick_ai_rogue_card,
+    pick_ai_ultimate_card,
+    pick_challenge_beta_choices,
+    pick_rogue_choices,
+    pick_ultimate_choices,
+)
+from app.gameplay.ai_moves import (
+    AiMoveService,
+    compute_game_visits,
+    choose_ai_style_move,
+    choose_tengen_target,
+    gravity_allowed_points,
+    lowline_allowed_points,
+    plan_rogue_ai_search,
+    rogue_forbidden_points,
+    sansan_opening_restriction,
+    shadow_followup_points,
+)
+from app.gameplay.effect_utils import (
+    adjacent8_points as _adjacent8_points,
+    adjacent_points as _adjacent_points,
+    clear_random_enemy_stones as _clear_random_enemy_stones,
+    count_stones as _count_stones,
+    diamond_points as _diamond_points,
+    find_exact_five_lines as _find_exact_five_lines,
+    find_corner_with_min_stones as _find_corner_with_min_stones,
+    find_new_fool_shapes as _find_new_fool_shapes,
+    get_blackhole_points as _get_blackhole_points,
+    get_corner_helper_spawn_points as _get_corner_helper_spawn_points,
+    get_golden_corner_points as _get_golden_corner_points,
+    get_sansan_points as _get_sansan_points,
+    get_square_points as _get_square_points,
+    get_star_points as _get_star_points,
+    line_endpoints as _line_endpoints,
+    line_key as _line_key,
+    line_points_between as _line_points_between,
+    mirror_coord as _mirror_coord,
+    pick_joseki_targets as _pick_joseki_targets,
+    random_hidden_center as _random_hidden_center,
+    set_points_to_color as _set_points_to_color,
+    shape_center as _shape_center,
+    spawn_bonus_points as _spawn_bonus_points,
+    spawn_random_owned_stones as _spawn_random_owned_stones,
+    try_spawn_bonus_stone as _try_spawn_bonus_stone,
+)
+from app.gameplay.rogue_effects import (
+    apply_rogue_card_uses,
+    challenge_active_use_bonus as _challenge_active_use_bonus,
+    challenge_category_counts_for_game as _challenge_category_counts,
+    challenge_has_set as _challenge_has_set,
+    challenge_remaining as _challenge_remaining,
+    challenge_should_bonus_derivative as _challenge_should_bonus_derivative,
+    challenge_zone_points as _challenge_zone_points,
+    apply_player_rogue_board_effects,
+    reset_rogue_effect_state,
+    rogue_card_ids as _rogue_card_ids,
+    rogue_has as _rogue_has,
+)
+from app.services.card_config_service import CardConfigService
+from app.gameplay.ultimate_effects import apply_ultimate_board_effect, apply_ultimate_state_effect
 from app.runtime.engine import KataGoEngine
 from app.runtime.game_store import ActiveGameStore
 from app.runtime.startup import EnginePaths, EngineStartupManager
@@ -211,18 +226,16 @@ def _sync_balance_globals() -> None:
             setattr(ws_actions_module, key, getattr(gameplay_config, key))
 
 
+card_config_service = CardConfigService(
+    get_tuning_values=get_gameplay_tuning_values,
+    get_tuning_specs=get_gameplay_tuning_specs,
+    apply_balance_values=gameplay_config.apply_balance_values,
+    sync_balance_globals=_sync_balance_globals,
+)
+
+
 def reload_live_card_config() -> list[str]:
-    errors = reload_card_catalog()
-    if errors:
-        return errors
-    errors = gameplay_config.apply_balance_values(
-        get_gameplay_tuning_values(),
-        get_gameplay_tuning_specs(),
-    )
-    if errors:
-        return errors
-    _sync_balance_globals()
-    return []
+    return card_config_service.reload_live_config()
 
 
 CARD_CONFIG_STARTUP_ERRORS = reload_live_card_config()
@@ -255,145 +268,12 @@ def _runtime_config_path(source_config: Path) -> Path:
 
 def get_game_visits(level: str, move_count: int = -1,
                     mode: str = "normal") -> int:
-    """Cap visits so even the strongest rank finishes within MAX_MOVE_TIME.
-    In the opening, use a hard cap for instant response.
-    mode: 'normal', 'rogue', or 'ultimate'."""
-    raw = RANK_VISITS.get(level, 800)
-    if raw == 0:
-        visits = MAX_GAME_VISITS   # p9d: use the cap, not unlimited
-    else:
-        visits = min(raw, MAX_GAME_VISITS)
-    # Rogue / Ultimate: cap visits — chaotic boards don't need deep search
-    if mode == "rogue":
-        visits = min(visits, ROGUE_MAX_VISITS)
-    elif mode == "ultimate":
-        visits = min(visits, ULTIMATE_MAX_VISITS)
-    # CPU mode: hard cap to keep response time acceptable
-    if engine_runtime.cpu_mode:
-        visits = min(visits, CPU_MAX_VISITS)
-    # Opening speed: hard cap — NN raw policy already plays strong openings
-    if 0 <= move_count < OPENING_MOVE_THRESHOLD and visits > OPENING_MAX_VISITS:
-        visits = OPENING_MAX_VISITS
-    return visits
-
-
-def pick_rogue_choices(n: int = 3, pool: Optional[list[str]] = None) -> list[str]:
-    """Pick n random unique card IDs."""
-    import time
-    rng = random.Random(time.time_ns())
-    keys = rogue_card_ids(pool)
-    rng.shuffle(keys)
-    choices = keys[:n]
-    if choices and not any(card in ROGUE_FEATURED_CARDS for card in choices):
-        featured_pool = featured_rogue_cards(keys)
-        if featured_pool:
-            choices[-1] = rng.choice(featured_pool)
-    unique_choices = []
-    for card in choices:
-        if card not in unique_choices:
-            unique_choices.append(card)
-    for card in keys:
-        if len(unique_choices) >= n:
-            break
-        if card not in unique_choices:
-            unique_choices.append(card)
-    return unique_choices[:n]
-
-
-def _challenge_card_category(card_id: str) -> Optional[str]:
-    return challenge_card_category(card_id)
-
-
-def _challenge_category_counts_from_cards(cards: list[str]) -> dict[str, int]:
-    return challenge_category_counts(cards)
-
-
-def _challenge_weighted_unique_sample(
-    pool: list[str],
-    n: int,
-    weights: dict[str, float],
-    rng: random.Random,
-) -> list[str]:
-    available = list(pool)
-    chosen: list[str] = []
-    while available and len(chosen) < n:
-        total = sum(max(0.01, weights.get(card_id, 1.0)) for card_id in available)
-        roll = rng.random() * total
-        upto = 0.0
-        picked = available[-1]
-        for card_id in available:
-            upto += max(0.01, weights.get(card_id, 1.0))
-            if upto >= roll:
-                picked = card_id
-                break
-        chosen.append(picked)
-        available.remove(picked)
-    return chosen
-
-
-def pick_challenge_beta_choices(
-    selected_cards: list[str],
-    n: int = 3,
-    pool: Optional[list[str]] = None,
-) -> list[str]:
-    import time
-
-    rng = random.Random(time.time_ns())
-    base_pool = rogue_card_ids(pool or CHALLENGE_BETA_POOL, exclude=selected_cards)
-    if len(base_pool) <= n:
-        return base_pool[:n]
-
-    weights = {card_id: 1.0 for card_id in base_pool}
-    counts = _challenge_category_counts_from_cards(selected_cards)
-    for card_id in base_pool:
-        category = _challenge_card_category(card_id)
-        if category and counts.get(category, 0) > 0:
-            weights[card_id] += CHALLENGE_STAGE_BIAS_WEIGHT * counts[category]
-
-    choices = _challenge_weighted_unique_sample(base_pool, n, weights, rng)
-    if choices and not any(card in ROGUE_FEATURED_CARDS for card in choices):
-        featured_pool = featured_rogue_cards(base_pool)
-        if featured_pool:
-            choices[-1] = rng.choice(featured_pool)
-    return choices
-
-
-def pick_ai_rogue_card(exclude: Optional[list[str]] = None) -> str:
-    import time
-    rng = random.Random(time.time_ns())
-    pool = ai_rogue_cards(exclude)
-    return rng.choice(pool or ai_rogue_cards())
-
-
-def pick_ultimate_choices(n: int = 3, exclude: list = None) -> list[str]:
-    """Pick n random unique ultimate card IDs, excluding given keys."""
-    import time
-    rng = random.Random(time.time_ns())
-    keys = ultimate_card_ids(exclude)
-    rng.shuffle(keys)
-    choices = keys[:n]
-    if choices and not any(card in ULTIMATE_FEATURED_CARDS for card in choices):
-        featured_pool = featured_ultimate_cards(keys)
-        if featured_pool:
-            choices[-1] = rng.choice(featured_pool)
-    unique_choices = []
-    for card in choices:
-        if card not in unique_choices:
-            unique_choices.append(card)
-    for card in keys:
-        if len(unique_choices) >= n:
-            break
-        if card not in unique_choices:
-            unique_choices.append(card)
-    return unique_choices[:n]
-
-
-def pick_ai_ultimate_card(exclude: list = None) -> str:
-    """Pick 1 random AI card from the simple brute-force pool."""
-    import time
-    rng = random.Random(time.time_ns())
-    pool = ai_ultimate_cards(exclude)
-    return rng.choice(pool or ai_ultimate_cards())
+    return compute_game_visits(
+        level,
+        move_count,
+        mode,
+        cpu_mode=engine_runtime.cpu_mode,
+    )
 
 
 def _is_loopback_host(host: str) -> bool:
@@ -550,6 +430,18 @@ async def root():
     return FileResponse(str(index_path))
 
 
+@app.get("/react-preview")
+async def react_preview():
+    preview_path = STATIC_DIR / "react" / "index.html"
+    if not preview_path.exists():
+        return Response(
+            content="static/react/index.html not found. Run npm run build --prefix frontend.",
+            media_type="text/plain; charset=utf-8",
+            status_code=404,
+        )
+    return FileResponse(str(preview_path))
+
+
 @app.get("/balance-lab")
 async def balance_lab():
     lab_path = STATIC_DIR / "card_editor.html"
@@ -569,14 +461,12 @@ async def card_editor():
 
 @app.get("/api/card-config")
 async def get_card_config_payload():
-    reload_live_card_config()
-    return get_card_config_editor_payload()
+    return card_config_service.get_payload()
 
 
 @app.get("/api/card-config/schema")
 async def get_card_config_schema():
-    payload = get_card_config_editor_payload()
-    return payload.get("schema", {})
+    return card_config_service.get_schema()
 
 
 @app.post("/api/card-config")
@@ -589,11 +479,7 @@ async def save_card_config_payload(request: Request):
             status_code=400,
         )
     config = body.get("config") if isinstance(body, dict) else None
-    result = save_card_config(config)
-    if result.get("ok"):
-        live_errors = reload_live_card_config()
-        if live_errors:
-            result = {"ok": False, "errors": live_errors, "payload": get_card_config_editor_payload()}
+    result = card_config_service.save_payload(config)
     if not result.get("ok"):
         return JSONResponse(result, status_code=400)
     return result
@@ -601,11 +487,7 @@ async def save_card_config_payload(request: Request):
 
 @app.post("/api/card-config/reset")
 async def reset_card_config_payload():
-    result = reset_card_config()
-    if result.get("ok"):
-        live_errors = reload_live_card_config()
-        if live_errors:
-            result = {"ok": False, "errors": live_errors, "payload": get_card_config_editor_payload()}
+    result = card_config_service.reset_payload()
     if not result.get("ok"):
         return JSONResponse(result, status_code=400)
     return result
@@ -660,6 +542,7 @@ async def get_status():
     model_exists = engine_runtime.has_model_files()
     exe_exists = engine_runtime.has_engine_binaries()
     selected_model = engine_runtime.select_model()
+    card_config_payload = card_config_service.get_payload()
     return {
         "server_rev": SERVER_REV,
         "host": SERVER_HOST,
@@ -673,8 +556,8 @@ async def get_status():
         "no_katago": NO_KATAGO,
         "cpu_mode": engine_runtime.cpu_mode,
         "static_ready": (STATIC_DIR / "index.html").exists(),
-        "card_config": get_card_config_editor_payload().get("source"),
-        "card_config_errors": get_card_config_editor_payload().get("errors", []),
+        "card_config": card_config_payload.get("source"),
+        "card_config_errors": card_config_payload.get("errors", []),
         "engine_phase": snapshot.get("phase"),
         "engine_message": snapshot.get("message"),
         "engine_backend": snapshot.get("active_backend"),
@@ -786,6 +669,19 @@ async def run_in_executor(func, *args):
     return await loop.run_in_executor(None, func, *args)
 
 
+ai_move_service = AiMoveService(
+    engine=engine,
+    run_in_executor=run_in_executor,
+    engine_log=_engine_log,
+    coord_to_gtp=coord_to_gtp,
+    gtp_to_coord=gtp_to_coord,
+)
+
+
+def _bind_ai_move_service_runtime():
+    ai_move_service.bind_runtime(engine=engine, run_in_executor=run_in_executor)
+
+
 @app.websocket("/ws/{game_id}")
 async def websocket_endpoint(websocket: WebSocket, game_id: str):
     await websocket.accept()
@@ -883,7 +779,13 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
         run_in_executor=run_in_executor,
         GoGame=GoGame,
         coord_to_gtp=coord_to_gtp,
+        gtp_to_coord=gtp_to_coord,
+        engine_state_snapshot=_engine_state_snapshot,
+        start_engine_background=engine_runtime.start_background,
+        reload_live_card_config=reload_live_card_config,
         get_game_visits=get_game_visits,
+        pick_rogue_choices=pick_rogue_choices,
+        pick_ultimate_choices=pick_ultimate_choices,
         pick_challenge_beta_choices=pick_challenge_beta_choices,
         pick_ai_rogue_card=pick_ai_rogue_card,
         pick_ai_ultimate_card=pick_ai_ultimate_card,
@@ -894,10 +796,21 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
         ultimate_ai_move=_ultimate_ai_move,
         ultimate_force_score=_ultimate_force_score,
         run_coach_turn_if_needed=_run_coach_turn_if_needed,
+        run_ai_observer_loop=_run_ai_observer_loop,
         sync_board_to_katago=_sync_board_to_katago,
         challenge_remaining=_challenge_remaining,
         challenge_zone_points=_challenge_zone_points,
         rogue_has=_rogue_has,
+        get_ai_rogue_forbidden_points=_get_ai_rogue_forbidden_points,
+        ultimate_get_territory_forbidden=_ultimate_get_territory_forbidden,
+        record_ultimate_player_action=_record_ultimate_player_action,
+        check_capture_foul=_check_capture_foul,
+        count_stones=_count_stones,
+        apply_ultimate_effect=_apply_ultimate_effect,
+        resolve_pending_ultimate_shadow_links=_resolve_pending_ultimate_shadow_links,
+        apply_player_rogue_move_effects=_apply_player_rogue_move_effects,
+        apply_ai_rogue_response_effects=_apply_ai_rogue_response_effects,
+        prepare_player_turn_modifiers=_prepare_player_turn_modifiers,
         finish_ultimate_quickthink_turn=_finish_ultimate_quickthink_turn,
         pick_joseki_targets=_pick_joseki_targets,
         random_hidden_center=_random_hidden_center,
@@ -916,533 +829,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                     game = ws_action_context.game
                     continue
 
-                if action == "new_game":
-                    config_errors = reload_live_card_config()
-                    if config_errors:
-                        await send_error("卡牌配置加载失败：" + "；".join(config_errors[:6]))
-                        continue
-
-                    if not engine.ready and not data.get("two_player", False):
-                        snapshot = _engine_state_snapshot()
-                        if snapshot.get("phase") not in {"initializing", "ready"}:
-                            engine_runtime.start_background("game_start")
-                            snapshot = _engine_state_snapshot()
-                        await send({
-                            "type": "engine_not_ready",
-                            "phase": snapshot.get("phase"),
-                            "message": snapshot.get("message") or "KataGo 正在随游戏启动",
-                            "last_error": snapshot.get("last_error"),
-                            "log_tail": snapshot.get("log_tail"),
-                        })
-                        deadline = time.time() + 120
-                        while not engine.ready and time.time() < deadline:
-                            await asyncio.sleep(0.5)
-                            snapshot = _engine_state_snapshot()
-                            if snapshot.get("phase") in {"failed", "disabled", "stopped"}:
-                                break
-                        if not engine.ready:
-                            snapshot = _engine_state_snapshot()
-                            await send({
-                                "type": "engine_not_ready",
-                                "phase": snapshot.get("phase"),
-                                "message": snapshot.get("message"),
-                                "last_error": snapshot.get("last_error"),
-                                "log_tail": snapshot.get("log_tail"),
-                            })
-                            await send_error(
-                                snapshot.get("message")
-                                or "KataGo未就绪，请稍候重试，或先使用两人对局模式"
-                            )
-                            continue
-
-                    active_games.prune()
-                    size = int(data.get("size", 19))
-                    komi = float(data.get("komi", 7.5))
-                    handicap = int(data.get("handicap", 0))
-                    player_color = data.get("player_color", "B")
-                    level = data.get("level", "a3d")
-                    two_player = bool(data.get("two_player", False))
-                    ai_observer = bool(data.get("ai_observer", False)) and not two_player
-                    if ai_observer:
-                        two_player = False
-                    rogue_enabled = bool(data.get("rogue", False))
-                    ai_rogue_enabled = bool(data.get("ai_rogue", False)) and rogue_enabled and not two_player
-                    challenge_beta = bool(data.get("challenge_beta", False))
-                    challenge_stage = int(data.get("challenge_stage", 0) or 0)
-                    challenge_cards = [
-                        card_id for card_id in data.get("challenge_cards", [])
-                        if card_id in CHALLENGE_BETA_POOL
-                    ]
-                    challenge_limits = data.get("challenge_limits", {}) or {}
-                    challenge_refreshes = int(data.get("challenge_refreshes", 0) or 0)
-                    if challenge_beta:
-                        two_player = False
-                        ai_observer = False
-                        rogue_enabled = True
-                        ai_rogue_enabled = False
-                        handicap = CHALLENGE_BETA_HANDICAPS.get(challenge_stage, handicap)
-                    ai_style = str(data.get("ai_style", "balanced"))
-                    if ai_style not in AI_STYLE_OPTIONS:
-                        ai_style = "balanced"
-                    ai_level_black = str(data.get("ai_level_black", level))
-                    if ai_level_black not in RANK_VISITS:
-                        ai_level_black = level
-                    ai_level_white = str(data.get("ai_level_white", level))
-                    if ai_level_white not in RANK_VISITS:
-                        ai_level_white = level
-                    ai_style_black = str(data.get("ai_style_black", ai_style))
-                    if ai_style_black not in AI_STYLE_OPTIONS:
-                        ai_style_black = ai_style
-                    ai_style_white = str(data.get("ai_style_white", ai_style))
-                    if ai_style_white not in AI_STYLE_OPTIONS:
-                        ai_style_white = ai_style
-
-                    game = GoGame(size, komi, handicap, player_color, level,
-                                  two_player)
-                    game.ai_observer = ai_observer
-                    game.ai_style = ai_style
-                    game.ai_level_black = ai_level_black
-                    game.ai_level_white = ai_level_white
-                    game.ai_style_black = ai_style_black
-                    game.ai_style_white = ai_style_white
-                    game.rogue_enabled = rogue_enabled
-                    game.ai_rogue_enabled = ai_rogue_enabled
-                    game.challenge_beta = challenge_beta
-                    game.challenge_stage = challenge_stage
-                    game.challenge_cards = challenge_cards
-                    game.challenge_refreshes = challenge_refreshes
-                    game.challenge_limits = {
-                        "undo": int(challenge_limits.get("undo", 0) or 0),
-                        "hint": int(challenge_limits.get("hint", 0) or 0),
-                        "coach": int(challenge_limits.get("coach", 0) or 0),
-                    }
-                    game.challenge_usage = {"undo": 0, "hint": 0, "coach": 0}
-                    active_games.set(game_id, game)
-
-                    if engine.ready:
-                        visits = get_game_visits(level, len(game.moves))
-                        await run_in_executor(engine.set_visits, visits)
-                        await run_in_executor(engine.send_command,
-                                             f"boardsize {size}")
-                        await run_in_executor(engine.send_command, "clear_board")
-                        await run_in_executor(engine.send_command, f"komi {komi}")
-                        # Set rules based on komi: Chinese for 7.5, Japanese for 6.5
-                        rules = "chinese" if komi == 7.5 else "japanese"
-                        await run_in_executor(engine.send_command,
-                                             f"kata-set-rules {rules}")
-
-                    if handicap > 0 and engine.ready:
-                        resp = await run_in_executor(
-                            engine.send_command, f"fixed_handicap {handicap}")
-                        if resp.startswith("="):
-                            for gtp in resp[1:].strip().split():
-                                coord = gtp_to_coord(gtp, size)
-                                if coord:
-                                    game.place_stone(coord[0], coord[1], "B")
-                                    game.moves.append(("B", gtp))
-                            game.current_player = "W"
-                    if challenge_beta and challenge_cards:
-                        await _apply_challenge_rogue_loadout(game, send)
-                    game.reset_history()
-
-                    await send({"type": "game_start", **game.to_state()})
-
-                    # ── Ultimate Rogue mode: both sides pick cards ────
-                    ultimate = bool(data.get("ultimate", False))
-                    if ultimate and not two_player and engine.ready:
-                        game.ultimate = True
-                        choices = pick_ultimate_choices(3)
-                        cards_data = [ultimate_card_summary(cid) for cid in choices]
-                        await send({"type": "ultimate_offer",
-                                    "cards": cards_data})
-                        # Game waits for player card selection
-
-                    # ── Rogue mode: offer 3 cards before game starts ─────
-                    elif rogue_enabled and (two_player or engine.ready):
-                        should_offer_rogue = True
-                        if challenge_beta and len(challenge_cards) >= max(1, challenge_stage):
-                            should_offer_rogue = False
-                        if should_offer_rogue:
-                            if challenge_beta:
-                                rogue_pool = [card_id for card_id in CHALLENGE_BETA_POOL if card_id not in challenge_cards]
-                                choices = pick_challenge_beta_choices(challenge_cards, 3, pool=rogue_pool)
-                            else:
-                                rogue_pool = TWO_PLAYER_ROGUE_POOL if two_player else None
-                                choices = pick_rogue_choices(3, pool=rogue_pool)
-                            game.challenge_offer_cards = choices if challenge_beta else []
-                            cards_data = [rogue_card_summary(cid) for cid in choices]
-                            await send({
-                                "type": "rogue_offer",
-                                "cards": cards_data,
-                                "challenge_beta": challenge_beta,
-                                "challenge_stage": challenge_stage,
-                                "refresh_remaining": challenge_refreshes,
-                            })
-                            # Game waits for card selection before AI moves
-                        else:
-                            if ai_observer and engine.ready:
-                                asyncio.create_task(_run_ai_observer_loop(game, send))
-                            elif not two_player and engine.ready:
-                                if game.ai_color == game.current_player:
-                                    await _ai_move(game, send)
-                    else:
-                        if ai_observer and engine.ready:
-                            asyncio.create_task(_run_ai_observer_loop(game, send))
-                        elif not two_player and engine.ready:
-                            if game.ai_color == game.current_player:
-                                await _ai_move(game, send)
-
-                    if not game.game_over and engine.ready:
-                        asyncio.create_task(do_analysis_bg(game))
-
-                # ── play ──────────────────────────────────────────────────────
-                elif action == "play":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game or game.game_over:
-                        await send_error("暂无进行中的对局")
-                        continue
-                    if (
-                        not game.two_player
-                        and game.rogue_card == "coach_mode"
-                        and game.rogue_coach_moves_left > 0
-                    ):
-                        await send_error("代练上号接管中，请等待强化 AI 完成代打")
-                        continue
-
-                    if game.two_player:
-                        color = game.current_player
-                    else:
-                        if not engine.ready:
-                            snapshot = _engine_state_snapshot()
-                            await send_error(
-                                snapshot.get("message")
-                                or "KataGo尚未就绪，当前不能进行 AI 对局"
-                            )
-                            continue
-                        if game.current_player != game.player_color:
-                            await send_error("还没轮到你")
-                            continue
-                        color = game.player_color
-
-                    # ── Ultimate mode play ─────────────────────────────────
-                    if game.ultimate and not game.two_player:
-                        point = _board_point_from_data(data, game.size)
-                        if point is None:
-                            await send_error("落点超出棋盘范围")
-                            continue
-                        x, y = point
-
-                        if game.ultimate_ai_card == "territory":
-                            cv_player = 1 if color == "B" else 2
-                            fb = _ultimate_get_territory_forbidden(
-                                game, cv_player)
-                            if (x, y) in fb:
-                                await send_error("这里已被绝对领地封锁，不能在 AI 的禁区内落子")
-                                continue
-
-                        if game.board[y][x] != 0:
-                            await send_error("该位置已有棋子")
-                            continue
-
-                        if game.is_ko(x, y, color):
-                            await send_error("打劫禁着：不能立即提回")
-                            continue
-
-                        gtp = coord_to_gtp(x, y, game.size)
-                        if gtp is None:
-                            await send_error("落点超出棋盘范围")
-                            continue
-                        captured = game.place_stone(x, y, color)
-                        if captured == -1:
-                            await send_error("打劫禁着：不能立即提回")
-                            continue
-                        if captured == -2:
-                            await send_error("这手属于自杀禁着，不能这样下")
-                            continue
-                        was_double_pending = game.ultimate_double_pending
-                        _record_ultimate_player_action(game)
-                        game.moves.append((color, gtp))
-                        game.passed[color] = False
-                        await _check_capture_foul(game, send, color, captured, ultimate=True)
-
-                        p_card = game.ultimate_player_card
-                        if p_card == "quickthink":
-                            if not game.ultimate_quickthink_active:
-                                game.ultimate_quickthink_token += 1
-                            game.ultimate_quickthink_active = True
-                            game.current_player = game.player_color
-                            await send({"type": "game_state", **game.to_state()})
-                            if game.ultimate_move_count >= 20:
-                                _finish_ultimate_quickthink_turn(game)
-                                await _ultimate_force_score(game, send)
-                            continue
-
-                        board_modified = False
-                        opp_val = 2 if color == "B" else 1
-                        opp_before = _count_stones(game, opp_val)
-                        if p_card:
-                            board_modified = await _apply_ultimate_effect(game, send, x, y, color, p_card)
-                        pending_modified = await _resolve_pending_ultimate_shadow_links(game, send)
-                        if board_modified or pending_modified:
-                            await _sync_board_to_katago(game)
-                            # Card effects that removed opponent stones count
-                            # toward capture-foul progress (offender = this player)
-                            effect_removed = max(0, opp_before - _count_stones(game, opp_val))
-                            if effect_removed > 0:
-                                await _check_capture_foul(game, send, color, effect_removed, ultimate=True)
-
-                        chain_bonus = (
-                            p_card == "chain"
-                            and random.random() < ULTIMATE_CHAIN_EXTRA_TURN_CHANCE
-                        )
-                        double_bonus = (
-                            p_card == "double"
-                            and not was_double_pending
-                        )
-
-                        game.ultimate_extra_turn = chain_bonus or double_bonus
-                        game.ultimate_double_pending = bool(double_bonus)
-                        game.current_player = (
-                            game.player_color if (chain_bonus or double_bonus) else game.ai_color
-                        )
-                        game.push_history()
-                        await send({"type": "game_state", **game.to_state()})
-
-                        if game.ultimate_move_count >= 20:
-                            await _ultimate_force_score(game, send)
-                            continue
-
-                        if chain_bonus:
-                            await send({"type": "rogue_event", "msg": "连珠棋触发成功，你可以继续落子"})
-                            continue
-
-                        if double_bonus:
-                            await send({"type": "rogue_event", "msg": "双刀流触发成功，你可以继续落子"})
-                            continue
-
-                        game.ultimate_extra_turn = False
-                        if engine.ready:
-                            await _ultimate_ai_move(game, send)
-                        if not game.game_over and engine.ready:
-                            asyncio.create_task(do_analysis_bg(game))
-                        continue
-
-                    # Rogue: 让子棋任务 - force pass for opening passes
-                    if (game.rogue_card == "handicap_quest"
-                            and not game.two_player
-                            and game.rogue_handicap_passes < ROGUE_HANDICAP_REQUIRED_PASSES):
-                        await send_error(
-                            f"🏋️ 让子棋任务：还需虚手 "
-                            f"{ROGUE_HANDICAP_REQUIRED_PASSES - game.rogue_handicap_passes} 次才能落子")
-                        continue
-
-                    point = _board_point_from_data(data, game.size)
-                    if point is None:
-                        await send_error("落点超出棋盘范围")
-                        continue
-                    x, y = point
-                    gtp = coord_to_gtp(x, y, game.size)
-                    if gtp is None:
-                        await send_error("落点超出棋盘范围")
-                        continue
-
-                    if game.board[y][x] != 0:
-                        await send_error("该位置已有棋子")
-                        continue
-
-                    if game.is_ko(x, y, color):
-                        await send_error("打劫禁着：不能立即提回")
-                        continue
-
-                    player_forbidden = _get_ai_rogue_forbidden_points(game)
-                    if not game.two_player and (x, y) in player_forbidden:
-                        await send_error("这里已被 AI 的 Rogue 卡限制，当前不能落子")
-                        continue
-                    if (not game.two_player
-                            and game.rogue_card == "puppet"
-                            and game.rogue_puppet_target == (x, y)):
-                        await send_error("该点已被傀儡术预留给 AI")
-                        continue
-
-                    if engine.ready:
-                        resp = await run_in_executor(
-                            engine.send_command, f"play {color} {gtp}")
-                        if "?" in resp:
-                            await send_error(f"无效落子: {gtp}")
-                            continue
-
-                    captured = game.place_stone(x, y, color)
-                    if captured == -1:
-                        if engine.ready:
-                            await run_in_executor(engine.send_command, "undo")
-                        await send_error("打劫禁着：不能立即提回")
-                        continue
-                    if captured == -2:
-                        if engine.ready:
-                            await run_in_executor(engine.send_command, "undo")
-                        await send_error("这手属于自杀禁着，不能这样下")
-                        continue
-                    game.moves.append((color, gtp))
-                    game.passed[color] = False
-                    game.current_player = "W" if color == "B" else "B"
-                    await _check_capture_foul(game, send, color, captured, ultimate=False)
-                    await _apply_player_rogue_move_effects(
-                        game, send, x, y, color, captured)
-                    await _apply_ai_rogue_response_effects(
-                        game, send, x, y, color)
-
-                    quickthink_bonus = False
-                    if game.rogue_card == "quickthink" and not game.two_player:
-                        if game.rogue_quickthink_stage == 1:
-                            game.rogue_quickthink_stage = 2
-                            game.current_player = game.player_color
-                            quickthink_bonus = True
-                        else:
-                            game.rogue_quickthink_stage = 0
-
-                    game.push_history()
-                    await send({"type": "game_state", **game.to_state()})
-
-                    # Rogue: skip AI turn (twin / exchange / handicap_quest)
-                    if game.rogue_skip_ai:
-                        game.rogue_skip_ai = False
-                        game.current_player = game.player_color
-                        await send({"type": "game_state", **game.to_state()})
-                        skip_msgs = {
-                            "twin": "⚡ 双子星辰！你可以继续落子",
-                            "exchange": "🔄 乾坤挪移！你可以继续落子",
-                            "handicap_quest": "🏋️ 奖励回合！你可以继续落子",
-                        }
-                        await send({"type": "rogue_event",
-                                    "msg": skip_msgs.get(game.rogue_card,
-                                                         "你可以继续落子")})
-                    elif not game.two_player and engine.ready:
-                        if quickthink_bonus:
-                            await send({"type": "rogue_event",
-                                        "msg": "⚡ 快速思考：2 秒追加手已开启"})
-                        else:
-                            await _ai_move(game, send)
-
-                    if not game.game_over and engine.ready:
-                        asyncio.create_task(do_analysis_bg(game))
-
-                # ── pass ──────────────────────────────────────────────────────
-                elif action == "pass":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game or game.game_over:
-                        continue
-                    if (
-                        not game.two_player
-                        and game.rogue_card == "coach_mode"
-                        and game.rogue_coach_moves_left > 0
-                    ):
-                        await send_error("代练上号接管中，请等待强化 AI 完成代打")
-                        continue
-
-                    if game.two_player:
-                        color = game.current_player
-                    else:
-                        if game.current_player != game.player_color:
-                            continue
-                        color = game.player_color
-
-                    # Ultimate mode pass
-                    if game.ultimate and not game.two_player:
-                        if game.ultimate_player_card == "quickthink" and game.ultimate_quickthink_active:
-                            _finish_ultimate_quickthink_turn(game)
-                            game.current_player = game.ai_color
-                            game.push_history()
-                            await send({"type": "game_state", **game.to_state()})
-                            if game.ultimate_move_count >= 20:
-                                await _ultimate_force_score(game, send)
-                            elif engine.ready:
-                                await _ultimate_ai_move(game, send)
-                            if not game.game_over and engine.ready:
-                                asyncio.create_task(do_analysis_bg(game))
-                            continue
-                        _record_ultimate_player_action(game)
-                        game.moves.append((color, "pass"))
-                        game.passed[color] = True
-                        game.current_player = "W" if color == "B" else "B"
-                        game.ultimate_double_pending = False
-                        _finish_ultimate_quickthink_turn(game)
-                        game.push_history()
-                        await send({"type": "game_state", **game.to_state()})
-                        if game.ultimate_move_count >= 20:
-                            await _ultimate_force_score(game, send)
-                        elif engine.ready:
-                            await _ultimate_ai_move(game, send)
-                        if not game.game_over and engine.ready:
-                            asyncio.create_task(do_analysis_bg(game))
-                        continue
-
-                    if engine.ready:
-                        await run_in_executor(
-                            engine.send_command, f"play {color} pass")
-                    game.moves.append((color, "pass"))
-                    game.passed[color] = True
-                    game.current_player = "W" if color == "B" else "B"
-                    if game.rogue_card == "quickthink":
-                        game.rogue_quickthink_stage = 0
-
-                    # Rogue: 让子棋任务 — track opening passes
-                    if (game.rogue_card == "handicap_quest"
-                            and not game.two_player
-                            and color == game.player_color
-                            and not game.rogue_handicap_active):
-                        game.rogue_handicap_passes += 1
-                        if game.rogue_handicap_passes >= ROGUE_HANDICAP_REQUIRED_PASSES:
-                            game.rogue_handicap_active = True
-                            await send({"type": "rogue_event",
-                                        "msg": "🏋️ 让子棋任务完成！"
-                                               f"现在每 {ROGUE_HANDICAP_BONUS_INTERVAL} 手可多下一手"})
-                        else:
-                            await send({"type": "rogue_event",
-                                        "msg": f"🏋️ 虚手 "
-                                               f"{game.rogue_handicap_passes}/"
-                                               f"{ROGUE_HANDICAP_REQUIRED_PASSES}"})
-
-                    game.push_history()
-                    await send({"type": "game_state", **game.to_state()})
-
-                    if not game.two_player and engine.ready:
-                        await _ai_move(game, send)
-
-                    if not game.game_over and engine.ready:
-                        asyncio.create_task(do_analysis_bg(game))
-
-                # ── undo ──────────────────────────────────────────────────────
-                elif action == "undo":
-                    if not game:
-                        game = active_games.get(game_id, touch=True)
-                    if not game or not game.moves:
-                        continue
-                    if game.rogue_card in {"no_regret", "quickthink"}:
-                        await send_error("这张卡会禁用悔棋")
-                        continue
-
-                    if game.challenge_beta:
-                        if _challenge_remaining(game, "undo") <= 0:
-                            await send_error("测试版闯关：悔棋次数已用完")
-                            continue
-                        game.challenge_usage["undo"] += 1
-
-                    undo_count = 1 if game.two_player else (
-                        2 if len(game.moves) >= 2 else 1)
-                    if not game.undo_history(undo_count):
-                        continue
-                    game.game_over = False
-                    game.winner = None
-                    if engine.ready:
-                        await _sync_board_to_katago(game)
-                    _prepare_player_turn_modifiers(game)
-                    await send({"type": "game_state", **game.to_state()})
-
-                    if engine.ready:
-                        analysis = await do_analysis(game)
-                        await send({"type": "analysis", **analysis})
+                continue
 
             except WebSocketDisconnect:
                 raise
@@ -1463,206 +850,6 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
             await send({"type": "error", "message": f"服务器错误: {e}"})
         except Exception:
             pass
-
-
-def _get_star_points(size: int) -> list[tuple[int, int]]:
-    """Return star points + tengen for a given board size."""
-    if size == 19:
-        pts = [(3, 3), (9, 3), (15, 3), (3, 9), (9, 9), (15, 9),
-               (3, 15), (9, 15), (15, 15)]
-    elif size == 13:
-        pts = [(3, 3), (6, 3), (9, 3), (3, 6), (6, 6), (9, 6),
-               (3, 9), (6, 9), (9, 9)]
-    elif size == 9:
-        pts = [(2, 2), (4, 2), (6, 2), (2, 4), (4, 4), (6, 4),
-               (2, 6), (4, 6), (6, 6)]
-    else:
-        c = size // 2
-        pts = [(c, c)]
-    return pts
-
-
-def _get_blackhole_points(size: int) -> list[tuple[int, int]]:
-    """Return a diamond (manhattan ≤ 2) centered on tengen = 13 points."""
-    c = size // 2
-    pts = []
-    for dy in range(-2, 3):
-        for dx in range(-2, 3):
-            if abs(dx) + abs(dy) <= 2:
-                nx, ny = c + dx, c + dy
-                if 0 <= nx < size and 0 <= ny < size:
-                    pts.append((nx, ny))
-    return pts
-
-
-def _get_golden_corner_points(size: int, corner: int, span: int = 5) -> list[tuple[int, int]]:
-    """Return a corner forbidden zone (0=TL, 1=TR, 2=BL, 3=BR)."""
-    pts = []
-    for dy in range(span):
-        for dx in range(span):
-            if corner == 0:
-                pts.append((dx, dy))
-            elif corner == 1:
-                pts.append((size - 1 - dx, dy))
-            elif corner == 2:
-                pts.append((dx, size - 1 - dy))
-            else:
-                pts.append((size - 1 - dx, size - 1 - dy))
-    return pts
-
-
-def _get_sansan_points(size: int) -> list[tuple[int, int]]:
-    """Return all four 3-3 points."""
-    return [(2, 2), (size - 3, 2), (2, size - 3), (size - 3, size - 3)]
-
-
-def _pick_joseki_targets(size: int, n: int = 8) -> list[tuple[int, int]]:
-    """Pick n joseki-ish corner points for joseki_ocd."""
-    import time
-    rng = random.Random(time.time_ns())
-    offsets = [(2, 2), (2, 3), (3, 2), (3, 3), (2, 4), (4, 2), (3, 4), (4, 3)]
-    candidates = []
-    for bx in (0, size - 1):
-        for by in (0, size - 1):
-            for ox, oy in offsets:
-                x = ox if bx == 0 else size - 1 - ox
-                y = oy if by == 0 else size - 1 - oy
-                if 0 <= x < size and 0 <= y < size:
-                    candidates.append((x, y))
-    candidates = list(dict.fromkeys(candidates))
-    rng.shuffle(candidates)
-    return candidates[:n]
-
-
-def _is_lowline(x: int, y: int, size: int) -> bool:
-    """Check if a coord is on the 3rd line or lower (edge-adjacent)."""
-    return x <= 2 or x >= size - 3 or y <= 2 or y >= size - 3
-
-
-def _mirror_coord(x: int, y: int, size: int) -> tuple[int, int]:
-    """Mirror a coordinate about tengen (center)."""
-    return (size - 1 - x, size - 1 - y)
-
-
-def _adjacent_points(x: int, y: int, size: int) -> list[tuple[int, int]]:
-    """Return orthogonally adjacent points within the board."""
-    pts = []
-    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-        nx, ny = x + dx, y + dy
-        if 0 <= nx < size and 0 <= ny < size:
-            pts.append((nx, ny))
-    return pts
-
-
-def _adjacent8_points(x: int, y: int, size: int) -> list[tuple[int, int]]:
-    """Return the 8 neighboring points around a coordinate."""
-    pts = []
-    for dy in (-1, 0, 1):
-        for dx in (-1, 0, 1):
-            if dx == 0 and dy == 0:
-                continue
-            nx, ny = x + dx, y + dy
-            if 0 <= nx < size and 0 <= ny < size:
-                pts.append((nx, ny))
-    return pts
-
-
-def _set_points_to_color(game: GoGame, points: list[tuple[int, int]], color: str) -> list[tuple[int, int]]:
-    """Apply a batch color change and stabilize nearby groups immediately."""
-    return _apply_magic_points(game, points, color, overwrite_enemy=True)
-
-
-def _remove_dead_groups(game: GoGame, seeds: list[tuple[int, int]], color_value: int) -> list[tuple[int, int]]:
-    removed = []
-    seen = set()
-    for x, y in seeds:
-        if not (0 <= x < game.size and 0 <= y < game.size):
-            continue
-        if game.board[y][x] != color_value or (x, y) in seen:
-            continue
-        grp = game.get_group(x, y)
-        seen.update(grp)
-        if grp and not game.has_liberty(grp):
-            for gx, gy in grp:
-                game.board[gy][gx] = 0
-                removed.append((gx, gy))
-    return removed
-
-
-def _apply_magic_points(
-    game: GoGame,
-    points: list[tuple[int, int]],
-    color: str,
-    *,
-    overwrite_enemy: bool,
-) -> list[tuple[int, int]]:
-    """Apply multi-stone effects as one stabilized batch so later turns don't
-    unexpectedly delete or flip those stones.
-    """
-    cv = 1 if color == "B" else 2
-    ov = 3 - cv
-    touched = []
-    seen = set()
-    for x, y in points:
-        if (x, y) in seen:
-            continue
-        seen.add((x, y))
-        if not (0 <= x < game.size and 0 <= y < game.size):
-            continue
-        cell = game.board[y][x]
-        if cell == cv:
-            continue
-        if cell == ov and not overwrite_enemy:
-            continue
-        if cell not in (0, ov):
-            continue
-        game.board[y][x] = cv
-        touched.append((x, y))
-
-    if not touched:
-        return []
-
-    frontier = set(touched)
-    for x, y in touched:
-        frontier.update(game.neighbors(x, y))
-    frontier_list = list(frontier)
-    _remove_dead_groups(game, frontier_list, ov)
-    _remove_dead_groups(game, frontier_list, cv)
-    game.ko_point = None
-    return [(x, y) for x, y in touched if game.board[y][x] == cv]
-
-
-def _try_spawn_bonus_stone(game: GoGame, x: int, y: int, color: str) -> bool:
-    """Place a bonus stone conservatively so later turns don't "eat" invalid spawns."""
-    if not (0 <= x < game.size and 0 <= y < game.size):
-        return False
-    if game.board[y][x] != 0:
-        return False
-
-    cv = 1 if color == "B" else 2
-    ov = 3 - cv
-    game.board[y][x] = cv
-
-    for nx, ny in game.neighbors(x, y):
-        if game.board[ny][nx] != ov:
-            continue
-        grp = game.get_group(nx, ny)
-        if not game.has_liberty(grp):
-            for gx, gy in grp:
-                game.board[gy][gx] = 0
-
-    own_group = game.get_group(x, y)
-    if not own_group or not game.has_liberty(own_group):
-        game.board[y][x] = 0
-        game.ko_point = None
-        return False
-    game.ko_point = None
-    return True
-
-
-def _spawn_bonus_points(game: GoGame, points: list[tuple[int, int]], color: str) -> list[tuple[int, int]]:
-    """Spawn bonus stones as a stabilized batch without overwriting enemy stones."""
-    return _apply_magic_points(game, points, color, overwrite_enemy=False)
 
 
 def _record_ultimate_turn(game: GoGame) -> None:
@@ -1689,11 +876,6 @@ def _apply_score_penalty(game: GoGame, offender: str, amount: float) -> None:
         game.komi += amount
     else:
         game.komi -= amount
-
-
-def _count_stones(game: GoGame, color_val: int) -> int:
-    """Count how many stones of *color_val* (1=B, 2=W) are on the board."""
-    return sum(cell == color_val for row in game.board for cell in row)
 
 
 async def _check_capture_foul(game: GoGame, send_fn, offender: str, captured: int, *, ultimate: bool) -> None:
@@ -1753,121 +935,6 @@ async def _check_capture_foul(game: GoGame, send_fn, offender: str, captured: in
         await run_in_executor(engine.send_command, f"komi {game.komi}")
 
 
-def _ai_style_target_score(game: GoGame, color: str, coord: tuple[int, int], style: str) -> float:
-    x, y = coord
-    center = (game.size - 1) / 2.0
-    edge_dist = min(x, y, game.size - 1 - x, game.size - 1 - y)
-    center_dist = abs(x - center) + abs(y - center)
-    own = 1 if color == "B" else 2
-    opp = 3 - own
-    own_adj = 0
-    opp_adj = 0
-    for nx, ny in game.neighbors(x, y):
-        cell = game.board[ny][nx]
-        if cell == own:
-            own_adj += 1
-        elif cell == opp:
-            opp_adj += 1
-    if style == "territory":
-        return -edge_dist * 3 + own_adj - opp_adj * 0.25
-    if style == "influence":
-        return -center_dist * 2 + opp_adj * 0.4
-    if style == "attack":
-        return opp_adj * 4 + own_adj * 0.5 - edge_dist * 0.3
-    if style == "defense":
-        return own_adj * 4 + opp_adj * 0.2 - center_dist * 0.2
-    return 0.0
-
-
-def _choose_ai_style_move(game: GoGame, color: str, top_moves: list[dict], style: str) -> Optional[str]:
-    if style not in AI_STYLE_OPTIONS or style == "balanced":
-        return None
-    best_move = None
-    best_score = None
-    for item in top_moves[:8]:
-        gtp = (item.get("move") or "").strip()
-        coord = gtp_to_coord(gtp, game.size)
-        if not coord:
-            continue
-        x, y = coord
-        if game.board[y][x] != 0:
-            continue
-        score = _ai_style_target_score(game, color, coord, style)
-        if best_score is None or score > best_score:
-            best_score = score
-            best_move = gtp
-    return best_move
-
-
-def _collect_joseki_burst_points(
-    game: GoGame,
-    anchors: list[tuple[int, int]],
-    color: str,
-    count: int,
-    rng: random.Random,
-) -> list[tuple[int, int]]:
-    """Collect flashy bonus points around joseki anchors for ultimate mode."""
-    cv = 1 if color == "B" else 2
-    nearby = []
-    seen = set()
-    for ax, ay in anchors:
-        for dy in range(-2, 3):
-            for dx in range(-2, 3):
-                nx, ny = ax + dx, ay + dy
-                if 0 <= nx < game.size and 0 <= ny < game.size:
-                    if (nx, ny) in seen or game.board[ny][nx] == cv:
-                        continue
-                    seen.add((nx, ny))
-                    nearby.append((nx, ny))
-    rng.shuffle(nearby)
-    chosen = nearby[:count]
-    if len(chosen) < count:
-        leftovers = [
-            (x, y)
-            for y in range(game.size)
-            for x in range(game.size)
-            if game.board[y][x] != cv and (x, y) not in seen
-        ]
-        rng.shuffle(leftovers)
-        chosen.extend(leftovers[: count - len(chosen)])
-    return chosen
-
-
-def _diamond_points(
-    cx: int,
-    cy: int,
-    radius: int,
-    size: int,
-    *,
-    boundary_only: bool = False,
-    include_center: bool = True,
-) -> list[tuple[int, int]]:
-    pts = []
-    for dy in range(-radius, radius + 1):
-        for dx in range(-radius, radius + 1):
-            dist = abs(dx) + abs(dy)
-            if dist > radius:
-                continue
-            if boundary_only and dist != radius:
-                continue
-            if not include_center and dist == 0:
-                continue
-            nx, ny = cx + dx, cy + dy
-            if 0 <= nx < size and 0 <= ny < size:
-                pts.append((nx, ny))
-    return pts
-
-
-def _get_square_points(cx: int, cy: int, radius: int, size: int) -> list[tuple[int, int]]:
-    pts = []
-    for dy in range(-radius, radius + 1):
-        for dx in range(-radius, radius + 1):
-            nx, ny = cx + dx, cy + dy
-            if 0 <= nx < size and 0 <= ny < size:
-                pts.append((nx, ny))
-    return pts
-
-
 def _pick_fog_mask(size: int, rng: random.Random) -> list[tuple[int, int]]:
     cx = rng.randint(0, size - 1)
     cy = rng.randint(0, size - 1)
@@ -1884,251 +951,6 @@ def _pick_fog_point(game, rng: random.Random) -> list[tuple[int, int]]:
     if not candidates:
         return []
     return [rng.choice(candidates)]
-
-
-def _shape_key(points: list[tuple[int, int]] | tuple[tuple[int, int], ...]) -> tuple[tuple[int, int], ...]:
-    return tuple(sorted(points))
-
-
-def _shape_center(shape: tuple[tuple[int, int], ...]) -> tuple[int, int]:
-    xs = [x for x, _ in shape]
-    ys = [y for _, y in shape]
-    return ((min(xs) + max(xs)) // 2, (min(ys) + max(ys)) // 2)
-
-
-def _find_new_fool_shapes(
-    game: GoGame,
-    color: str,
-    seen_shapes: set[tuple[tuple[int, int], ...]],
-) -> list[tuple[tuple[int, int], ...]]:
-    cv = 1 if color == "B" else 2
-    found = []
-    found_keys = set()
-    orientations = [
-        ((1, 0), (0, 1)),
-        ((-1, 0), (0, 1)),
-        ((1, 0), (0, -1)),
-        ((-1, 0), (0, -1)),
-    ]
-
-    for y in range(game.size):
-        for x in range(game.size):
-            if game.board[y][x] != cv:
-                continue
-            for (ax, ay), (bx, by) in orientations:
-                p1 = (x + ax, y + ay)
-                p2 = (x + bx, y + by)
-                if not (0 <= p1[0] < game.size and 0 <= p1[1] < game.size):
-                    continue
-                if not (0 <= p2[0] < game.size and 0 <= p2[1] < game.size):
-                    continue
-                if game.board[p1[1]][p1[0]] != cv or game.board[p2[1]][p2[0]] != cv:
-                    continue
-                diag = (x + ax + bx, y + ay + by)
-                if 0 <= diag[0] < game.size and 0 <= diag[1] < game.size:
-                    if game.board[diag[1]][diag[0]] == cv:
-                        continue
-                shape = _shape_key([(x, y), p1, p2])
-                if shape in seen_shapes or shape in found_keys:
-                    continue
-                loosely_isolated = True
-                shape_set = set(shape)
-                for sx, sy in shape:
-                    for nx, ny in _adjacent_points(sx, sy, game.size):
-                        if (nx, ny) in shape_set:
-                            continue
-                        if game.board[ny][nx] == cv:
-                            loosely_isolated = False
-                            break
-                    if not loosely_isolated:
-                        break
-                if not loosely_isolated:
-                    continue
-                found.append(shape)
-                found_keys.add(shape)
-
-    return found
-
-
-def _random_hidden_center(size: int, radius: int, rng: random.Random) -> tuple[int, int]:
-    low = max(radius, 0)
-    high = max(low, size - radius - 1)
-    return (rng.randint(low, high), rng.randint(low, high))
-
-
-def _get_corner_square_points(size: int, corner: int, span: int) -> list[tuple[int, int]]:
-    pts = []
-    for dy in range(span):
-        for dx in range(span):
-            if corner == 0:
-                pts.append((dx, dy))
-            elif corner == 1:
-                pts.append((size - span + dx, dy))
-            elif corner == 2:
-                pts.append((dx, size - span + dy))
-            else:
-                pts.append((size - span + dx, size - span + dy))
-    return pts
-
-
-def _get_corner_helper_spawn_points(size: int, corner: int, span: int = 5) -> list[tuple[int, int]]:
-    inner = span - 1
-    min_line = 2
-    pts = []
-    if corner == 0:
-        pts.extend((x, inner) for x in range(min_line, span))
-        pts.extend((inner, y) for y in range(min_line, span - 1))
-    elif corner == 1:
-        pts.extend((x, inner) for x in range(size - span, size - min_line))
-        pts.extend((size - span, y) for y in range(min_line, span - 1))
-    elif corner == 2:
-        pts.extend((x, size - span) for x in range(min_line, span))
-        pts.extend((inner, y) for y in range(size - span + 1, size - min_line))
-    else:
-        pts.extend((x, size - span) for x in range(size - span, size - min_line))
-        pts.extend((size - span, y) for y in range(size - span + 1, size - min_line))
-    return list(dict.fromkeys(pts))
-
-
-def _get_corner_boundary_points(size: int, corner: int, span: int) -> list[tuple[int, int]]:
-    pts = []
-    for x, y in _get_corner_square_points(size, corner, span):
-        min_x = 0 if corner in (0, 2) else size - span
-        max_x = span - 1 if corner in (0, 2) else size - 1
-        min_y = 0 if corner in (0, 1) else size - span
-        max_y = span - 1 if corner in (0, 1) else size - 1
-        if x in (min_x, max_x) or y in (min_y, max_y):
-            pts.append((x, y))
-    return pts
-
-
-def _find_corner_with_min_stones(
-    game: GoGame,
-    color: str,
-    span: int,
-    count: int,
-    exclude: Optional[list[int]] = None,
-) -> Optional[int]:
-    cv = 1 if color == "B" else 2
-    excluded = set(exclude or [])
-    for corner in range(4):
-        if corner in excluded:
-            continue
-        own = sum(
-            1
-            for x, y in _get_corner_square_points(game.size, corner, span)
-            if game.board[y][x] == cv
-        )
-        if own >= count:
-            return corner
-    return None
-
-
-def _line_key(points: list[tuple[int, int]] | tuple[tuple[int, int], ...]) -> tuple[tuple[int, int], ...]:
-    return tuple(sorted(points))
-
-
-def _find_exact_five_lines(game: GoGame, color: str) -> list[tuple[tuple[int, int], ...]]:
-    cv = 1 if color == "B" else 2
-    lines = []
-    seen = set()
-    directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
-    for y in range(game.size):
-        for x in range(game.size):
-            if game.board[y][x] != cv:
-                continue
-            for dx, dy in directions:
-                px, py = x - dx, y - dy
-                if 0 <= px < game.size and 0 <= py < game.size and game.board[py][px] == cv:
-                    continue
-                run = []
-                cx, cy = x, y
-                while 0 <= cx < game.size and 0 <= cy < game.size and game.board[cy][cx] == cv:
-                    run.append((cx, cy))
-                    cx += dx
-                    cy += dy
-                if len(run) != 5:
-                    continue
-                key = _line_key(run)
-                if key in seen:
-                    continue
-                seen.add(key)
-                lines.append(key)
-    return lines
-
-
-def _line_endpoints(
-    line: tuple[tuple[int, int], ...]
-) -> tuple[Optional[tuple[int, int]], Optional[tuple[int, int]]]:
-    if len(line) != 5:
-        return None, None
-    sorted_line = sorted(line)
-    x1, y1 = sorted_line[0]
-    x2, y2 = sorted_line[1]
-    dx, dy = x2 - x1, y2 - y1
-    start = (x1 - dx, y1 - dy)
-    end = (sorted_line[-1][0] + dx, sorted_line[-1][1] + dy)
-    return start, end
-
-
-def _spawn_random_owned_stones(
-    game: GoGame,
-    color: str,
-    count: int,
-    rng: random.Random,
-    *,
-    area: Optional[list[tuple[int, int]]] = None,
-    forbidden: Optional[set[tuple[int, int]]] = None,
-) -> list[tuple[int, int]]:
-    forbidden = forbidden or set()
-    candidates = list(area) if area is not None else [
-        (x, y)
-        for y in range(game.size)
-        for x in range(game.size)
-    ]
-    unique = []
-    seen = set()
-    for point in candidates:
-        if point in seen or point in forbidden:
-            continue
-        seen.add(point)
-        x, y = point
-        if game.board[y][x] == 0:
-            unique.append(point)
-    rng.shuffle(unique)
-    return _spawn_bonus_points(game, unique[:count], color)
-
-
-def _clear_random_enemy_stones(
-    game: GoGame,
-    color: str,
-    count: int,
-    rng: random.Random,
-    *,
-    area: Optional[list[tuple[int, int]]] = None,
-) -> list[tuple[int, int]]:
-    ov = 2 if color == "B" else 1
-    candidates = list(area) if area is not None else [
-        (x, y)
-        for y in range(game.size)
-        for x in range(game.size)
-    ]
-    enemies = []
-    seen = set()
-    for point in candidates:
-        if point in seen:
-            continue
-        seen.add(point)
-        x, y = point
-        if game.board[y][x] == ov:
-            enemies.append(point)
-    rng.shuffle(enemies)
-    cleared = enemies[:count]
-    for x, y in cleared:
-        game.board[y][x] = 0
-    if cleared:
-        game.ko_point = None
-    return cleared
 
 
 def _get_player_bonus_forbidden_points(game: GoGame, color: str) -> set[tuple[int, int]]:
@@ -2311,28 +1133,6 @@ async def _trigger_ultimate_five_in_row(game: GoGame, send_fn, color: str):
     return chain_count > 0
 
 
-def _line_points_between(x1: int, y1: int, x2: int, y2: int) -> list[tuple[int, int]]:
-    pts: list[tuple[int, int]] = []
-    dx = abs(x2 - x1)
-    dy = abs(y2 - y1)
-    sx = 1 if x1 < x2 else -1
-    sy = 1 if y1 < y2 else -1
-    err = dx - dy
-    x, y = x1, y1
-    while True:
-        pts.append((x, y))
-        if x == x2 and y == y2:
-            break
-        e2 = err * 2
-        if e2 > -dy:
-            err -= dy
-            x += sx
-        if e2 < dx:
-            err += dx
-            y += sy
-    return pts
-
-
 def _player_non_pass_coords(game: GoGame, color: str, limit: Optional[int] = None) -> list[tuple[int, int]]:
     coords = []
     for move_color, gtp in game.moves:
@@ -2383,55 +1183,6 @@ def _get_ai_rogue_forbidden_points(game: GoGame) -> list[tuple[int, int]]:
     if card in {"blackhole", "golden_corner", "fog"}:
         return list(game.ai_rogue_seal_points)
     return []
-
-
-def _rogue_card_ids(game: GoGame) -> list[str]:
-    cards: list[str] = []
-    for card_id in list(getattr(game, "challenge_cards", [])) + [game.rogue_card]:
-        if card_id and card_id not in cards:
-            cards.append(card_id)
-    return cards
-
-
-def _rogue_has(game: GoGame, card_id: str) -> bool:
-    return card_id in _rogue_card_ids(game)
-
-
-def _challenge_remaining(game: GoGame, key: str) -> int:
-    return max(0, game.challenge_limits.get(key, 0) - game.challenge_usage.get(key, 0))
-
-
-def _challenge_category_counts(game: GoGame) -> dict[str, int]:
-    return _challenge_category_counts_from_cards(list(getattr(game, "challenge_cards", [])))
-
-
-def _challenge_has_set(game: GoGame, category: str, need: int = CHALLENGE_SET_MIN_COUNT) -> bool:
-    if not getattr(game, "challenge_beta", False):
-        return False
-    return _challenge_category_counts(game).get(category, 0) >= need
-
-
-def _challenge_zone_points(game: GoGame, points: list[tuple[int, int]]) -> list[tuple[int, int]]:
-    if not _challenge_has_set(game, "zone"):
-        return list(points)
-    expanded: set[tuple[int, int]] = set()
-    for px, py in points:
-        for dy in range(-CHALLENGE_ZONE_EXPAND_RADIUS, CHALLENGE_ZONE_EXPAND_RADIUS + 1):
-            for dx in range(-CHALLENGE_ZONE_EXPAND_RADIUS, CHALLENGE_ZONE_EXPAND_RADIUS + 1):
-                nx, ny = px + dx, py + dy
-                if 0 <= nx < game.size and 0 <= ny < game.size:
-                    expanded.add((nx, ny))
-    return sorted(expanded)
-
-
-def _challenge_active_use_bonus(game: GoGame, card_id: str) -> int:
-    if not _challenge_has_set(game, "active"):
-        return 0
-    return CHALLENGE_ACTIVE_USE_BONUS if _challenge_card_category(card_id) == "active" else 0
-
-
-def _challenge_should_bonus_derivative(game: GoGame) -> bool:
-    return _challenge_has_set(game, "derivative") and random.random() < CHALLENGE_DERIVATIVE_BONUS_CHANCE
 
 
 async def _challenge_apply_trap_bonus(game: GoGame, send_fn, source_name: str) -> None:
@@ -2565,29 +1316,8 @@ async def _activate_rogue_card(game: GoGame, send_fn, card_id: str):
     """Apply immediate effects when the player picks a rogue card."""
     cdef = get_rogue_card(card_id)
     game.rogue_card = card_id
-    game.rogue_joseki_targets = []
-    game.rogue_joseki_hits = 0
-    game.rogue_joseki_done = False
-    game.rogue_godhand_center = None
-    game.rogue_godhand_trigger = []
-    game.rogue_godhand_done = False
-    game.rogue_sansan_trap_done = False
-    game.rogue_corner_helper_done = set()
-    game.rogue_sanrensei_done = False
-    game.rogue_puppet_target = None
-    game.rogue_five_in_row_seen = set()
-    game.rogue_last_stand_done = {"B": False, "W": False}
-    game.rogue_capture_foul_progress = {"B": 0, "W": 0}
-    game.rogue_coach_moves_left = 0
-    game.rogue_coach_bonus_checked = False
-    game.rogue_quickthink_stage = 0
-    game.rogue_fool_shapes = set()
-    if card_id != "seal":
-        game.rogue_waiting_seal = False
-    if card_id not in {"seal", "blackhole", "golden_corner", "fog"}:
-        game.rogue_seal_points = []
-    if "uses" in cdef:
-        game.rogue_uses[card_id] = cdef["uses"]
+    reset_rogue_effect_state(game)
+    apply_rogue_card_uses(game, card_id, cdef)
 
     if card_id == "komi_relief":
         if game.player_color == "B":
@@ -2665,36 +1395,17 @@ async def _activate_ai_rogue_card(game: GoGame, send_fn, card_id: str):
 async def _apply_challenge_rogue_loadout(game: GoGame, send_fn):
     cards = rogue_card_ids(game.challenge_cards)
     game.rogue_card = cards[-1] if cards else None
-    game.rogue_uses = {}
-    game.rogue_waiting_seal = False
-    game.rogue_skip_ai = False
-    game.rogue_joseki_targets = []
-    game.rogue_joseki_hits = 0
-    game.rogue_joseki_done = False
-    game.rogue_godhand_center = None
-    game.rogue_godhand_trigger = []
-    game.rogue_godhand_done = False
-    game.rogue_sansan_trap_done = False
-    game.rogue_corner_helper_done = set()
-    game.rogue_sanrensei_done = False
-    game.rogue_puppet_target = None
-    game.rogue_five_in_row_seen = set()
-    game.rogue_last_stand_done = {"B": False, "W": False}
-    game.rogue_capture_foul_progress = {"B": 0, "W": 0}
-    game.rogue_coach_moves_left = 0
-    game.rogue_coach_bonus_checked = False
-    game.rogue_quickthink_stage = 0
-    game.rogue_fool_shapes = set()
-    game.rogue_handicap_passes = 0
-    game.rogue_handicap_active = False
-    game.rogue_handicap_bonuses = 0
-    game.rogue_seal_points = []
+    reset_rogue_effect_state(game, reset_uses=True, reset_handicap=True)
     game.rogue_enabled = bool(cards)
 
     for card_id in cards:
         cdef = get_rogue_card(card_id)
-        if "uses" in cdef:
-            game.rogue_uses[card_id] = cdef["uses"] + _challenge_active_use_bonus(game, card_id)
+        apply_rogue_card_uses(
+            game,
+            card_id,
+            cdef,
+            bonus=_challenge_active_use_bonus(game, card_id),
+        )
         if card_id == "komi_relief":
             if game.player_color == "B":
                 game.komi = max(0.5, game.komi - 7.0)
@@ -2741,121 +1452,21 @@ async def _apply_player_rogue_move_effects(game: GoGame, send_fn,
         await send_fn({"type": "rogue_event",
                        "msg": f"蚕食触发：提掉 {captured} 子，当前贴目变为 {game.komi}"})
 
-    if _rogue_has(game, "sprout") and captured > 0:
-            adj = _adjacent_points(x, y, game.size)
-            empty_adj = [(ax, ay) for ax, ay in adj if game.board[ay][ax] == 0]
-            if empty_adj:
-                bx, by = random.choice(empty_adj)
-                changed = _spawn_bonus_points(game, [(bx, by)], color)
-                if changed:
-                    if engine.ready:
-                        await _sync_board_to_katago(game)
-                    await send_fn({"type": "rogue_event",
-                                   "msg": f"萌芽触发：在 {coord_to_gtp(bx, by, game.size)} 额外长出一颗己方棋子"})
-
-    if (_rogue_has(game, "joseki_ocd")
-            and not game.rogue_joseki_done):
-        if (x, y) in game.rogue_joseki_targets:
-            game.rogue_joseki_hits += 1
-            await send_fn({"type": "rogue_event",
-                           "msg": f"定式命中 ({game.rogue_joseki_hits}/{ROGUE_JOSEKI_REQUIRED_HITS})"})
-        if game.rogue_joseki_hits >= ROGUE_JOSEKI_REQUIRED_HITS:
-            game.rogue_joseki_done = True
-            remaining_targets = [
-                (tx, ty)
-                for tx, ty in game.rogue_joseki_targets
-                if game.board[ty][tx] != (1 if color == "B" else 2)
-            ]
-            changed = _set_points_to_color(game, remaining_targets, color)
-            if changed and engine.ready:
-                await _sync_board_to_katago(game)
-            await send_fn({"type": "rogue_event",
-                           "msg": f"定式强迫症完成，自动补上 {len(changed)} 颗同色棋"})
-
-    if (_rogue_has(game, "god_hand")
-            and not game.rogue_godhand_done
-            and (x, y) in game.rogue_godhand_trigger):
-        game.rogue_godhand_done = True
-        center = game.rogue_godhand_center or (x, y)
-        area = _get_square_points(center[0], center[1], ROGUE_GODHAND_RADIUS, game.size)
-        random.shuffle(area)
-        targets = [(px, py) for px, py in area if game.board[py][px] == 0][:ROGUE_GODHAND_FILL_COUNT]
-        changed = _set_points_to_color(game, targets, color)
-        if changed and engine.ready:
-            await _sync_board_to_katago(game)
-        await send_fn({"type": "rogue_event",
-                       "msg": f"✨ 神之一手发动，在暗点周围爆发 {len(changed)} 颗同色棋"})
-        await _challenge_apply_trap_bonus(game, send_fn, "神之一手")
-
-    if (game.two_player
-            and _rogue_has(game, "sansan_trap")
-            and not game.rogue_sansan_trap_done
-            and (x, y) in _get_sansan_points(game.size)):
-        mover_opening = len(_player_non_pass_coords(game, color, limit=2)) == 1
-        if not mover_opening:
-            nearby = []
-        else:
-            trigger_color = "W" if color == "B" else "B"
-            nearby = [(nx, ny) for nx, ny in _adjacent8_points(x, y, game.size) if game.board[ny][nx] == 0]
-        random.shuffle(nearby)
-        changed = _spawn_bonus_points(game, nearby[:ROGUE_SANSAN_TRAP_STONES], trigger_color) if nearby else []
-        if changed:
-            game.rogue_sansan_trap_done = True
-            if engine.ready:
-                await _sync_board_to_katago(game)
-            await send_fn({"type": "rogue_event",
-                           "msg": f"△ 三三陷阱发动，在 {coord_to_gtp(x, y, game.size)} 周围反打 {len(changed)} 子"})
-
-    if _rogue_has(game, "corner_helper"):
-        corner = _find_corner_with_min_stones(
-            game,
-            color,
-            5,
-            ROGUE_CORNER_HELPER_TRIGGER_STONES,
-            exclude=list(game.rogue_corner_helper_done),
-        )
-        if corner is not None:
-            candidates = [
-                (px, py)
-                for px, py in _get_corner_helper_spawn_points(game.size, corner, 5)
-                if game.board[py][px] == 0
-            ]
-            random.shuffle(candidates)
-            changed = _spawn_bonus_points(game, candidates[:ROGUE_CORNER_HELPER_STONES], color)
-            if changed:
-                game.rogue_corner_helper_done.add(corner)
-                if engine.ready:
-                    await _sync_board_to_katago(game)
-                await send_fn({"type": "rogue_event",
-                               "msg": f"🏯 守角辅助补强了 {len(changed)} 颗角部援军"})
-
-    if _rogue_has(game, "sanrensei") and not game.rogue_sanrensei_done:
-        player_moves = _player_non_pass_coords(game, color, limit=ROGUE_SANRENSEI_OPENING_MOVES)
-        star_set = set(_get_star_points(game.size))
-        first_moves = player_moves[:ROGUE_SANRENSEI_REQUIRED_STARS]
-        if len(first_moves) >= ROGUE_SANRENSEI_REQUIRED_STARS and all(pt in star_set for pt in first_moves):
-            choices = [pt for pt in first_moves if game.board[pt[1]][pt[0]] == 0]
-            if len(choices) < ROGUE_SANRENSEI_BONUS_STONES:
-                choices.extend([pt for pt in star_set if game.board[pt[1]][pt[0]] == 0 and pt not in choices])
-            random.shuffle(choices)
-            changed = _spawn_bonus_points(game, choices[:ROGUE_SANRENSEI_BONUS_STONES], color)
-            support_pool = []
-            for sx, sy in (first_moves + changed):
-                for px, py in _adjacent8_points(sx, sy, game.size):
-                    if game.board[py][px] == 0 and (px, py) not in support_pool:
-                        support_pool.append((px, py))
-            random.shuffle(support_pool)
-            if support_pool:
-                changed.extend(_spawn_bonus_points(game, support_pool[:ROGUE_SANRENSEI_SUPPORT_STONES], color))
-            if changed and _challenge_should_bonus_derivative(game):
-                extra_pool = [pt for pt in star_set if game.board[pt[1]][pt[0]] == 0 and pt not in changed]
-                random.shuffle(extra_pool)
-                changed.extend(_spawn_bonus_points(game, extra_pool[:1], color))
-            game.rogue_sanrensei_done = True
-            if changed and engine.ready:
-                await _sync_board_to_katago(game)
-            await send_fn({"type": "rogue_event",
-                           "msg": f"✦ 三连星发动，自动补出 {len(changed)} 颗星位棋"})
+    board_effect = apply_player_rogue_board_effects(
+        game,
+        x=x,
+        y=y,
+        color=color,
+        captured=captured,
+        coord_to_gtp=coord_to_gtp,
+        gtp_to_coord=gtp_to_coord,
+    )
+    if board_effect.modified and engine.ready:
+        await _sync_board_to_katago(game)
+    for msg in board_effect.messages:
+        await send_fn({"type": "rogue_event", "msg": msg})
+    for source_name in board_effect.trap_bonus_sources:
+        await _challenge_apply_trap_bonus(game, send_fn, source_name)
 
     if _rogue_has(game, "no_regret") and random.random() < ROGUE_NO_REGRET_CHANCE:
         bonus = await _pick_second_best_point(game, color)
@@ -2867,52 +1478,11 @@ async def _apply_player_rogue_move_effects(game: GoGame, send_fn,
                 await send_fn({"type": "rogue_event",
                                "msg": f"🚫 永不悔棋发动，在 {coord_to_gtp(bonus[0], bonus[1], game.size)} 补了一手"})
 
-    if _rogue_has(game, "foolish_wisdom"):
-        new_shapes = _find_new_fool_shapes(game, color, game.rogue_fool_shapes)
-        changed = []
-        for shape in new_shapes:
-            game.rogue_fool_shapes.add(shape)
-            cx, cy = _shape_center(shape)
-            area = [
-                (px, py)
-                for px, py in _get_square_points(cx, cy, 2, game.size)
-                if game.board[py][px] == 0
-            ]
-            random.shuffle(area)
-            changed.extend(_spawn_bonus_points(game, area[:ROGUE_FOOLISH_FILL_COUNT], color))
-            if _challenge_should_bonus_derivative(game):
-                extra_area = [
-                    (px, py)
-                    for px, py in _get_square_points(cx, cy, 2, game.size)
-                    if game.board[py][px] == 0
-                ]
-                random.shuffle(extra_area)
-                changed.extend(_spawn_bonus_points(game, extra_area[:1], color))
-        if changed and engine.ready:
-            await _sync_board_to_katago(game)
-        if new_shapes:
-            await send_fn({"type": "rogue_event",
-                           "msg": f"🪤 大智若愚发动，识别到 {len(new_shapes)} 个愚形，额外长出 {len(changed)} 颗己方棋子"})
-
     if _rogue_has(game, "five_in_row"):
         await _trigger_rogue_five_in_row(game, send_fn, color)
 
     if _rogue_has(game, "last_stand"):
         await _trigger_rogue_last_stand(game, send_fn, color, (x, y))
-
-    if (_rogue_has(game, "handicap_quest")
-            and game.rogue_handicap_active
-            and game.rogue_handicap_bonuses < ROGUE_HANDICAP_MAX_BONUSES
-            and not game.two_player):
-        p_moves = sum(1 for c, m in game.moves
-                      if c == game.player_color and m.upper() != "PASS")
-        if (p_moves > 0
-                and p_moves % ROGUE_HANDICAP_BONUS_INTERVAL == 0):
-            game.rogue_skip_ai = True
-            game.rogue_handicap_bonuses += 1
-            await send_fn({"type": "rogue_event",
-                           "msg": f"让子任务奖励触发：每满 {ROGUE_HANDICAP_BONUS_INTERVAL} 手获得一次奖励，"
-                                  f"当前进度 {game.rogue_handicap_bonuses}/{ROGUE_HANDICAP_MAX_BONUSES}，AI 将虚手一次"})
 
     await _challenge_maybe_reduce_ai_level(game, send_fn)
 
@@ -2996,367 +1566,35 @@ async def _apply_ultimate_effect(game: GoGame, send_fn, x: int, y: int,
     import time as _time
     rng = random.Random(_time.time_ns())
     size = game.size
-    cv = 1 if color == "B" else 2
-    ov = 3 - cv
     modified = False
 
-    if card == "proliferate":
-        # Spawn 5 same-color stones in 5×5 area
-        candidates = []
-        for dy in range(-2, 3):
-            for dx in range(-2, 3):
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < size and 0 <= ny < size and game.board[ny][nx] == 0:
-                    candidates.append((nx, ny))
-        rng.shuffle(candidates)
-        placed_points = _spawn_bonus_points(game, candidates[:5], color)
-        placed = len(placed_points)
-        if placed > 0:
-            modified = True
-            await send_fn({"type": "rogue_event",
-                           "msg": f"🦠 无限增生！生成 {placed} 颗棋子"})
-
-    elif card == "wildgrow":
-        # Pick 3 random existing stones of this color, each grows a neighbor
-        own_stones = [(sx, sy) for sy in range(size) for sx in range(size)
-                      if game.board[sy][sx] == cv]
-        rng.shuffle(own_stones)
-        growth_targets = []
-        for sx, sy in own_stones:
-            if len(growth_targets) >= ULTIMATE_WILDGROW_MAX_GROWTH:
-                break
-            adj = []
-            for dy in range(-1, 2):
-                for dx in range(-1, 2):
-                    nx, ny = sx + dx, sy + dy
-                    if 0 <= nx < size and 0 <= ny < size and game.board[ny][nx] == 0:
-                        adj.append((nx, ny))
-            if adj:
-                growth_targets.append(rng.choice(adj))
-        grown = len(_spawn_bonus_points(game, growth_targets, color))
-        if grown > 0:
-            modified = True
-            await send_fn({"type": "rogue_event",
-                           "msg": f"🌿 狂野生长！{grown} 颗棋子生长出新子"})
-
-    elif card == "rejection":
-        # Push all opponent stones in 3×3 away from placed stone
-        pushed = 0
-        destroyed = 0
-        for dy in range(-1, 2):
-            for dx in range(-1, 2):
-                if dx == 0 and dy == 0:
-                    continue
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < size and 0 <= ny < size and game.board[ny][nx] == ov:
-                    # Push direction: away from (x,y)
-                    push_x, push_y = nx + dx, ny + dy
-                    game.board[ny][nx] = 0  # remove from original
-                    if (0 <= push_x < size and 0 <= push_y < size
-                            and game.board[push_y][push_x] == 0):
-                        game.board[push_y][push_x] = ov
-                        pushed += 1
-                    else:
-                        destroyed += 1
-                    modified = True
-        if pushed + destroyed > 0:
-            msg = f"💥 排异反应！"
-            if pushed:
-                msg += f"挤走 {pushed} 子"
-            if destroyed:
-                msg += f"{'，' if pushed else ''}摧毁 {destroyed} 子"
+    board_effect = apply_ultimate_board_effect(game, x=x, y=y, color=color, card=card)
+    if board_effect is not None:
+        for msg in board_effect.messages:
             await send_fn({"type": "rogue_event", "msg": msg})
+        return board_effect.modified
 
-    elif card == "shadow_clone":
-        # Place at the symmetric point, then force a delayed line between the
-        # original move and its mirror on the next turn.
-        mx, my = size - 1 - x, size - 1 - y
-        clone_target = None
-        if game.board[my][mx] == 0:
-            clone_target = (mx, my)
-        else:
-            nearby = []
-            for dy in (-1, 0, 1):
-                for dx in (-1, 0, 1):
-                    nx, ny = mx + dx, my + dy
-                    if 0 <= nx < size and 0 <= ny < size and game.board[ny][nx] == 0:
-                        nearby.append((nx, ny))
-            if nearby:
-                nearby.sort(key=lambda p: abs(p[0] - mx) + abs(p[1] - my))
-                clone_target = nearby[0]
-        if clone_target:
-            tx, ty = clone_target
-            placed = _spawn_bonus_points(game, [(tx, ty)], color)
-            if placed:
-                modified = True
-                game.ultimate_shadow_clone_links.append({
-                    "trigger_move": game.ultimate_move_count + 1,
-                    "color": cv,
-                    "from": (x, y),
-                    "to": (tx, ty),
-                })
-                await send_fn({"type": "rogue_event",
-                               "msg": f"👥 影分身！在 {coord_to_gtp(tx, ty, size)} 出现分身，下一回合会连成镜像线"})
-
-    elif card == "plague":
-        # Convert ALL enemy stones in 3×3 area
-        targets = []
-        for dy in range(-2, 3):
-            for dx in range(-2, 3):
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < size and 0 <= ny < size and game.board[ny][nx] == ov:
-                    targets.append((nx, ny))
-        converted = len(_set_points_to_color(game, targets, color))
-        if converted > 0:
-            modified = True
-        if converted > 0:
-            await send_fn({"type": "rogue_event",
-                           "msg": f"☠️ 瘟疫蔓延！感染 {converted} 颗敌子"})
-
-    elif card == "meteor":
-        # Destroy 4 random enemy stones
-        enemies = [(sx, sy) for sy in range(size) for sx in range(size)
-                   if game.board[sy][sx] == ov]
-        rng.shuffle(enemies)
-        destroyed = 0
-        for ex, ey in enemies[:ULTIMATE_METEOR_DESTROY_COUNT]:
-            game.board[ey][ex] = 0
-            destroyed += 1
-        if destroyed > 0:
-            modified = True
-            await send_fn({"type": "rogue_event",
-                           "msg": f"☄️ 陨石雨！摧毁 {destroyed} 颗对方棋子"})
-
-    elif card == "quantum":
-        # Place on 4 random empty points
-        empties = [(sx, sy) for sy in range(size) for sx in range(size)
-                   if game.board[sy][sx] == 0]
-        rng.shuffle(empties)
-        placed = len(_spawn_bonus_points(game, empties[:ULTIMATE_QUANTUM_PLACE_COUNT], color))
-        if placed > 0:
-            modified = True
-            await send_fn({"type": "rogue_event",
-                           "msg": f"⚛️ 量子纠缠！在 {placed} 个位置出现棋子"})
-
-    elif card == "devour":
-        # Eat all opponent stones in 5×5
-        eaten = 0
-        for dy in range(-2, 3):
-            for dx in range(-2, 3):
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < size and 0 <= ny < size and game.board[ny][nx] == ov:
-                    game.board[ny][nx] = 0
-                    eaten += 1
-        if eaten > 0:
-            modified = True
-            await send_fn({"type": "rogue_event",
-                           "msg": f"👹 吞噬之口！吃掉 {eaten} 颗对方棋子"})
-
-    elif card == "timewarp":
-        # 70% chance to undo opponent's last 2 moves
-        if rng.random() < ULTIMATE_TIMEWARP_TRIGGER_CHANCE:
-            opp_color = "W" if color == "B" else "B"
-            erased = 0
-            for i in range(len(game.moves) - 1, -1, -1):
-                if erased >= 2:
-                    break
-                mc, mg = game.moves[i]
-                if mc == opp_color and mg.upper() != "PASS":
-                    coord_t = gtp_to_coord(mg, size)
-                    if coord_t:
-                        ox, oy = coord_t
-                        if game.board[oy][ox] == (1 if mc == "B" else 2):
-                            game.board[oy][ox] = 0
-                            erased += 1
-                            modified = True
-            if erased > 0:
-                await send_fn({"type": "rogue_event",
-                               "msg": f"⏳ 时空裂缝！抹去对方 {erased} 手棋"})
-
-    elif card == "blackout":
-        # Cross pattern: 5 tiles horizontal + 5 tiles vertical centered on (x,y)
-        destroyed = 0
-        for d in range(-2, 3):
-            for nx, ny in [(x + d, y), (x, y + d)]:
-                if 0 <= nx < size and 0 <= ny < size and game.board[ny][nx] == ov:
-                    game.board[ny][nx] = 0
-                    destroyed += 1
-                    modified = True
-        if destroyed > 0:
-            await send_fn({"type": "rogue_event",
-                           "msg": f"🌋 天崩地裂！十字清除 {destroyed} 颗敌子"})
-
-    elif card == "magnet":
-        # Pull all own stones 3 steps toward (x,y), destroying enemies in path
-        own_stones = [(sx, sy) for sy in range(size) for sx in range(size)
-                      if game.board[sy][sx] == cv and (sx, sy) != (x, y)]
-        # Sort by distance so closest move first (avoid collisions)
-        own_stones.sort(key=lambda p: abs(p[0] - x) + abs(p[1] - y))
-        moved = 0
-        crushed = 0
-        for sx, sy in own_stones:
-            cx, cy = sx, sy
-            for _ in range(3):
-                dx_dir = (0 if cx == x else (1 if cx < x else -1))
-                dy_dir = (0 if cy == y else (1 if cy < y else -1))
-                if dx_dir == 0 and dy_dir == 0:
-                    break
-                nx, ny = cx + dx_dir, cy + dy_dir
-                if not (0 <= nx < size and 0 <= ny < size):
-                    break
-                if game.board[ny][nx] == ov:
-                    game.board[ny][nx] = 0  # crush enemy
-                    crushed += 1
-                if game.board[ny][nx] == 0:
-                    game.board[cy][cx] = 0
-                    game.board[ny][nx] = cv
-                    cx, cy = nx, ny
-                    modified = True
-                else:
-                    break  # blocked by own stone
-            if (cx, cy) != (sx, sy):
-                moved += 1
-        if moved + crushed > 0:
-            msg = f"🧲 磁力吸附！{moved} 子飞奔"
-            if crushed:
-                msg += f"，碾碎 {crushed} 颗敌子"
+    state_effect = apply_ultimate_state_effect(
+        game,
+        x=x,
+        y=y,
+        color=color,
+        card=card,
+        coord_to_gtp=coord_to_gtp,
+        gtp_to_coord=gtp_to_coord,
+    )
+    if state_effect is not None:
+        for msg in state_effect.messages:
             await send_fn({"type": "rogue_event", "msg": msg})
+        return state_effect.modified
 
-    elif card == "necro":
-        # Spawn 3 own stones on random empty + convert 2 enemy stones
-        empties = [(sx, sy) for sy in range(size) for sx in range(size)
-                   if game.board[sy][sx] == 0]
-        rng.shuffle(empties)
-        spawned = len(_spawn_bonus_points(game, empties[:3], color))
-        enemies = [(sx, sy) for sy in range(size) for sx in range(size)
-                   if game.board[sy][sx] == ov]
-        rng.shuffle(enemies)
-        converted = len(_set_points_to_color(game, enemies[:2], color))
-        if spawned + converted > 0:
-            modified = True
-        if spawned + converted > 0:
-            await send_fn({"type": "rogue_event",
-                           "msg": f"💀 亡灵召唤！召唤 {spawned} 子，转化 {converted} 子"})
-
-    elif card == "joseki_burst":
-        if not game.ultimate_joseki_targets:
-            game.ultimate_joseki_targets = _pick_joseki_targets(
-                game.size, ULTIMATE_JOSEKI_TARGET_COUNT)
-        if not game.ultimate_joseki_done and (x, y) in game.ultimate_joseki_targets:
-            game.ultimate_joseki_hits += 1
-            await send_fn({"type": "rogue_event",
-                           "msg": f"定式爆发命中 ({game.ultimate_joseki_hits}/{ULTIMATE_JOSEKI_REQUIRED_HITS})"})
-        if not game.ultimate_joseki_done and game.ultimate_joseki_hits >= ULTIMATE_JOSEKI_REQUIRED_HITS:
-            game.ultimate_joseki_done = True
-            remaining_targets = [
-                (tx, ty)
-                for tx, ty in game.ultimate_joseki_targets
-                if game.board[ty][tx] != cv
-            ]
-            changed = _set_points_to_color(game, remaining_targets, color)
-            burst_points = _collect_joseki_burst_points(
-                game,
-                game.ultimate_joseki_targets,
-                color,
-                ULTIMATE_JOSEKI_BONUS_STONES,
-                rng,
-            )
-            changed.extend(_spawn_bonus_points(game, burst_points, color))
-            if changed:
-                modified = True
-                await send_fn({"type": "rogue_event",
-                               "msg": f"定式爆发完成：补满 {len(remaining_targets)} 个目标点，并额外爆发 {len(changed) - len(remaining_targets)} 颗棋子"})
-
-    elif card == "five_in_row":
+    if card == "five_in_row":
         if await _trigger_ultimate_five_in_row(game, send_fn, color):
             modified = True
 
     elif card == "last_stand":
         if await _trigger_ultimate_last_stand(game, send_fn, color):
             modified = True
-
-    elif card == "god_hand":
-        if not game.ultimate_godhand_trigger:
-            game.ultimate_godhand_center = _random_hidden_center(game.size, 2, rng)
-            game.ultimate_godhand_trigger = _diamond_points(
-                game.ultimate_godhand_center[0],
-                game.ultimate_godhand_center[1],
-                2,
-                game.size,
-            )
-        if not game.ultimate_godhand_done and (x, y) in game.ultimate_godhand_trigger:
-            game.ultimate_godhand_done = True
-            cleared = 0
-            for sy in range(size):
-                for sx in range(size):
-                    if game.board[sy][sx] == ov:
-                        game.board[sy][sx] = 0
-                        cleared += 1
-                        modified = True
-            empties = [(sx, sy) for sy in range(size) for sx in range(size) if game.board[sy][sx] == 0]
-            rng.shuffle(empties)
-            filled = len(_spawn_bonus_points(game, empties[:ULTIMATE_GODHAND_FILL_COUNT], color))
-            if filled > 0:
-                modified = True
-            await send_fn({"type": "rogue_event",
-                           "msg": f"✨ 神之一手发动，清空 {cleared} 颗敌子并洒下 {filled} 颗同色棋"})
-
-    elif card == "corner_helper":
-        corner = None
-        for candidate in range(4):
-            if candidate in game.ultimate_corner_helper_done:
-                continue
-            own = sum(
-                1
-                for px, py in _get_corner_square_points(size, candidate, 5)
-                if game.board[py][px] == cv
-            )
-            if own >= 2:
-                corner = candidate
-                break
-        if corner is not None:
-            cleared = 0
-            for px, py in _get_corner_square_points(size, corner, 8):
-                if game.board[py][px] == ov:
-                    game.board[py][px] = 0
-                    cleared += 1
-                    modified = True
-            boundary = _get_corner_boundary_points(size, corner, 8)
-            placed = _spawn_bonus_points(game, boundary, color)
-            if placed:
-                modified = True
-            if cleared or placed:
-                game.ultimate_corner_helper_done.add(corner)
-                await send_fn({"type": "rogue_event",
-                               "msg": f"🏯 守角要塞封锁角部，清空 {cleared} 子并筑边 {len(placed)} 子"})
-
-    elif card == "sanrensei":
-        if not game.ultimate_sanrensei_done:
-            first_three = _player_non_pass_coords(game, color, limit=3)
-            star_set = set(_get_star_points(size))
-            if len(first_three) >= 3 and all(pt in star_set for pt in first_three[:3]):
-                changed = []
-                cleared = 0
-                seen = set()
-                for sx, sy in star_set:
-                    for px, py in _diamond_points(sx, sy, 2, size):
-                        if (px, py) in seen:
-                            continue
-                        seen.add((px, py))
-                        if game.board[py][px] == ov:
-                            game.board[py][px] = 0
-                            cleared += 1
-                            modified = True
-                    changed.extend(_spawn_bonus_points(
-                        game,
-                        _diamond_points(sx, sy, 2, size, boundary_only=True) + [(sx, sy)],
-                        color,
-                    ))
-                if changed:
-                    modified = True
-                game.ultimate_sanrensei_done = True
-                await send_fn({"type": "rogue_event",
-                               "msg": f"✦ 三连星爆发，清空 {cleared} 子并扩张 {len(changed)} 颗星位势力"})
 
     elif card == "foolish_wisdom":
         pending_shapes = _find_new_fool_shapes(game, color, game.ultimate_fool_shapes)
@@ -3388,36 +1626,6 @@ async def _apply_ultimate_effect(game: GoGame, send_fn, x: int, y: int,
         if total_generated > 0:
             await send_fn({"type": "rogue_event",
                            "msg": f"🪤 大智若愚连锁结束，本次共生成 {total_generated} 颗己方棋子"})
-
-    elif card == "wall":
-        if random.random() < ULTIMATE_WALL_TRIGGER_CHANCE:
-            row_slots = sum(1 for fx in range(size) if game.board[y][fx] == 0)
-            col_slots = sum(1 for fy in range(size) if game.board[fy][x] == 0)
-            choose_row = row_slots >= col_slots
-            if choose_row:
-                placed = len(_spawn_bonus_points(
-                    game,
-                    [(fx, y) for fx in range(size) if game.board[y][fx] == 0],
-                    color,
-                ))
-                if placed > 0:
-                    modified = True
-                    await send_fn({"type": "rogue_event",
-                                   "msg": f"🧱 万里长城发动！第 {size - y} 行筑起 {placed} 子"})
-            else:
-                placed = len(_spawn_bonus_points(
-                    game,
-                    [(x, fy) for fy in range(size) if game.board[fy][x] == 0],
-                    color,
-                ))
-                if placed > 0:
-                    modified = True
-                    cols = "ABCDEFGHJKLMNOPQRST"
-                    await send_fn({"type": "rogue_event",
-                                   "msg": f"🧱 万里长城发动！{cols[x]} 列筑起 {placed} 子"})
-        else:
-            await send_fn({"type": "rogue_event",
-                           "msg": "🧱 万里长城未能成型，这次没有筑起城墙"})
 
     return modified
 
@@ -3497,32 +1705,7 @@ async def _pick_nonpass_fallback_move(
     visits: int,
     forbidden: Optional[set[tuple[int, int]]] = None,
 ) -> Optional[str]:
-    forbidden = forbidden or set()
-    try:
-        lines, _ = engine.analyze(
-            color,
-            visits=max(100, min(visits, 1200)),
-            interval=50,
-            duration=1.5,
-            extra_args=["rootInfo", "true"],
-        )
-        result = engine.parse_analysis(lines, [], game.size, to_move_color=color)
-        for item in result.get("top_moves", []):
-            gtp = (item.get("move") or item.get("gtp") or "").strip()
-            if not gtp or gtp.upper() in {"PASS", "RESIGN"}:
-                continue
-            coord = gtp_to_coord(gtp, game.size)
-            if not coord or game.board[coord[1]][coord[0]] != 0:
-                continue
-            if coord in forbidden or not game.is_legal_move(coord[0], coord[1], color):
-                continue
-            with engine.command_lock:
-                resp = engine._send_command_locked(f"play {color} {gtp}")
-                if "?" not in resp:
-                    return gtp
-    except Exception as exc:
-        _engine_log(f"non-pass fallback failed: {exc}")
-    return None
+    return await ai_move_service.pick_nonpass_fallback_move(game, color, visits, forbidden)
 
 
 async def _pick_ranked_legal_move(
@@ -3533,38 +1716,13 @@ async def _pick_ranked_legal_move(
     *,
     time_limit: float = 1.5,
 ) -> Optional[str]:
-    forbidden = forbidden or set()
-    try:
-        lines, _ = await run_in_executor(
-            engine.analyze,
-            color,
-            max(120, min(visits, 1400)),
-            50,
-            time_limit,
-            ["rootInfo", "true"],
-        )
-        result = engine.parse_analysis(lines, [], game.size, to_move_color=color)
-        candidates = []
-        for item in result.get("top_moves", []):
-            gtp = (item.get("move") or item.get("gtp") or "").strip()
-            if not gtp or gtp.upper() in {"PASS", "RESIGN"}:
-                continue
-            coord = gtp_to_coord(gtp, game.size)
-            if (
-                coord
-                and coord not in forbidden
-                and game.board[coord[1]][coord[0]] == 0
-                and game.is_legal_move(coord[0], coord[1], color)
-            ):
-                candidates.append(gtp)
-        for gtp in candidates:
-            with engine.command_lock:
-                resp = engine._send_command_locked(f"play {color} {gtp}")
-                if "?" not in resp:
-                    return gtp
-    except Exception as exc:
-        _engine_log(f"ranked legal fallback failed: {exc}")
-    return None
+    return await ai_move_service.pick_ranked_legal_move(
+        game,
+        color,
+        visits,
+        forbidden,
+        time_limit=time_limit,
+    )
 
 
 async def _ultimate_ai_move(game: GoGame, send_fn,
@@ -3800,27 +1958,16 @@ async def _ai_move(game: GoGame, send_fn):
             await send_fn({"type": "rogue_event",
                            "msg": f"🎭 傀儡术目标 {puppet_gtp} 执行失败，AI 改为正常应手"})
 
-    _mode = "rogue" if rogue_cards else "normal"
-    effective_level = game.level
-    if "nerf" in rogue_cards:
-        effective_level = _weaken_rank(effective_level, 8)
-    if "time_press" in rogue_cards:
-        effective_level = _weaken_rank(effective_level, 5)
-    visits = get_game_visits(effective_level, move_count, mode=_mode)
-
-    if "nerf" in rogue_cards:
-        visits = max(30, int(visits * ROGUE_NERF_FACTOR))
-
-    if move_count < OPENING_MOVE_THRESHOLD:
-        time_limit = min(3.0, MAX_MOVE_TIME)
-    elif visits > 5000:
-        time_limit = MAX_MOVE_TIME
-    else:
-        time_limit = 8.0
-
-    if "time_press" in rogue_cards:
-        time_limit = min(ROGUE_TIME_PRESS_MAX_TIME, time_limit)
-        visits = min(visits, ROGUE_TIME_PRESS_MAX_VISITS)
+    ai_plan = plan_rogue_ai_search(
+        game,
+        rogue_cards,
+        move_count=move_count,
+        ai_move_count=ai_move_count,
+        get_game_visits=get_game_visits,
+        weaken_rank=_weaken_rank,
+    )
+    visits = ai_plan.visits
+    time_limit = ai_plan.time_limit
 
     if "fog" in rogue_cards:
         rng = random.Random(time.time_ns())
@@ -3840,24 +1987,10 @@ async def _ai_move(game: GoGame, send_fn):
         if game.rogue_seal_points:
             await send_fn({"type": "rogue_event", "msg": fog_msg})
 
-    if "tengen" in rogue_cards and ai_move_count < ROGUE_TENGEN_AI_MOVES:
-        if ai_move_count == 0:
-            c = game.size // 2
-            target = (c, c)
-            msg = "天元触发，AI 优先抢下天元"
-        else:
-            star_pts = _get_star_points(game.size)
-            available = [(x, y) for x, y in star_pts
-                         if game.board[y][x] == 0
-                         and (x, y) != (game.size // 2, game.size // 2)]
-            if available:
-                target = random.choice(available)
-                msg = "天元触发，AI 优先补下星位"
-            else:
-                target = None
-                msg = None
-        if target:
-            tx, ty = target
+    if "tengen" in rogue_cards:
+        target_plan = choose_tengen_target(game, ai_move_count)
+        if target_plan:
+            tx, ty = target_plan.coord
             if game.board[ty][tx] == 0 and not game.is_ko(tx, ty, color):
                 t_gtp = coord_to_gtp(tx, ty, game.size)
                 resp = await run_in_executor(
@@ -3871,79 +2004,61 @@ async def _ai_move(game: GoGame, send_fn):
                     await send_fn({"type": "game_state", **game.to_state()})
                     await send_fn({"type": "ai_move", "gtp": t_gtp,
                                     "color": color, "x": tx, "y": ty})
-                    if msg:
-                        await send_fn({"type": "rogue_event", "msg": msg})
+                    await send_fn({"type": "rogue_event", "msg": target_plan.message})
                     return
 
-    if "gravity" in rogue_cards and ai_move_count < ROGUE_GRAVITY_AI_MOVES:
-        star_pts = _get_star_points(game.size)
-        available = [(x, y) for x, y in star_pts if game.board[y][x] == 0]
-        if available:
+    if "gravity" in rogue_cards:
+        restriction = gravity_allowed_points(game, ai_move_count)
+        if restriction:
             gtp_move = await _ai_move_avoid_points_allow_only(
-                game, color, visits, time_limit, available)
+                game, color, visits, time_limit, restriction.points)
             if gtp_move:
                 await _finish_ai_move(game, send_fn, color, card, gtp_move,
-                                      "引力触发，AI 被限制在星位附近落子")
+                                      restriction.message)
                 return
 
-    if "lowline" in rogue_cards and ai_move_count < ROGUE_LOWLINE_AI_MOVES:
-        allowed = [(x, y) for x in range(game.size) for y in range(game.size)
-                   if _is_lowline(x, y, game.size) and game.board[y][x] == 0]
-        if allowed:
+    if "lowline" in rogue_cards:
+        restriction = lowline_allowed_points(game, ai_move_count)
+        if restriction:
             gtp_move = await _ai_move_avoid_points_allow_only(
-                game, color, visits, time_limit, allowed)
+                game, color, visits, time_limit, restriction.points)
             if gtp_move:
                 await _finish_ai_move(game, send_fn, color, card, gtp_move,
-                                      "低空飞行触发，AI 继续在低线路落子")
+                                      restriction.message)
                 return
 
     if "sansan" in rogue_cards:
-        if ai_move_count < 2:
-            sansan_pts = _get_sansan_points(game.size)
-            available = [(x, y) for x, y in sansan_pts if game.board[y][x] == 0]
-            if available:
+        restriction = sansan_opening_restriction(game, ai_move_count)
+        if restriction:
+            if restriction.kind == "allow_only":
                 gtp_move = await _ai_move_avoid_points_allow_only(
-                    game, color, visits, time_limit, available)
+                    game, color, visits, time_limit, restriction.points)
                 if gtp_move:
                     await _finish_ai_move(game, send_fn, color, card, gtp_move,
-                                          "三三开局触发，AI 优先抢角三三")
+                                          restriction.message)
                     return
-        elif ai_move_count < 4:
-            corner_ban = []
-            for cy in (0, game.size - 4):
-                for cx in (0, game.size - 4):
-                    for dy in range(4):
-                        for dx in range(4):
-                            corner_ban.append((cx + dx, cy + dy))
             gtp_move = await _ai_move_avoid_points(
-                game, color, visits, time_limit, corner_ban)
-            await _finish_ai_move(game, send_fn, color, card, gtp_move,
-                                  "三三开局后半段生效，AI 暂时避开角部 4x4")
+                game, color, visits, time_limit, restriction.points)
+            await _finish_ai_move(game, send_fn, color, card, gtp_move, restriction.message)
             return
 
     if (
         "shadow" in rogue_cards
-        and ai_move_count in ROGUE_SHADOW_AI_MOVE_INDEXES
-        and random.random() < ROGUE_SHADOW_CHANCE
+        and ai_move_count in gameplay_config.ROGUE_SHADOW_AI_MOVE_INDEXES
+        and random.random() < gameplay_config.ROGUE_SHADOW_CHANCE
     ):
-        prev_ai_gtp = None
-        for mc, mg in reversed(game.moves):
-            if mc == color and mg.upper() != "PASS":
-                prev_ai_gtp = mg
-                break
-        if prev_ai_gtp:
-            fc = gtp_to_coord(prev_ai_gtp, game.size)
-            if fc:
-                adj = _adjacent_points(fc[0], fc[1], game.size)
-                available = [(x, y) for x, y in adj if game.board[y][x] == 0]
-                if available:
-                    gtp_move = await _ai_move_avoid_points_allow_only(
-                        game, color, visits, time_limit, available)
-                    if gtp_move:
-                        await _finish_ai_move(game, send_fn, color, card,
-                                              gtp_move,
-                                              "影子触发，AI 贴着自己的上一手继续下")
-                        return
+        restriction = shadow_followup_points(
+            game,
+            color,
+            ai_move_count,
+            gtp_to_coord=gtp_to_coord,
+        )
+        if restriction:
+            gtp_move = await _ai_move_avoid_points_allow_only(
+                game, color, visits, time_limit, restriction.points)
+            if gtp_move:
+                await _finish_ai_move(game, send_fn, color, card, gtp_move, restriction.message)
+                return
 
     if ("nerf" in rogue_cards
             and ai_move_count < ROGUE_NERF_BACKUP_AI_MOVES
@@ -3970,15 +2085,12 @@ async def _ai_move(game: GoGame, send_fn):
                                   "次优之选触发，AI 采用了较弱备选点")
             return
 
-    forbidden = []
-    if "seal" in rogue_cards and game.rogue_seal_points:
-        forbidden = game.rogue_seal_points
-    elif "fog" in rogue_cards and game.rogue_seal_points:
-        forbidden = game.rogue_seal_points
-    elif "blackhole" in rogue_cards and ai_move_count < ROGUE_BLACKHOLE_AI_MOVES:
-        forbidden = _challenge_zone_points(game, _get_blackhole_points(game.size))
-    elif "golden_corner" in rogue_cards and game.rogue_seal_points and ai_move_count < ROGUE_GOLDEN_CORNER_AI_MOVES:
-        forbidden = game.rogue_seal_points
+    forbidden = rogue_forbidden_points(
+        game,
+        rogue_cards,
+        ai_move_count,
+        challenge_zone_points=_challenge_zone_points,
+    )
 
     if forbidden:
         gtp_move = await _ai_move_avoid_points(
@@ -3988,24 +2100,17 @@ async def _ai_move(game: GoGame, send_fn):
         if not rogue_cards and game.ai_style != "balanced":
             try:
                 analysis = await do_analysis(game)
-                gtp_move = _choose_ai_style_move(game, color, analysis.get("top_moves", []), game.ai_style)
+                gtp_move = choose_ai_style_move(
+                    game,
+                    color,
+                    analysis.get("top_moves", []),
+                    game.ai_style,
+                    gtp_to_coord=gtp_to_coord,
+                )
             except Exception:
                 gtp_move = None
         if not gtp_move:
-            def _genmove_atomic():
-                with engine.command_lock:
-                    mv = 10000000 if visits == 0 else visits
-                    engine._send_command_locked(f"kata-set-param maxVisits {mv}")
-                    engine.current_visits = visits
-                    engine._send_command_locked(
-                        f"kata-set-param maxTime {time_limit}")
-                    resp = engine._send_command_locked(
-                        f"genmove {color}",
-                        timeout=max(60, time_limit + 15))
-                    engine._send_command_locked("kata-set-param maxTime -1")
-                    return resp
-
-            resp = await run_in_executor(_genmove_atomic)
+            resp = await _ai_generate_move(color, visits, time_limit)
             if game.game_over:
                 return
             if "?" in resp:
@@ -4120,225 +2225,41 @@ async def _ai_move(game: GoGame, send_fn):
 
 
 async def _ai_move_avoid_points(game, color, visits, time_limit, forbidden):
-    """Generate an AI move while avoiding forbidden points (seal card)."""
-    forbidden_gtp = set()
-    for x, y in forbidden:
-        forbidden_gtp.add(coord_to_gtp(x, y, game.size))
-    forbidden_gtp_upper = {s.upper() for s in forbidden_gtp}
-    forbidden_coords = set(forbidden)
-
-    def _analyze_and_pick():
-        with engine.command_lock:
-            mv = 10000000 if visits == 0 else visits
-            engine._send_command_locked(f"kata-set-param maxVisits {mv}")
-            engine.current_visits = visits
-            engine._send_command_locked(
-                f"kata-set-param maxTime {time_limit}")
-            # Use genmove first
-            resp = engine._send_command_locked(
-                f"genmove {color}", timeout=max(60, time_limit + 15))
-            engine._send_command_locked("kata-set-param maxTime -1")
-
-            gtp_move = resp.replace("=", "").strip()
-            # If move is not on a forbidden point, use it
-            if gtp_move.upper() not in ("PASS", "RESIGN") and \
-               gtp_move.upper() not in forbidden_gtp_upper:
-                return gtp_move
-
-            # Move hit a sealed point — undo and try with reduced visits
-            if gtp_move.upper() not in ("PASS", "RESIGN"):
-                engine._send_command_locked("undo")
-            # Try a few times with randomization
-            for attempt in range(5):
-                v = max(50, visits // (2 + attempt))
-                engine._send_command_locked(f"kata-set-param maxVisits {v}")
-                resp2 = engine._send_command_locked(
-                    f"genmove {color}", timeout=20)
-                m = resp2.replace("=", "").strip()
-                if m.upper() not in ("PASS", "RESIGN") and \
-                   m.upper() not in forbidden_gtp_upper:
-                    return m
-                if m.upper() not in ("PASS", "RESIGN"):
-                    engine._send_command_locked("undo")
-            return None
-
-    picked = await run_in_executor(_analyze_and_pick)
-    if picked:
-        return picked
-
-    ranked = await _pick_ranked_legal_move(game, color, visits, forbidden_coords, time_limit=1.3)
-    if ranked:
-        return ranked
-
-    def _last_resort():
-        with engine.command_lock:
-            allowed = [(x, y) for y in range(game.size) for x in range(game.size)
-                       if game.board[y][x] == 0
-                       and (x, y) not in forbidden_coords
-                       and game.is_legal_move(x, y, color)]
-            random.shuffle(allowed)
-            for ax, ay in allowed:
-                gtp = coord_to_gtp(ax, ay, game.size)
-                r = engine._send_command_locked(f"play {color} {gtp}")
-                if "?" not in r:
-                    return gtp
-            engine._send_command_locked(f"play {color} pass")
-            return "pass"
-
-    return await run_in_executor(_last_resort)
+    _bind_ai_move_service_runtime()
+    return await ai_move_service.avoid_points(game, color, visits, time_limit, forbidden)
 
 
 async def _ai_move_avoid_points_allow_only(game, color, visits, time_limit,
                                            allowed: list[tuple[int, int]]):
-    """Generate AI move restricted to a set of allowed coordinates.
-
-    Uses genmove then retries if the move isn't in the allowed set.
-    Falls back to random pick from allowed if KataGo keeps choosing outside.
-    """
-    allowed_gtp = {coord_to_gtp(x, y, game.size).upper() for x, y in allowed}
-
-    def _pick():
-        with engine.command_lock:
-            mv = max(50, min(visits, 2000))  # lower visits for faster retry
-            engine._send_command_locked(f"kata-set-param maxVisits {mv}")
-            engine.current_visits = mv
-            engine._send_command_locked(
-                f"kata-set-param maxTime {min(time_limit, 3.0)}")
-
-            for attempt in range(6):
-                v = max(50, mv // (1 + attempt))
-                engine._send_command_locked(f"kata-set-param maxVisits {v}")
-                resp = engine._send_command_locked(
-                    f"genmove {color}", timeout=15)
-                m = resp.replace("=", "").strip()
-                if m.upper() in ("PASS", "RESIGN"):
-                    engine._send_command_locked("kata-set-param maxTime -1")
-                    return m
-                if m.upper() in allowed_gtp:
-                    engine._send_command_locked("kata-set-param maxTime -1")
-                    return m
-                engine._send_command_locked("undo")
-
-            # Fallback: pick a random allowed point
-            engine._send_command_locked("kata-set-param maxTime -1")
-            random.shuffle(allowed)
-            for ax, ay in allowed:
-                if game.board[ay][ax] == 0:
-                    gtp = coord_to_gtp(ax, ay, game.size)
-                    r = engine._send_command_locked(f"play {color} {gtp}")
-                    if "?" not in r:
-                        return gtp
-            # Nothing worked, let AI play freely
-            resp = engine._send_command_locked(f"genmove {color}", timeout=15)
-            return resp.replace("=", "").strip()
-
-    return await run_in_executor(_pick)
+    _bind_ai_move_service_runtime()
+    return await ai_move_service.allow_only_points(game, color, visits, time_limit, allowed)
 
 
 async def _ai_move_suboptimal(game, color, visits, time_limit, start_idx=2, end_idx=5):
-    """Use kata-analyze to pick from a weaker band of candidate moves."""
-
-    def _analyze_pick():
-        # analyze() takes command_lock internally, so don't hold it here
-        mv = max(200, min(visits, 3000))
-        lines, _ = engine.analyze(
-            color, visits=mv, interval=50, duration=2.0,
-            extra_args=["rootInfo", "true"])
-        result = engine.parse_analysis(
-            lines, [], game.size, to_move_color=color)
-
-        top = result.get("top_moves", [])
-        if len(top) < end_idx:
-            return None
-
-        candidates = top[start_idx:end_idx]
-        pick = random.choice(candidates)
-        gtp = pick.get("move") or pick.get("gtp")
-        if not gtp:
-            return None
-
-        # Play the chosen move in KataGo
-        with engine.command_lock:
-            resp = engine._send_command_locked(f"play {color} {gtp}")
-            if "?" in resp:
-                return None
-        return gtp
-
-    return await run_in_executor(_analyze_pick)
+    _bind_ai_move_service_runtime()
+    return await ai_move_service.suboptimal_move(
+        game,
+        color,
+        visits,
+        time_limit,
+        start_idx=start_idx,
+        end_idx=end_idx,
+    )
 
 
 async def _ai_move_no_resign(game, color: str) -> str:
-    """Retry genmove with low randomized visits to avoid resignation.
-    Falls back to pass if AI still wants to resign."""
-
-    def _retry():
-        with engine.command_lock:
-            for v in (100, 30, 10):
-                engine._send_command_locked(f"kata-set-param maxVisits {v}")
-                engine._send_command_locked("kata-set-param maxTime 2")
-                resp = engine._send_command_locked(
-                    f"genmove {color}", timeout=10)
-                engine._send_command_locked("kata-set-param maxTime -1")
-                m = resp.replace("=", "").strip()
-                if m.upper() != "RESIGN":
-                    return m
-                engine._send_command_locked("undo")
-            # All retries still resign → force pass
-            engine._send_command_locked(f"play {color} pass")
-            return "pass"
-
-    return await run_in_executor(_retry)
+    _bind_ai_move_service_runtime()
+    return await ai_move_service.no_resign_move(game, color)
 
 
 async def _ai_retry_avoiding_ko(game, color):
-    """When AI's genmove landed on a ko point, undo and pick a different move.
+    _bind_ai_move_service_runtime()
+    return await ai_move_service.retry_avoiding_ko(game, color)
 
-    Retries ``genmove`` with progressively lower visits (more randomisation).
-    If all retries still hit the ko point, falls back to a random legal
-    non-ko point.  Only passes as an absolute last resort.
-    """
 
-    def _retry():
-        with engine.command_lock:
-            # Undo the ko-violating genmove that KataGo already played
-            engine._send_command_locked("undo")
-
-            for attempt in range(5):
-                v = max(50, 800 // (2 + attempt))
-                engine._send_command_locked(f"kata-set-param maxVisits {v}")
-                engine._send_command_locked(
-                    f"kata-set-param maxTime 3")
-                resp = engine._send_command_locked(
-                    f"genmove {color}", timeout=10)
-                engine._send_command_locked("kata-set-param maxTime -1")
-                m = resp.replace("=", "").strip()
-                if m.upper() in ("PASS", "RESIGN"):
-                    return m
-                c = gtp_to_coord(m, game.size)
-                if not c or not game.is_ko(c[0], c[1], color):
-                    return m
-                # Still hitting ko — undo and try again
-                engine._send_command_locked("undo")
-
-            # All retries failed — pick a random legal non-ko point
-            empties = [
-                (x, y)
-                for y in range(game.size) for x in range(game.size)
-                if game.board[y][x] == 0
-                and game.is_legal_move(x, y, color)
-            ]
-            random.shuffle(empties)
-            for ax, ay in empties:
-                gtp = coord_to_gtp(ax, ay, game.size)
-                r = engine._send_command_locked(f"play {color} {gtp}")
-                if "?" not in r:
-                    return gtp
-
-            # Absolute last resort — pass
-            engine._send_command_locked(f"play {color} pass")
-            return "pass"
-
-    return await run_in_executor(_retry)
+async def _ai_generate_move(color: str, visits: int, time_limit: float) -> str:
+    _bind_ai_move_service_runtime()
+    return await ai_move_service.generate_move(color, visits, time_limit)
 
 
 async def _finish_ai_move(game, send_fn, color, card, gtp_move, rogue_msg=None):
@@ -4418,24 +2339,20 @@ async def _generate_ai_style_move(game: GoGame, color: str, visits: int, time_li
     if style != "balanced":
         try:
             analysis = await do_analysis(game)
-            chosen = _choose_ai_style_move(game, color, analysis.get("top_moves", []), style)
+            chosen = choose_ai_style_move(
+                game,
+                color,
+                analysis.get("top_moves", []),
+                style,
+                gtp_to_coord=gtp_to_coord,
+            )
         except Exception:
             chosen = None
     if chosen:
         await run_in_executor(engine.send_command, f"play {color} {chosen}")
         return chosen
 
-    def _genmove_atomic():
-        with engine.command_lock:
-            mv = 10000000 if visits == 0 else visits
-            engine._send_command_locked(f"kata-set-param maxVisits {mv}")
-            engine.current_visits = visits
-            engine._send_command_locked(f"kata-set-param maxTime {time_limit}")
-            resp = engine._send_command_locked(f"genmove {color}", timeout=max(60, time_limit + 15))
-            engine._send_command_locked("kata-set-param maxTime -1")
-            return resp
-
-    resp = await run_in_executor(_genmove_atomic)
+    resp = await _ai_generate_move(color, visits, time_limit)
     return resp.replace("=", "").strip()
 
 
