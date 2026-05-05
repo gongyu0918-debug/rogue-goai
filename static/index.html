@@ -3149,8 +3149,8 @@ function updateChallengeInfo() {
 }
 
 const ROGUE_CARD_ZH = {
-  tengen: { name: "天元", desc: "开局 5 手，AI 会优先靠近天元与星位落子。" },
-  dice: { name: "掷骰", desc: "AI 每手有 10% 概率直接虚手。" },
+  tengen: { name: "天元", desc: "AI 开局必下天元，随后 2 手只能落在天元 5×5 菱形区域内。" },
+  dice: { name: "掷骰", desc: "AI 每手有 6% 概率直接虚手。" },
   erosion: { name: "蚕食", desc: "每提 1 子，贴目向有利方偏移 4 目。" },
   puppet: { name: "傀儡术", desc: "先选定 AI 下一手的落点；你先正常落子，随后 AI 会被迫下在那里，整局限 1 次。" },
   seal: { name: "封印术", desc: "指定 4 个禁着点，整局 AI 都不能下在这些点。" },
@@ -3161,33 +3161,33 @@ const ROGUE_CARD_ZH = {
   lowline: { name: "低空飞行", desc: "AI 前 8 手偏向二三路低位。" },
   suboptimal: { name: "次优之选", desc: "AI 前 8 手更容易从后几名的候选点里随机挑一手。" },
   mirror: { name: "镜像", desc: "AI 有 16% 概率按棋盘对称位置镜像模仿你的上一手。" },
-  slip: { name: "手滑了", desc: "AI 有 14% 概率手滑到相邻的点位。" },
-  blackhole: { name: "黑洞", desc: "棋盘中心 13 子区域对 AI 前 6 手禁入。" },
-  exchange: { name: "乾坤挪移", desc: "强制 AI 虚手，你继续行棋，整局限 1 次。" },
+  slip: { name: "手滑了", desc: "AI 有 12% 概率手滑到相邻的点位。" },
+  blackhole: { name: "黑洞", desc: "棋盘中心 13 子区域整局对 AI 禁入。" },
+  exchange: { name: "乾坤挪移", desc: "主动技能：限 1 次，将对方一颗棋子摆动到你指定的空点。" },
   fog: { name: "战争迷雾", desc: "AI 前 11 手每手前会刷新一个 3×3 禁区遮罩；之后每回合随机封锁 2 个 AI 禁着点。" },
-  gravity: { name: "星位引力", desc: "AI 前 7 手被星位磁场牵引。" },
-  golden_corner: { name: "黄金角", desc: "随机封锁一角 4×4 区域，AI 前 10 手禁入。" },
-  sansan: { name: "三三开局", desc: "强制 AI 在开局前 2 手抢四个三三点中的位置；之后 2 手暂时避开角上 4×4 区域。" },
-  shadow: { name: "影子", desc: "AI 前 3 手有 70% 概率紧跟自己的上一手。" },
+  gravity: { name: "星位引力", desc: "AI 前 6 手必定下在星位。" },
+  golden_corner: { name: "黄金角", desc: "随机封锁一角 4×4 区域，AI 整局禁入。" },
+  sansan: { name: "三三开局", desc: "AI 前 3 手必定下在角部 3×3 区域。" },
+  shadow: { name: "影子", desc: "AI 整局有 18% 概率紧跟自己的上一手。" },
   sprout: { name: "萌芽", desc: "每次提子后，都会在附近自动长出 1 颗己棋。" },
   joseki_ocd: { name: "定式强迫症", desc: "开局亮出 7 个目标点，只要下中 4 个，剩下的 3 个会自动补成你的棋子。" },
   handicap_quest: { name: "让子任务", desc: "先虚手 1 次，之后每满 8 手奖励 AI 虚手一次，最多触发 3 次。" },
-  god_hand: { name: "神之一手", desc: "踩中隐藏菱形区，周围 3×3 内随机爆出 3 颗己棋，只会落在空点。" },
-  sansan_trap: { name: "三三陷阱", desc: "只有对手第 1 手正好下在四个三三点之一时才会触发，并在那手棋周围反生 8 颗我方棋。" },
+  god_hand: { name: "神之一手", desc: "踩中隐藏菱形区，周围 5×5 内随机爆出 3 颗己棋，只会落在空点。" },
+  sansan_trap: { name: "三三陷阱", desc: "只要 AI 下在四个三三点之一，就会在该三三点相邻交叉点生成 1 颗我方棋，不占用落子权。" },
   corner_helper: { name: "守角辅助", desc: "每个角各算一次：任一角的 5×5 区域里有 4 颗己子时，就会在那个角补 1 颗援军。" },
-  sanrensei: { name: "三连星", desc: "若你前 2 手都落在星位，会自动补出第 3 颗星位棋，并再长出 2 颗援军。" },
-  no_regret: { name: "永不悔棋", desc: "禁用悔棋，但每手 12% 概率白送一子。" },
-  quickthink: { name: "快速思考", desc: "4 秒内落子可追加 2 秒连击窗口；选中后禁用推荐点位与悔棋。" },
+  sanrensei: { name: "三连星", desc: "若你前三手都下在星位，会在额外两颗未落子星位赠送我方棋。" },
+  no_regret: { name: "永不悔棋", desc: "禁用悔棋；对方落子后有 8% 概率在你的下一手最佳点位自动赠送一子，不占用手动着子机会。" },
+  quickthink: { name: "快速思考", desc: "2 秒内落子可追加 1 秒连击窗口；超时视为虚手；选中后禁用推荐点位与悔棋。" },
   foolish_wisdom: { name: "大智若愚", desc: "摆出愚形，附近 5×5 内随机长出 2 颗己棋。" },
-  five_in_row: { name: "五子连珠", desc: "这是五子棋，不是围棋。每当我方正好连成 5 子，就会优先在首尾补子，并在连线附近补 4 颗援军。" },
+  five_in_row: { name: "五子连珠", desc: "这是五子棋，不是围棋。每当我方正好连成 5 子，就会优先在首尾补子，并在连线附近补 2 颗援军。" },
   coach_mode: { name: "代练上号", desc: "主动技能：后 30 手由更强的 AI 代打；若结束后胜率仍低于 50%，则额外再代打 10 手。" },
   capture_foul: { name: "提子犯规", desc: "若对手单次或累计提子达到 4 颗，就会触发犯规判罚，被惩罚方罚 4 目，随后重新计数。" },
   last_stand: { name: "起死回生", desc: "当我方胜率跌到 26% 以下时，仅触发 1 次：在上一手周围 3×3 内随机消掉 1 颗敌子，并随机补 1 颗己棋。" },
 };
 
 const ROGUE_CARD_I18N = {
-  tengen: { name: "Tengen", desc: "For its first 3 moves, the AI is pulled toward the center and star points." },
-  dice: { name: "Dice Roll", desc: "Each AI move has a 10% chance of being skipped entirely." },
+  tengen: { name: "Tengen", desc: "The AI opens on tengen, then its next 2 moves must stay inside the 5×5 diamond around tengen." },
+  dice: { name: "Dice Roll", desc: "Each AI move has a 6% chance of being skipped entirely." },
   erosion: { name: "Erosion", desc: "Every capture shifts komi by 4 points in the captor's favor." },
   puppet: { name: "Puppet", desc: "Mark the AI's next forced point first. You play your move, then the AI must answer there (once per game)." },
   seal: { name: "Seal", desc: "Mark 4 forbidden points the AI cannot touch for the whole game." },
@@ -3198,25 +3198,25 @@ const ROGUE_CARD_I18N = {
   lowline: { name: "Low Sweep", desc: "The AI hugs the 2nd\u20133rd lines for 6 moves." },
   suboptimal: { name: "Second Best", desc: "For its first 8 moves, the AI is much more likely to choose weaker backup options." },
   mirror: { name: "Mirror", desc: "16% chance the AI mirrors your last move across the board." },
-  slip: { name: "Butterfingers", desc: "14% chance the AI slips to a straight-adjacent point." },
-  blackhole: { name: "Black Hole", desc: "The central 13-point zone is off-limits to the AI for its first 6 moves." },
-  exchange: { name: "Turn Steal", desc: "Force the AI to pass \u2014 you keep playing (once per game)." },
+  slip: { name: "Butterfingers", desc: "12% chance the AI slips to a straight-adjacent point." },
+  blackhole: { name: "Black Hole", desc: "The central 13-point zone is off-limits to the AI for the whole game." },
+  exchange: { name: "Stone Shift", desc: "Active, once per game: move one opponent stone to an empty point you choose." },
   fog: { name: "Fog of War", desc: "For the AI's first 11 moves, a drifting 3\u00d73 no-go zone appears. After that, each turn blocks 2 random legal points." },
-  gravity: { name: "Gravity Well", desc: "The AI is pulled toward star points for 5 moves." },
-  golden_corner: { name: "Golden Corner", desc: "A random 4\u00d74 corner is sealed off from the AI for its first 10 moves." },
-  sansan: { name: "3-3 Rush", desc: "For its first 2 moves, the AI is forced to open on the four 3-3 points, then avoids corner 4\u00d74 zones for 2 moves." },
-  shadow: { name: "Shadow", desc: "On its first 2 moves, the AI has a high chance to cling to its previous stone." },
+  gravity: { name: "Gravity Well", desc: "The AI's first 6 moves must be on star points." },
+  golden_corner: { name: "Golden Corner", desc: "A random 4\u00d74 corner is sealed off from the AI for the whole game." },
+  sansan: { name: "3-3 Rush", desc: "The AI's first 3 moves must land inside corner 3\u00d73 zones." },
+  shadow: { name: "Shadow", desc: "All game, the AI has an 18% chance to cling to its previous stone." },
   sprout: { name: "Sprout", desc: "Each capture spawns a bonus friendly stone nearby." },
   joseki_ocd: { name: "Joseki OCD", desc: "7 target points appear. Hit any 4 of them to auto-fill the remaining 3 with your stones." },
   handicap_quest: { name: "Handicap Quest", desc: "Pass once to start; after every 8 moves you force an AI pass, up to 3 times." },
-  god_hand: { name: "Hand of God", desc: "Step on a hidden diamond zone \u2014 3 friendly stones burst into nearby empty points inside a 3\u00d73 area." },
-  sansan_trap: { name: "3-3 Trap", desc: "Only if the opponent's very first move lands on any 3-3 point, you immediately gain 8 nearby counter-stones." },
+  god_hand: { name: "Hand of God", desc: "Step on a hidden diamond zone \u2014 3 friendly stones burst into nearby empty points inside a 5\u00d75 area." },
+  sansan_trap: { name: "3-3 Trap", desc: "Whenever the AI plays one of the four 3-3 points, gain 1 adjacent friendly stone without consuming your move." },
   corner_helper: { name: "Corner Guard", desc: "Each corner can trigger once. If any corner's 5\u00d75 area has 4 of your stones, that corner gains 1 reinforcement." },
-  sanrensei: { name: "Three Stars", desc: "If your first 2 moves both land on star points, the game auto-fills a 3rd star point stone and adds 2 nearby support stones." },
-  no_regret: { name: "No Regrets", desc: "Undo disabled \u2014 but each move has a 12% chance to add a free stone." },
-  quickthink: { name: "Quick Think", desc: "Play within 3s to unlock a 1s bonus move window. Hints and undo are disabled while this card is active." },
+  sanrensei: { name: "Three Stars", desc: "If your first 3 moves are star points, gain 2 more stones on empty star points." },
+  no_regret: { name: "No Regrets", desc: "Undo disabled. After the opponent moves, 8% chance to gift a stone on your next best point without consuming your manual move." },
+  quickthink: { name: "Quick Think", desc: "Play within 2s to unlock a 1s combo window; timeout counts as pass. Hints and undo are disabled while active." },
   foolish_wisdom: { name: "Wise Fool", desc: "Form an ugly shape to sprout 2 bonus stones in the nearby 5\u00d75 area." },
-  five_in_row: { name: "Five in a Row", desc: "This is Gomoku, not Go. Whenever your stones form exactly 5 in a row, it extends the ends if possible; blocked ends become nearby support stones, plus 4 extra support stones near the line." },
+  five_in_row: { name: "Five in a Row", desc: "This is Gomoku, not Go. Whenever your stones form exactly 5 in a row, it extends the ends if possible; blocked ends become nearby support stones, plus 2 extra support stones near the line." },
   coach_mode: { name: "Coach Login", desc: "Active: a stronger AI plays the next 30 turns for you. If your winrate stays below 50% after that, it plays 10 extra turns." },
   capture_foul: { name: "Capture Foul", desc: "When the opponent's single capture or running capture total reaches 4 stones, a foul triggers automatically. The offender loses 4 points, then the counter resets." },
   last_stand: { name: "Last Stand", desc: "Once per game, if your winrate drops below 26%, remove 1 enemy stone and add 1 friendly stone inside the last move's 3\u00d73 area without landing on forbidden points." },
@@ -4109,6 +4109,8 @@ let rogueUses = {};
 let rogueSealing = false;
 let rogueSeals = [];       // [[x,y], ...]
 let puppetMode = false;    // waiting for player to pick AI's move
+let exchangeModeActive = false;
+let exchangeModeSource = null;
 
 // Ultimate mode state
 let ultimateMode = false;
@@ -5979,7 +5981,7 @@ function getRogueSkillConfig() {
     return { key: "twin", uses: rogueUses.twin || 0, title: ui("主动技能：连击", "Active Skill: Combo") };
   }
   if (activeRogueCard === "exchange") {
-    return { key: "exchange", uses: rogueUses.exchange || 0, title: ui("主动技能：乾坤挪移", "Active Skill: Turn Steal") };
+    return { key: "exchange", uses: rogueUses.exchange || 0, title: ui("主动技能：乾坤挪移", "Active Skill: Stone Shift") };
   }
   if (activeRogueCard === "coach_mode") {
     return { key: "coach_mode", uses: rogueUses.coach_mode || 0, title: ui("主动技能：代练上号", "Active Skill: Coach Mode") };
@@ -6032,6 +6034,8 @@ function resetRogueState() {
   rogueSeals = [];
   aiRogueSeals = [];
   puppetMode = false;
+  exchangeModeActive = false;
+  exchangeModeSource = null;
   document.getElementById("rogue-bar").style.display = "none";
   updateRogueSkillButton();
   document.getElementById("rogue-overlay").classList.remove("show");
@@ -6201,6 +6205,19 @@ function drawRogueMarks() {
       ctx.fill();
     }
   }
+  if (exchangeModeSource) {
+    const px = PAD + exchangeModeSource.x * CELL;
+    const py = PAD + exchangeModeSource.y * CELL;
+    ctx.strokeStyle = "rgba(77, 209, 199, 0.95)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(px, py, CELL * 0.42, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(77, 209, 199, 0.16)";
+    ctx.beginPath();
+    ctx.arc(px, py, CELL * 0.32, 0, Math.PI * 2);
+    ctx.fill();
+  }
   if (ultimatePlayerCard === "joseki_burst" && gameState
       && gameState.ultimate_joseki_targets && !gameState.ultimate_joseki_done) {
     const board = getCurrentBoard();
@@ -6265,7 +6282,9 @@ document.getElementById("rb-twin").addEventListener("click", () => {
 document.getElementById("rb-exchange").addEventListener("click", () => {
   if (!activeRogueCard || activeRogueCard !== "exchange") return;
   if ((rogueUses.exchange || 0) <= 0) return;
-  sendWS({ action: "rogue_use_exchange" });
+  exchangeModeActive = true;
+  exchangeModeSource = null;
+  log(ui("🔄 乾坤挪移：先选择一颗对方棋子，再选择一个空点", "🔄 Stone Shift: choose an opponent stone, then an empty destination."));
 });
 document.getElementById("rb-coach").addEventListener("click", () => {
   if (!activeRogueCard || activeRogueCard !== "coach_mode") return;
@@ -6285,7 +6304,9 @@ document.getElementById("btn-skill").addEventListener("click", () => {
     return;
   }
   if (cfg.key === "exchange") {
-    sendWS({ action: "rogue_use_exchange" });
+    exchangeModeActive = true;
+    exchangeModeSource = null;
+    log(ui("🔄 乾坤挪移：先选择一颗对方棋子，再选择一个空点", "🔄 Stone Shift: choose an opponent stone, then an empty destination."));
     return;
   }
   if (cfg.key === "coach_mode") {
@@ -6352,6 +6373,38 @@ function isCoachTakingOver() {
     && activeRogueCard === "coach_mode"
     && (gameState?.rogue_coach_moves_left || 0) > 0;
 }
+
+function handleExchangeClick(x, y) {
+  if (!exchangeModeActive || !gameState || activeRogueCard !== "exchange" || (rogueUses.exchange || 0) <= 0) {
+    exchangeModeActive = false;
+    exchangeModeSource = null;
+    return false;
+  }
+  if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) return true;
+  const aiValue = aiColor === "B" ? 1 : 2;
+  const pointValue = gameState.board?.[y]?.[x];
+  if (!exchangeModeSource) {
+    if (pointValue !== aiValue) {
+      log(ui("🔄 乾坤挪移：请先选择一颗对方棋子", "🔄 Stone Shift: choose an opponent stone first."));
+      return true;
+    }
+    exchangeModeSource = { x, y };
+    log(ui("🔄 乾坤挪移：再选择一个空点作为目标", "🔄 Stone Shift: choose an empty destination."));
+    if (!animFrameId) render();
+    return true;
+  }
+  if (pointValue !== 0) {
+    log(ui("🔄 乾坤挪移：目标点必须为空", "🔄 Stone Shift: destination must be empty."));
+    return true;
+  }
+  const from = exchangeModeSource;
+  exchangeModeActive = false;
+  exchangeModeSource = null;
+  sendWS({ action: "rogue_use_exchange", from_x: from.x, from_y: from.y, to_x: x, to_y: y });
+  if (!animFrameId) render();
+  return true;
+}
+
 function tryPlay(x, y) {
   const now = Date.now();
   const minGap = (ultimateMode && ultimatePlayerCard === "quickthink" && gameState?.ultimate_quickthink_active) ? 80 : 400;
@@ -6361,6 +6414,9 @@ function tryPlay(x, y) {
   if (isCoachTakingOver()) {
     log(ui("🎓 代练上号接管中，请等待强化 AI 完成代打。", "🎓 Coach is controlling this phase. Wait for the boosted AI to finish."));
     return;
+  }
+  if (exchangeModeActive || exchangeModeSource) {
+    if (handleExchangeClick(x, y)) return;
   }
   if (!twoPlayerMode && !isMyTurn) return;
   if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) return;
@@ -6742,7 +6798,7 @@ function handleMessage(msg) {
       rogueSeals = msg.rogue_seal_points || [];
       activeAiRogueCard = msg.ai_rogue_card || null;
       aiRogueSeals = msg.ai_rogue_seal_points || [];
-      rogueSealing = false; puppetMode = false;
+      rogueSealing = false; puppetMode = false; exchangeModeActive = false; exchangeModeSource = null;
       updateRogueBar();
       syncCardTurnTimer();
       updateChallengeInfo();

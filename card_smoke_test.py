@@ -5,7 +5,11 @@ import threading
 
 import server as s
 from app.data import cards as card_data
-from app.runtime.ws_actions import WebSocketActionContext, handle_rogue_use_puppet
+from app.runtime.ws_actions import (
+    WebSocketActionContext,
+    handle_rogue_use_exchange,
+    handle_rogue_use_puppet,
+)
 
 
 class DummyEngine:
@@ -272,6 +276,34 @@ async def smoke_puppet_flow():
     assert any(msg.get("type") == "rogue_uses_update" and msg.get("uses", {}).get("puppet") == 0 for msg in sent)
 
 
+async def smoke_exchange_shift():
+    game = make_game()
+    game.rogue_enabled = True
+    game.rogue_card = "exchange"
+    game.rogue_uses["exchange"] = 1
+    game.current_player = game.player_color
+    game.board[2][2] = 2
+    sent = []
+    synced = {"count": 0}
+    ctx = make_ws_context(game, sent, engine=DummyEngine())
+
+    async def fake_sync(_game):
+        synced["count"] += 1
+
+    ctx.sync_board_to_katago = fake_sync
+    await handle_rogue_use_exchange(
+        ctx,
+        {"from_x": 2, "from_y": 2, "to_x": 4, "to_y": 4},
+    )
+
+    assert game.board[2][2] == 0
+    assert game.board[4][4] == 2
+    assert game.rogue_uses["exchange"] == 0
+    assert game.current_player == game.player_color
+    assert synced["count"] == 1
+    assert any(msg.get("type") == "rogue_event" and "乾坤挪移" in msg.get("msg", "") for msg in sent)
+
+
 async def smoke_ai_rogue_cards():
     for card_id in s.ROGUE_CARDS:
         game = make_game()
@@ -356,7 +388,7 @@ async def smoke_new_rogue_cards():
     game = make_game()
     game.rogue_card = "god_hand"
     game.rogue_godhand_center = (4, 4)
-    game.rogue_godhand_trigger = s._diamond_points(4, 4, 1, game.size)
+    game.rogue_godhand_trigger = s._diamond_points(4, 4, s.ROGUE_GODHAND_RADIUS, game.size)
     game.board[4][5] = 2
     game.board[5][4] = 2
     synced = {"count": 0}
@@ -376,7 +408,7 @@ async def smoke_new_rogue_cards():
 
     assert game.rogue_godhand_done is True
     assert synced["count"] == 1
-    assert sum(1 for x, y in s._get_square_points(4, 4, 1, game.size) if game.board[y][x] == 1) >= 1
+    assert sum(1 for x, y in s._get_square_points(4, 4, s.ROGUE_GODHAND_RADIUS, game.size) if game.board[y][x] == 1) >= 1
 
     game = make_game()
     game.rogue_card = "corner_helper"
@@ -398,7 +430,8 @@ async def smoke_new_rogue_cards():
 
     game = make_game()
     game.rogue_card = "sanrensei"
-    game.moves = [("B", "C7"), ("W", "E5"), ("B", "G7")]
+    game.moves = [("B", "C7"), ("W", "E5"), ("B", "G7"), ("W", "E4"), ("B", "C3")]
+    game.rebuild_board()
     old_sync = s._sync_board_to_katago
     try:
         async def fake_sync(_game):
@@ -409,13 +442,16 @@ async def smoke_new_rogue_cards():
     finally:
         s._sync_board_to_katago = old_sync
     assert game.rogue_sanrensei_done is True
-    assert sum(1 for x, y in s._get_star_points(game.size) if game.board[y][x] == 1) >= 1
+    assert sum(1 for x, y in s._get_star_points(game.size) if game.board[y][x] == 1) >= 5
 
     game = make_game()
     game.rogue_card = "no_regret"
-    old_pick = s._pick_second_best_point
+    game.current_player = game.ai_color
+    game.moves = [("B", "D4")]
+    old_pick = s._pick_best_point
     old_random = s.random.random
     old_sync = s._sync_board_to_katago
+    old_engine = s.engine
     try:
         async def fake_pick(_game, _color):
             return (4, 4)
@@ -423,14 +459,16 @@ async def smoke_new_rogue_cards():
         async def fake_sync(_game):
             return None
 
-        s._pick_second_best_point = fake_pick
+        s.engine = DummyEngine(["C3"])
+        s._pick_best_point = fake_pick
         s.random.random = lambda: 0.0
         s._sync_board_to_katago = fake_sync
-        await s._apply_player_rogue_move_effects(game, send, 3, 3, "B", 0)
+        await s._ai_move(game, send)
     finally:
-        s._pick_second_best_point = old_pick
+        s._pick_best_point = old_pick
         s.random.random = old_random
         s._sync_board_to_katago = old_sync
+        s.engine = old_engine
     assert game.board[4][4] == 1
 
 
@@ -462,8 +500,8 @@ async def smoke_sansan_trap():
     finally:
         s.engine = old_engine
 
-    assert game.rogue_sansan_trap_done is True
-    assert sum(1 for x, y in s._adjacent8_points(2, 2, game.size) if game.board[y][x] == 1) >= 3
+    assert game.rogue_sansan_trap_done is False
+    assert sum(1 for x, y in s._adjacent8_points(2, 2, game.size) if game.board[y][x] == 1) == s.ROGUE_SANSAN_TRAP_STONES
     assert any(msg.get("type") == "rogue_event" for msg in sent)
 
 
@@ -999,7 +1037,7 @@ async def smoke_two_player_rogue_shared_cards():
 
     await s._apply_player_rogue_move_effects(game, send_white, 2, 2, "W", 0)
     black_support = sum(1 for x, y in s._adjacent8_points(2, 2, game.size) if game.board[y][x] == 1)
-    assert black_support >= 3
+    assert black_support == s.ROGUE_SANSAN_TRAP_STONES
     assert any(msg.get("type") == "rogue_event" for msg in sent)
 
     choices = s.pick_rogue_choices(3, pool=s.TWO_PLAYER_ROGUE_POOL)
@@ -1057,8 +1095,8 @@ async def smoke_ai_rogue_support():
     finally:
         s._sync_board_to_katago = old_sync
 
-    assert game.ai_rogue_sansan_trap_done is True
-    assert sum(1 for x, y in s._adjacent8_points(2, 2, game.size) if game.board[y][x] == 2) >= 3
+    assert game.ai_rogue_sansan_trap_done is False
+    assert sum(1 for x, y in s._adjacent8_points(2, 2, game.size) if game.board[y][x] == 2) == s.ROGUE_SANSAN_TRAP_STONES
     assert any(msg.get("type") == "rogue_event" for msg in sent)
 
 
@@ -1464,6 +1502,7 @@ async def main():
         await smoke_player_rogue_effects()
         await smoke_joseki_completion()
         await smoke_puppet_flow()
+        await smoke_exchange_shift()
         await smoke_ai_rogue_cards()
         await smoke_slip_card()
         await smoke_new_rogue_cards()

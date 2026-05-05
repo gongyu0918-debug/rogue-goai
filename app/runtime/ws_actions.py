@@ -336,10 +336,46 @@ async def handle_rogue_use_exchange(ctx: WebSocketActionContext, data: dict) -> 
     if game.rogue_card != "exchange" or game.rogue_uses.get("exchange", 0) <= 0:
         await ctx.send_error("乾坤挪移已用完")
         return
+    if game.current_player != game.player_color:
+        await ctx.send_error("还没轮到你")
+        return
+    try:
+        from_x = int(data.get("from_x"))
+        from_y = int(data.get("from_y"))
+        to_x = int(data.get("to_x"))
+        to_y = int(data.get("to_y"))
+    except (TypeError, ValueError):
+        await ctx.send_error("乾坤挪移需要先选对方棋子，再选目标空点")
+        return
+    if not (
+        0 <= from_x < game.size
+        and 0 <= from_y < game.size
+        and 0 <= to_x < game.size
+        and 0 <= to_y < game.size
+    ):
+        await ctx.send_error("乾坤挪移点位越界")
+        return
+    opponent_value = 1 if game.ai_color == "B" else 2
+    if game.board[from_y][from_x] != opponent_value:
+        await ctx.send_error("乾坤挪移只能移动对方棋子")
+        return
+    if game.board[to_y][to_x] != 0:
+        await ctx.send_error("乾坤挪移目标点必须为空")
+        return
     game.rogue_uses["exchange"] -= 1
-    game.rogue_skip_ai = True
-    await ctx.send({"type": "rogue_event", "msg": "🔄 乾坤挪移激活！AI 下次将被迫虚手"})
+    game.board[from_y][from_x] = 0
+    game.board[to_y][to_x] = opponent_value
+    game.ko_point = None
+    game.push_history()
+    if ctx.engine.ready:
+        await ctx.sync_board_to_katago(game)
+    from_gtp = ctx.coord_to_gtp(from_x, from_y, game.size)
+    to_gtp = ctx.coord_to_gtp(to_x, to_y, game.size)
+    await ctx.send({"type": "game_state", **game.to_state()})
+    await ctx.send({"type": "rogue_event", "msg": f"🔄 乾坤挪移：已将对方棋子从 {from_gtp} 摆动到 {to_gtp}"})
     await ctx.send({"type": "rogue_uses_update", "uses": game.rogue_uses})
+    if ctx.engine.ready:
+        asyncio.create_task(ctx.do_analysis_bg(game))
 
 
 async def handle_rogue_use_coach(ctx: WebSocketActionContext, data: dict) -> None:
