@@ -87,6 +87,16 @@ function drawRogueMarks() {
     }
   }
 
+  if (activeRogueCard === "exchange" && typeof exchangeModeSource !== "undefined" && exchangeModeSource) {
+    const px = PAD + exchangeModeSource.x * CELL;
+    const py = PAD + exchangeModeSource.y * CELL;
+    ctx.strokeStyle = "rgba(77, 209, 199, 0.95)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(px, py, CELL * 0.42, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
   if (ultimatePlayerCard === "joseki_burst" && gameState
       && gameState.ultimate_joseki_targets && !gameState.ultimate_joseki_done) {
     const board = getCurrentBoard();

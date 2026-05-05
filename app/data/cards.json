@@ -18,10 +18,10 @@
           "ko-KR": "천원"
         },
         "desc": {
-          "zh-CN": "开局 5 手，AI 会优先靠近天元与星位落子",
-          "en-US": "For its first 3 moves, the AI is pulled toward the center and star points.",
-          "ja-JP": "序盤5手、AIは天元と星に近い着手を優先します。",
-          "ko-KR": "초반 5수 동안 AI가 천원과 화점 근처 착수를 우선합니다."
+          "zh-CN": "AI 开局必下天元，随后 2 手只能在天元 5×5 菱形区域落子。",
+          "en-US": "The AI opens at tengen, then its next 2 moves are restricted to the 5x5 diamond around tengen.",
+          "ja-JP": "AIは初手を天元に打ち、その後2手は天元周囲5×5の菱形内に制限されます。",
+          "ko-KR": "AI는 첫 수를 천원에 두고, 이후 2수는 천원 주변 5x5 마름모 영역에만 둘 수 있습니다."
         },
         "icon": "◎"
       },
@@ -33,10 +33,10 @@
           "ko-KR": "주사위"
         },
         "desc": {
-          "zh-CN": "AI 每手有 10% 概率直接虚手",
-          "en-US": "Each AI move has a 10% chance of being skipped entirely.",
-          "ja-JP": "AIの各手に10%の確率でパスが発生します。",
-          "ko-KR": "AI가 매 수 10% 확률로 바로 패스합니다."
+          "zh-CN": "AI 每手有 6% 概率直接虚手。",
+          "en-US": "Each AI move has a 6% chance of becoming a pass.",
+          "ja-JP": "AIの各手は6%の確率でパスになります。",
+          "ko-KR": "AI가 매 수 6% 확률로 바로 패스합니다."
         },
         "icon": "🎉"
       },
@@ -200,10 +200,10 @@
           "ko-KR": "손 미끄러짐"
         },
         "desc": {
-          "zh-CN": "AI 有 14% 概率手滑到相邻的点位",
-          "en-US": "14% chance the AI slips to a straight-adjacent point.",
-          "ja-JP": "AIが14%の確率で隣接点へ手滑りします。",
-          "ko-KR": "AI가 14% 확률로 인접한 점에 미끄러져 둡니다."
+          "zh-CN": "AI 有 12% 概率手滑到相邻的点位。",
+          "en-US": "The AI has a 12% chance to slip to an adjacent point.",
+          "ja-JP": "AIは12%の確率で隣接点に手滑りします。",
+          "ko-KR": "AI가 12% 확률로 인접한 지점에 미끄러져 둡니다."
         },
         "icon": "😾"
       },
@@ -215,10 +215,10 @@
           "ko-KR": "블랙홀"
         },
         "desc": {
-          "zh-CN": "棋盘中心 13 子区域对 AI 前 6 手禁入",
-          "en-US": "The central 13-point zone is off-limits to the AI for its first 6 moves.",
-          "ja-JP": "盤の中央13点は、AIの序盤6手の禁じ手になります。",
-          "ko-KR": "중앙 13점 영역이 AI의 초반 6수 금수 구역이 됩니다."
+          "zh-CN": "中央黑洞区域整局对 AI 禁入。",
+          "en-US": "The central black-hole zone is forbidden to the AI for the whole game.",
+          "ja-JP": "中央のブラックホール領域は、対局中ずっとAIの禁着域になります。",
+          "ko-KR": "중앙 블랙홀 구역은 대국 내내 AI 금지 구역입니다."
         },
         "icon": "🕳️"
       },
@@ -230,10 +230,10 @@
           "ko-KR": "차례 강탈"
         },
         "desc": {
-          "zh-CN": "强制 AI 虚手，你继续行棋（限 1 次）",
-          "en-US": "Force the AI to pass — you keep playing (once per game).",
-          "ja-JP": "AIを強制パスさせ、あなたが続けて打ちます。1局1回。",
-          "ko-KR": "AI를 강제로 패스시키고 내가 계속 둡니다. 한 판 1회."
+          "zh-CN": "主动效果，限 1 次：你可以把对方一颗棋子摆动到你指定的空点，不消耗你的落子权。",
+          "en-US": "Active, once per game: move one opponent stone to an empty point you choose without consuming your move.",
+          "ja-JP": "能動効果、1回限り：相手の石1子を指定した空点へ移動できます。自分の手番は消費しません。",
+          "ko-KR": "능동 효과, 1회 한정: 상대 돌 하나를 내가 지정한 빈 점으로 옮기며 내 착수권은 소모하지 않습니다."
         },
         "icon": "🔄",
         "uses": 1
@@ -261,10 +261,10 @@
           "ko-KR": "화점 인력"
         },
         "desc": {
-          "zh-CN": "AI 前 7 手被星位磁场牵引",
-          "en-US": "The AI is pulled toward star points for 5 moves.",
-          "ja-JP": "AIの序盤7手は星へ引き寄せられます。",
-          "ko-KR": "AI의 초반 7수가 화점으로 끌립니다."
+          "zh-CN": "星位引力：AI 前 6 手必定下在星位。",
+          "en-US": "Star-point gravity: the AI must play its first 6 moves on star points.",
+          "ja-JP": "星位引力：AIの最初の6手は必ず星に打ちます。",
+          "ko-KR": "화점 인력: AI의 첫 6수는 반드시 화점에 둡니다."
         },
         "icon": "🌃"
       },
@@ -276,10 +276,10 @@
           "ko-KR": "황금 귀"
         },
         "desc": {
-          "zh-CN": "随机封锁一角 4×4 区域，AI 前 10 手禁入",
-          "en-US": "A random 4×4 corner is sealed off from the AI for its first 10 moves.",
-          "ja-JP": "ランダムな隅の4×4範囲を封鎖し、AIの序盤10手は入れません。",
-          "ko-KR": "무작위 귀의 4×4 영역을 봉쇄해 AI가 초반 10수 동안 들어가지 못합니다."
+          "zh-CN": "随机封锁一角 4×4 区域，整局对 AI 禁入。",
+          "en-US": "Randomly locks one 4x4 corner zone; the AI is forbidden from it for the whole game.",
+          "ja-JP": "ランダムな隅4×4を封鎖し、対局中ずっとAIの禁着域にします。",
+          "ko-KR": "무작위 한 귀 4x4 구역을 봉쇄해 대국 내내 AI 금지 구역으로 만듭니다."
         },
         "icon": "🪙"
       },
@@ -291,10 +291,10 @@
           "ko-KR": "삼삼 포석"
         },
         "desc": {
-          "zh-CN": "强制 AI 在开局前 2 手去抢四个三三点中的位置，也就是开局硬走三三；之后 2 手暂时避开角上 4×4 区域",
-          "en-US": "For its first 2 moves, the AI is forced to open on the four 3-3 points, then avoids corner 4×4 zones for 2 moves.",
-          "ja-JP": "AIの最初の2手を四隅の三々に誘導します。その後2手は隅の4×4範囲を避けます。",
-          "ko-KR": "AI의 첫 2수를 네 귀 삼삼 중 한 곳으로 강제합니다. 이후 2수는 귀 4×4 영역을 잠시 피합니다."
+          "zh-CN": "AI 前 3 手必定落在四角的 3×3 区域内。",
+          "en-US": "The AI must play its first 3 moves inside the 3x3 corner zones.",
+          "ja-JP": "AIの最初の3手は四隅の3×3領域内に制限されます。",
+          "ko-KR": "AI의 첫 3수는 네 귀의 3x3 구역 안에만 둘 수 있습니다."
         },
         "icon": "◎"
       },
@@ -306,10 +306,10 @@
           "ko-KR": "그림자"
         },
         "desc": {
-          "zh-CN": "AI 前 3 手有 70% 概率紧跟自己的上一手",
-          "en-US": "On its first 2 moves, the AI has a high chance to cling to its previous stone.",
-          "ja-JP": "AIの序盤3手は70%の確率で、自分の前手の近くに続けて打ちます。",
-          "ko-KR": "AI의 초반 3수는 70% 확률로 자신의 직전 수 근처를 따라갑니다."
+          "zh-CN": "全局 18% 概率触发，AI 会贴着自己的上一手继续落子。",
+          "en-US": "Throughout the game, each AI move has an 18% chance to follow adjacent to its previous stone.",
+          "ja-JP": "対局中ずっと18%の確率で、AIは直前の自分の手に隣接して打ちます。",
+          "ko-KR": "대국 내내 AI가 18% 확률로 자신의 이전 수 인접점에 이어 둡니다."
         },
         "icon": "👁"
       },
@@ -366,10 +366,10 @@
           "ko-KR": "신의 한 수"
         },
         "desc": {
-          "zh-CN": "踩中隐藏菱形区，周围 3×3 内随机爆出 3 颗己棋，只会落在空点",
-          "en-US": "Step on a hidden diamond zone — 3 friendly stones burst into nearby empty points inside a 3×3 area.",
-          "ja-JP": "隠れた菱形エリアを踏むと、周囲3×3の空点に自分の石が3子出現します。",
-          "ko-KR": "숨은 마름모 영역을 밟으면 주변 3×3 빈 점에 내 돌 3개가 터져 나옵니다."
+          "zh-CN": "踩中隐藏菱形区，周围 5×5 内随机爆出 3 颗己棋，只会落在空点。",
+          "en-US": "Hit the hidden diamond to spawn 3 of your stones in the surrounding 5x5 area on empty points.",
+          "ja-JP": "隠れた菱形を踏むと、周囲5×5の空点に自分の石が3子出現します。",
+          "ko-KR": "숨겨진 마름모 구역을 밟으면 주변 5x5 빈 점에 내 돌 3개가 생깁니다."
         },
         "icon": "✨"
       },
@@ -381,10 +381,10 @@
           "ko-KR": "삼삼 함정"
         },
         "desc": {
-          "zh-CN": "只有对手第 1 手正好下在四个三三点之一时才会触发，并在那手棋周围反生 8 颗我方棋",
-          "en-US": "Only if the opponent's very first move lands on any 3-3 point, you immediately gain 8 nearby counter-stones.",
-          "ja-JP": "相手の第1手が三々だった場合だけ発動し、その手の周囲に自分の石を8子反発生させます。",
-          "ko-KR": "상대 첫 수가 정확히 네 삼삼 중 하나일 때만 발동하며, 그 수 주변에 내 돌 8개가 반격으로 생깁니다."
+          "zh-CN": "只要 AI 下在四个三三点之一，就立刻在相邻交叉点生成 1 颗我方棋子，不占用你的落子权。",
+          "en-US": "Whenever the AI plays one of the four 3-3 points, 1 of your stones appears on an adjacent point without consuming your move.",
+          "ja-JP": "AIが4つの三々点のいずれかに打つたび、隣接点に自分の石が1子出現し、手番は消費しません。",
+          "ko-KR": "AI가 네 3-3 지점 중 하나에 둘 때마다 인접 교차점에 내 돌 1개가 생기며 내 착수권은 소모되지 않습니다."
         },
         "icon": "🪤"
       },
@@ -411,10 +411,10 @@
           "ko-KR": "삼연성"
         },
         "desc": {
-          "zh-CN": "若你前 2 手都落在星位，会自动补出第 3 颗星位棋，并再长出 2 颗援军",
-          "en-US": "If your first 2 moves both land on star points, the game auto-fills a 3rd star point stone and adds 2 nearby support stones.",
-          "ja-JP": "あなたの最初の2手がどちらも星なら、3つ目の星を自動で補い、さらに援軍を2子置きます。",
-          "ko-KR": "내 첫 2수가 모두 화점이면 세 번째 화점을 자동으로 보충하고 지원군 2개를 더 둡니다."
+          "zh-CN": "若你前三手都下在星位，则在额外两颗未落子星位赠送我方棋子。",
+          "en-US": "If your first 3 moves are all on star points, 2 additional empty star points receive your stones.",
+          "ja-JP": "最初の3手がすべて星なら、未着手の星2点に自分の石が追加されます。",
+          "ko-KR": "내 첫 3수가 모두 화점이면 비어 있는 화점 2곳에 내 돌이 추가됩니다."
         },
         "icon": "⭐"
       },
@@ -426,10 +426,10 @@
           "ko-KR": "무르기 금지"
         },
         "desc": {
-          "zh-CN": "禁用悔棋，但每手 12% 概率白送一子",
-          "en-US": "Undo disabled — but each move has a 12% chance to add a free stone.",
-          "ja-JP": "待ったを禁止しますが、各手に12%の確率で石を1子もらえます。",
-          "ko-KR": "무르기를 금지하지만 매 수 12% 확률로 공짜 돌 1개를 얻습니다."
+          "zh-CN": "禁用悔棋；对方落子后有 8% 概率在你下一手最佳点位自动赠送一子，不占用你的手动着子机会。",
+          "en-US": "Undo is disabled; after the opponent moves, there is an 8% chance to gift one stone on your best next point without consuming your move.",
+          "ja-JP": "待った不可。相手の着手後8%の確率で、次の最善点に自分の石が1子追加され、手番は消費しません。",
+          "ko-KR": "되돌리기는 비활성화됩니다. 상대 착수 후 8% 확률로 내 다음 최선점에 돌 1개가 자동 추가되며 수동 착수권은 소모되지 않습니다."
         },
         "icon": "🚫"
       },
@@ -441,10 +441,10 @@
           "ko-KR": "빠른 생각"
         },
         "desc": {
-          "zh-CN": "4 秒内落子可追加 2 秒连击窗口；选中后禁用推荐点位与悔棋",
-          "en-US": "Play within 3s to unlock a 1s bonus move window. Hints and undo are disabled while this card is active.",
-          "ja-JP": "4秒以内に打つと2秒の連撃窓が開きます。選択中は推薦点と待ったが無効になります。",
-          "ko-KR": "4초 안에 착수하면 2초 연격 창이 열립니다. 선택 중에는 추천점과 무르기가 비활성화됩니다."
+          "zh-CN": "2 秒内落子可追加 1 秒连击窗口；超时视为虚手。选中后禁用推荐点位与悔棋。",
+          "en-US": "Play within 2 seconds to open a 1-second combo window; timeout becomes a pass. Hints and undo are disabled.",
+          "ja-JP": "2秒以内に着手すると1秒の連撃窓が開き、時間切れはパス扱い。ヒントと待ったは使用不可。",
+          "ko-KR": "2초 안에 두면 1초 연속 착수 창이 열리고, 시간 초과는 패스로 처리됩니다. 추천점과 되돌리기는 비활성화됩니다."
         },
         "icon": "⚡"
       },
@@ -471,10 +471,10 @@
           "ko-KR": "오목 연주"
         },
         "desc": {
-          "zh-CN": "这是五子棋，不是围棋。每当我方横、竖、斜正好连成 5 颗同色棋，就会优先在首尾补子；若首尾被堵住，则改在两端附近补子，并在连线附近再补 4 颗援军",
-          "en-US": "This is Gomoku, not Go. Whenever your stones form exactly 5 in a row, it extends the ends if possible; blocked ends become nearby support stones, plus 4 extra support stones near the line.",
-          "ja-JP": "これは囲碁ではなく五目並べです。自分の石がちょうど5連になるたび、両端を優先して補い、線の近くに援軍4子を置きます。",
-          "ko-KR": "이건 바둑이 아니라 오목입니다. 내 돌이 정확히 5개로 이어질 때마다 양끝을 우선 보강하고 선 주변에 지원군 4개를 둡니다."
+          "zh-CN": "每当我方横、竖、斜正好连成 5 颗同色棋，就会优先在首尾补子；若首尾被堵住，则改在两端附近补子，并在连线附近再补 2 颗援军。",
+          "en-US": "When exactly 5 of your stones connect in a line, endpoints are filled first; if blocked, nearby endpoints are used, plus 2 support stones near the line.",
+          "ja-JP": "自分の石が縦横斜めにちょうど5子連なると、まず両端を補強します。塞がれていれば端付近に置き、さらに周辺に援軍2子を補います。",
+          "ko-KR": "내 돌 5개가 가로/세로/대각선으로 정확히 이어지면 양끝을 우선 보강하고, 막혀 있으면 주변 끝점과 선 근처에 지원 돌 2개를 추가합니다."
         },
         "icon": "🎯"
       },
@@ -1181,7 +1181,7 @@
       "min": 0,
       "max": 1,
       "step": 0.01,
-      "value": 0.1
+      "value": 0.06
     },
     "ROGUE_SLIP_CHANCE": {
       "group": "Rogue",
@@ -1195,7 +1195,7 @@
       "min": 0,
       "max": 1,
       "step": 0.01,
-      "value": 0.14
+      "value": 0.12
     },
     "ROGUE_MIRROR_CHANCE": {
       "group": "Rogue",
@@ -1279,7 +1279,7 @@
       "min": 1,
       "max": 40,
       "step": 1,
-      "value": 5
+      "value": 3
     },
     "ROGUE_FOG_MASK_RADIUS": {
       "group": "Rogue",
@@ -1377,7 +1377,7 @@
       "min": 1,
       "max": 80,
       "step": 1,
-      "value": 7
+      "value": 6
     },
     "ROGUE_LOWLINE_AI_MOVES": {
       "group": "Rogue",
@@ -1405,7 +1405,7 @@
       "min": 0,
       "max": 1,
       "step": 0.01,
-      "value": 0.7
+      "value": 0.18
     },
     "ROGUE_SUBOPTIMAL_AI_MOVES": {
       "group": "Rogue",
@@ -1587,7 +1587,7 @@
       "min": 0,
       "max": 5,
       "step": 1,
-      "value": 1
+      "value": 2
     },
     "ROGUE_CORNER_HELPER_TRIGGER_STONES": {
       "group": "Rogue",
@@ -1629,7 +1629,7 @@
       "min": 1,
       "max": 9,
       "step": 1,
-      "value": 2
+      "value": 3
     },
     "ROGUE_SANRENSEI_OPENING_MOVES": {
       "group": "Rogue",
@@ -1643,7 +1643,7 @@
       "min": 1,
       "max": 20,
       "step": 1,
-      "value": 2
+      "value": 3
     },
     "ROGUE_SANRENSEI_BONUS_STONES": {
       "group": "Rogue",
@@ -1657,7 +1657,7 @@
       "min": 0,
       "max": 10,
       "step": 1,
-      "value": 1
+      "value": 2
     },
     "ROGUE_SANRENSEI_SUPPORT_STONES": {
       "group": "Rogue",
@@ -1671,7 +1671,7 @@
       "min": 0,
       "max": 20,
       "step": 1,
-      "value": 2
+      "value": 0
     },
     "ROGUE_NO_REGRET_CHANCE": {
       "group": "Rogue",
@@ -1685,7 +1685,7 @@
       "min": 0,
       "max": 1,
       "step": 0.01,
-      "value": 0.12
+      "value": 0.08
     },
     "ROGUE_QUICKTHINK_FIRST_SECONDS": {
       "group": "Rogue",
@@ -1699,7 +1699,7 @@
       "min": 1,
       "max": 30,
       "step": 1,
-      "value": 4
+      "value": 2
     },
     "ROGUE_QUICKTHINK_SECOND_SECONDS": {
       "group": "Rogue",
@@ -1713,7 +1713,7 @@
       "min": 1,
       "max": 30,
       "step": 1,
-      "value": 2
+      "value": 1
     },
     "ROGUE_SANSAN_TRAP_STONES": {
       "group": "Rogue",
@@ -1727,7 +1727,7 @@
       "min": 0,
       "max": 40,
       "step": 1,
-      "value": 8
+      "value": 1
     },
     "ROGUE_SEAL_POINT_COUNT": {
       "group": "Rogue",
@@ -1755,7 +1755,7 @@
       "min": 0,
       "max": 30,
       "step": 1,
-      "value": 4
+      "value": 2
     },
     "ROGUE_CAPTURE_FOUL_THRESHOLD": {
       "group": "Rogue",

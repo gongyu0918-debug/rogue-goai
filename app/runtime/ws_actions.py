@@ -739,10 +739,45 @@ async def handle_rogue_use_exchange(ctx: WebSocketActionContext, data: dict) -> 
     if game.rogue_card != "exchange" or game.rogue_uses.get("exchange", 0) <= 0:
         await ctx.send_error("乾坤挪移已用完")
         return
+    if game.current_player != game.player_color:
+        await ctx.send_error("还没轮到你")
+        return
+
+    from_point = _board_point_from_data(
+        {"x": data.get("from_x"), "y": data.get("from_y")},
+        game.size,
+    )
+    to_point = _board_point_from_data(
+        {"x": data.get("to_x"), "y": data.get("to_y")},
+        game.size,
+    )
+    if from_point is None or to_point is None:
+        await ctx.send_error("请选择对方棋子和目标空点")
+        return
+    fx, fy = from_point
+    tx, ty = to_point
+    opp_val = 2 if game.player_color == "B" else 1
+    if game.board[fy][fx] != opp_val:
+        await ctx.send_error("乾坤挪移只能移动对方棋子")
+        return
+    if game.board[ty][tx] != 0:
+        await ctx.send_error("目标位置必须是空点")
+        return
+
+    game.board[fy][fx] = 0
+    game.board[ty][tx] = opp_val
+    game.ko_point = None
+    if ctx.engine.ready:
+        await ctx.sync_board_to_katago(game)
     game.rogue_uses["exchange"] -= 1
-    game.rogue_skip_ai = True
-    await ctx.send({"type": "rogue_event", "msg": "🔄 乾坤挪移激活！AI 下次将被迫虚手"})
+    game.push_history()
+    from_gtp = ctx.coord_to_gtp(fx, fy, game.size)
+    to_gtp = ctx.coord_to_gtp(tx, ty, game.size)
+    await ctx.send({"type": "game_state", **game.to_state()})
+    await ctx.send({"type": "rogue_event", "msg": f"🔄 乾坤挪移：已将对方 {from_gtp} 的棋子摆动到 {to_gtp}"})
     await ctx.send({"type": "rogue_uses_update", "uses": game.rogue_uses})
+    if not game.game_over and ctx.engine.ready:
+        asyncio.create_task(ctx.do_analysis_bg(game))
 
 
 async def handle_rogue_use_coach(ctx: WebSocketActionContext, data: dict) -> None:
@@ -934,7 +969,7 @@ async def handle_undo(ctx: WebSocketActionContext, data: dict) -> None:
     game = ctx.restore_game()
     if not game or not game.moves:
         return
-    if game.rogue_card in {"no_regret", "quickthink"}:
+    if ctx.rogue_has(game, "no_regret") or ctx.rogue_has(game, "quickthink"):
         await ctx.send_error("这张卡会禁用悔棋")
         return
 

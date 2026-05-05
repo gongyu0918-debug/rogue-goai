@@ -204,18 +204,14 @@ def apply_player_rogue_board_effects(
     if (
         game.two_player
         and rogue_has(game, "sansan_trap")
-        and not game.rogue_sansan_trap_done
         and (x, y) in get_sansan_points(game.size)
     ):
-        mover_opening = len(_player_non_pass_coords(game, color, gtp_to_coord, limit=2)) == 1
-        nearby = []
         trigger_color = "W" if color == "B" else "B"
-        if mover_opening:
-            nearby = [
-                (nx, ny)
-                for nx, ny in adjacent8_points(x, y, game.size)
-                if game.board[ny][nx] == 0
-            ]
+        nearby = [
+            (nx, ny)
+            for nx, ny in adjacent8_points(x, y, game.size)
+            if game.board[ny][nx] == 0
+        ]
         random.shuffle(nearby)
         changed = spawn_bonus_points(
             game,
@@ -223,10 +219,9 @@ def apply_player_rogue_board_effects(
             trigger_color,
         ) if nearby else []
         if changed:
-            game.rogue_sansan_trap_done = True
             modified = True
             messages.append(
-                f"△ 三三陷阱发动，在 {coord_to_gtp(x, y, game.size)} 周围反打 {len(changed)} 子"
+                f"△ 三三陷阱发动，在 {coord_to_gtp(x, y, game.size)} 相邻点反打 {len(changed)} 子"
             )
 
     if rogue_has(game, "corner_helper"):
@@ -267,13 +262,11 @@ def apply_player_rogue_board_effects(
             len(first_moves) >= gameplay_config.ROGUE_SANRENSEI_REQUIRED_STARS
             and all(pt in star_set for pt in first_moves)
         ):
-            choices = [pt for pt in first_moves if game.board[pt[1]][pt[0]] == 0]
-            if len(choices) < gameplay_config.ROGUE_SANRENSEI_BONUS_STONES:
-                choices.extend([
-                    pt
-                    for pt in star_set
-                    if game.board[pt[1]][pt[0]] == 0 and pt not in choices
-                ])
+            choices = [
+                pt
+                for pt in star_set
+                if game.board[pt[1]][pt[0]] == 0
+            ]
             random.shuffle(choices)
             changed = spawn_bonus_points(
                 game,
@@ -281,12 +274,12 @@ def apply_player_rogue_board_effects(
                 color,
             )
             support_pool = []
-            for sx, sy in (first_moves + changed):
-                for px, py in adjacent8_points(sx, sy, game.size):
-                    if game.board[py][px] == 0 and (px, py) not in support_pool:
-                        support_pool.append((px, py))
-            random.shuffle(support_pool)
-            if support_pool:
+            if gameplay_config.ROGUE_SANRENSEI_SUPPORT_STONES > 0:
+                for sx, sy in (first_moves + changed):
+                    for px, py in adjacent8_points(sx, sy, game.size):
+                        if game.board[py][px] == 0 and (px, py) not in support_pool:
+                            support_pool.append((px, py))
+                random.shuffle(support_pool)
                 changed.extend(spawn_bonus_points(
                     game,
                     support_pool[:gameplay_config.ROGUE_SANRENSEI_SUPPORT_STONES],

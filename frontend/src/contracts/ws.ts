@@ -23,7 +23,7 @@ export type WsAction =
   | ({ action: "rogue_seal_point" } & MovePoint)
   | ({ action: "rogue_use_puppet" } & MovePoint)
   | { action: "rogue_use_twin" }
-  | { action: "rogue_use_exchange" }
+  | { action: "rogue_use_exchange"; from_x?: number; from_y?: number; to_x?: number; to_y?: number }
   | { action: "rogue_use_coach" }
   | { action: "ultimate_select_card"; card_id: string }
   | { action: "ultimate_quickthink_end" };

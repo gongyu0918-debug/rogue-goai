@@ -113,7 +113,7 @@ function getRogueSkillConfig() {
     return { key: "twin", uses: rogueUses.twin || 0, title: ui("主动技能：连击", "Active Skill: Combo") };
   }
   if (activeRogueCard === "exchange") {
-    return { key: "exchange", uses: rogueUses.exchange || 0, title: ui("主动技能：乾坤挪移", "Active Skill: Turn Steal") };
+    return { key: "exchange", uses: rogueUses.exchange || 0, title: ui("主动技能：乾坤挪移", "Active Skill: Stone Shift") };
   }
   if (activeRogueCard === "coach_mode") {
     return { key: "coach_mode", uses: rogueUses.coach_mode || 0, title: ui("主动技能：代练上号", "Active Skill: Coach Mode") };
@@ -166,6 +166,8 @@ function resetRogueState() {
   rogueSeals = [];
   aiRogueSeals = [];
   puppetMode = false;
+  if (typeof exchangeModeActive !== "undefined") exchangeModeActive = false;
+  if (typeof exchangeModeSource !== "undefined") exchangeModeSource = null;
   document.getElementById("rogue-bar").style.display = "none";
   updateRogueSkillButton();
   document.getElementById("rogue-overlay").classList.remove("show");
@@ -270,7 +272,9 @@ function bindRogueSkillButtons() {
   document.getElementById("rb-exchange").addEventListener("click", () => {
     if (!activeRogueCard || activeRogueCard !== "exchange") return;
     if ((rogueUses.exchange || 0) <= 0) return;
-    sendWS({ action: "rogue_use_exchange" });
+    exchangeModeActive = true;
+    exchangeModeSource = null;
+    logI18n("🔄 乾坤挪移：先选择一颗对方棋子，再选择目标空点", "🔄 Stone Shift: choose an opponent stone, then an empty destination.", "🔄 石の移動：相手の石を選び、次に空点を選択", "🔄 돌 이동: 상대 돌을 고른 뒤 빈 목적지를 선택하세요");
   });
 
   document.getElementById("rb-coach").addEventListener("click", () => {
@@ -292,7 +296,9 @@ function bindRogueSkillButtons() {
       return;
     }
     if (cfg.key === "exchange") {
-      sendWS({ action: "rogue_use_exchange" });
+      exchangeModeActive = true;
+      exchangeModeSource = null;
+      logI18n("🔄 乾坤挪移：先选择一颗对方棋子，再选择目标空点", "🔄 Stone Shift: choose an opponent stone, then an empty destination.", "🔄 石の移動：相手の石を選び、次に空点を選択", "🔄 돌 이동: 상대 돌을 고른 뒤 빈 목적지를 선택하세요");
       return;
     }
     if (cfg.key === "coach_mode") {

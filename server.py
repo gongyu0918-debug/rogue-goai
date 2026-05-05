@@ -125,6 +125,7 @@ from app.gameplay.ai_moves import (
     rogue_forbidden_points,
     sansan_opening_restriction,
     shadow_followup_points,
+    tengen_followup_points,
 )
 from app.gameplay.effect_utils import (
     adjacent8_points as _adjacent8_points,
@@ -1281,7 +1282,7 @@ def _clear_player_turn_modifiers(game: GoGame):
     _finish_ultimate_quickthink_turn(game)
 
 
-async def _pick_second_best_point(game: GoGame, color: str) -> Optional[tuple[int, int]]:
+async def _pick_analysis_point(game: GoGame, color: str, *, start_index: int = 0) -> Optional[tuple[int, int]]:
     if not engine.ready:
         return None
 
@@ -1302,7 +1303,7 @@ async def _pick_second_best_point(game: GoGame, color: str) -> Optional[tuple[in
     except Exception:
         return None
 
-    for candidate in top_moves[1:]:
+    for candidate in top_moves[start_index:]:
         move = candidate.get("move") or candidate.get("gtp")
         if not move or move.upper() == "PASS":
             continue
@@ -1310,6 +1311,14 @@ async def _pick_second_best_point(game: GoGame, color: str) -> Optional[tuple[in
         if coord and game.board[coord[1]][coord[0]] == 0:
             return coord
     return None
+
+
+async def _pick_second_best_point(game: GoGame, color: str) -> Optional[tuple[int, int]]:
+    return await _pick_analysis_point(game, color, start_index=1)
+
+
+async def _pick_best_point(game: GoGame, color: str) -> Optional[tuple[int, int]]:
+    return await _pick_analysis_point(game, color, start_index=0)
 
 
 async def _activate_rogue_card(game: GoGame, send_fn, card_id: str):
@@ -1330,12 +1339,13 @@ async def _activate_rogue_card(game: GoGame, send_fn, card_id: str):
         game.rogue_waiting_seal = True
     elif card_id == "blackhole":
         game.rogue_seal_points = _get_blackhole_points(game.size)
+        await send_fn({"type": "rogue_event", "msg": "黑洞已锁定中央区域，整局都会限制 AI 进入"})
     elif card_id == "golden_corner":
         corner = random.randint(0, 3)
         game.rogue_seal_points = _get_golden_corner_points(game.size, corner, ROGUE_GOLDEN_CORNER_SPAN)
         corner_names = ["左上角", "右上角", "左下角", "右下角"]
         await send_fn({"type": "rogue_event",
-                       "msg": f"黄金角已封锁 {corner_names[corner]} 的 {ROGUE_GOLDEN_CORNER_SPAN}x{ROGUE_GOLDEN_CORNER_SPAN} 区域"})
+                       "msg": f"黄金角已封锁 {corner_names[corner]} 的 {ROGUE_GOLDEN_CORNER_SPAN}x{ROGUE_GOLDEN_CORNER_SPAN} 区域，整局都会限制 AI 进入"})
     elif card_id == "joseki_ocd":
         game.rogue_joseki_targets = _pick_joseki_targets(
             game.size, ROGUE_JOSEKI_TARGET_COUNT)
@@ -1354,7 +1364,7 @@ async def _activate_rogue_card(game: GoGame, send_fn, card_id: str):
         rng = random.Random(time.time_ns())
         game.rogue_godhand_center = _random_hidden_center(game.size, 2, rng)
         game.rogue_godhand_trigger = _diamond_points(
-            game.rogue_godhand_center[0], game.rogue_godhand_center[1], 1, game.size)
+            game.rogue_godhand_center[0], game.rogue_godhand_center[1], ROGUE_GODHAND_RADIUS, game.size)
     elif card_id == "quickthink" and game.current_player == game.player_color:
         game.rogue_quickthink_stage = 1
     elif card_id == "coach_mode":
@@ -1424,7 +1434,7 @@ async def _apply_challenge_rogue_loadout(game: GoGame, send_fn):
             rng = random.Random(time.time_ns())
             game.rogue_godhand_center = _random_hidden_center(game.size, 2, rng)
             game.rogue_godhand_trigger = _diamond_points(
-                game.rogue_godhand_center[0], game.rogue_godhand_center[1], 1, game.size
+                game.rogue_godhand_center[0], game.rogue_godhand_center[1], ROGUE_GODHAND_RADIUS, game.size
             )
         elif card_id == "quickthink" and game.current_player == game.player_color:
             game.rogue_quickthink_stage = 1
@@ -1468,16 +1478,6 @@ async def _apply_player_rogue_move_effects(game: GoGame, send_fn,
     for source_name in board_effect.trap_bonus_sources:
         await _challenge_apply_trap_bonus(game, send_fn, source_name)
 
-    if _rogue_has(game, "no_regret") and random.random() < ROGUE_NO_REGRET_CHANCE:
-        bonus = await _pick_second_best_point(game, color)
-        if bonus:
-            changed = _spawn_bonus_points(game, [bonus], color)
-            if changed:
-                if engine.ready:
-                    await _sync_board_to_katago(game)
-                await send_fn({"type": "rogue_event",
-                               "msg": f"🚫 永不悔棋发动，在 {coord_to_gtp(bonus[0], bonus[1], game.size)} 补了一手"})
-
     if _rogue_has(game, "five_in_row"):
         await _trigger_rogue_five_in_row(game, send_fn, color)
 
@@ -1492,7 +1492,7 @@ async def _apply_ai_rogue_response_effects(game: GoGame, send_fn,
                                            color: str):
     if game.two_player or not game.ai_rogue_enabled:
         return
-    if game.ai_rogue_card == "sansan_trap" and not game.ai_rogue_sansan_trap_done:
+    if game.ai_rogue_card == "sansan_trap":
         coord = (x, y)
         if coord in _get_sansan_points(game.size):
             nearby = [
@@ -1503,12 +1503,11 @@ async def _apply_ai_rogue_response_effects(game: GoGame, send_fn,
             random.shuffle(nearby)
             changed = _spawn_bonus_points(game, nearby[:ROGUE_SANSAN_TRAP_STONES], game.ai_color)
             if changed:
-                game.ai_rogue_sansan_trap_done = True
                 if engine.ready:
                     await _sync_board_to_katago(game)
                 await send_fn({
                     "type": "rogue_event",
-                    "msg": f"三三陷阱发动，在 {coord_to_gtp(coord[0], coord[1], game.size)} 周围反打 {len(changed)} 子"
+                    "msg": f"三三陷阱发动，在 {coord_to_gtp(coord[0], coord[1], game.size)} 相邻点反打 {len(changed)} 子"
                 })
 
 
@@ -2006,6 +2005,13 @@ async def _ai_move(game: GoGame, send_fn):
                                     "color": color, "x": tx, "y": ty})
                     await send_fn({"type": "rogue_event", "msg": target_plan.message})
                     return
+        restriction = tengen_followup_points(game, ai_move_count)
+        if restriction:
+            gtp_move = await _ai_move_avoid_points_allow_only(
+                game, color, visits, time_limit, restriction.points)
+            if gtp_move:
+                await _finish_ai_move(game, send_fn, color, card, gtp_move, restriction.message)
+                return
 
     if "gravity" in rogue_cards:
         restriction = gravity_allowed_points(game, ai_move_count)
@@ -2044,7 +2050,6 @@ async def _ai_move(game: GoGame, send_fn):
 
     if (
         "shadow" in rogue_cards
-        and ai_move_count in gameplay_config.ROGUE_SHADOW_AI_MOVE_INDEXES
         and random.random() < gameplay_config.ROGUE_SHADOW_CHANCE
     ):
         restriction = shadow_followup_points(
@@ -2171,17 +2176,34 @@ async def _ai_move(game: GoGame, send_fn):
         game.passed[color] = True
 
     extra_board_change = False
-    if card == "sansan_trap" and not game.rogue_sansan_trap_done and ai_move_count == 0 and coord in _get_sansan_points(game.size):
+    if card == "sansan_trap" and coord in _get_sansan_points(game.size):
         player_color = game.player_color
         nearby = [(nx, ny) for nx, ny in _adjacent8_points(coord[0], coord[1], game.size) if game.board[ny][nx] == 0]
         random.shuffle(nearby)
         changed = _spawn_bonus_points(game, nearby[:ROGUE_SANSAN_TRAP_STONES], player_color)
         if changed:
-            game.rogue_sansan_trap_done = True
             extra_board_change = True
             await send_fn({"type": "rogue_event",
-                           "msg": f"△ 三三陷阱发动，在 {coord_to_gtp(coord[0], coord[1], game.size)} 周围反打 {len(changed)} 子"})
+                           "msg": f"△ 三三陷阱发动，在 {coord_to_gtp(coord[0], coord[1], game.size)} 相邻点反打 {len(changed)} 子"})
             await _challenge_apply_trap_bonus(game, send_fn, "三三陷阱")
+
+    if (needs_sync or extra_board_change) and engine.ready:
+        await _sync_board_to_katago(game)
+        needs_sync = False
+        extra_board_change = False
+
+    if (
+        _rogue_has(game, "no_regret")
+        and random.random() < ROGUE_NO_REGRET_CHANCE
+        and not game.game_over
+    ):
+        bonus = await _pick_best_point(game, game.player_color)
+        if bonus:
+            changed = _spawn_bonus_points(game, [bonus], game.player_color)
+            if changed:
+                extra_board_change = True
+                await send_fn({"type": "rogue_event",
+                               "msg": f"🚫 永不悔棋发动，AI 落子后在 {coord_to_gtp(bonus[0], bonus[1], game.size)} 赠送一子"})
 
     if needs_sync or extra_board_change:
         await _sync_board_to_katago(game)

@@ -8,8 +8,8 @@ from typing import Any, Callable, Optional
 import app.config.gameplay as gameplay_config
 from app.gameplay.effect_utils import (
     adjacent_points,
+    diamond_points,
     get_blackhole_points,
-    get_sansan_points,
     get_star_points,
     is_lowline,
 )
@@ -108,16 +108,21 @@ def choose_tengen_target(game: Any, ai_move_count: int) -> Optional[AiTargetPlan
     if ai_move_count == 0:
         c = game.size // 2
         return AiTargetPlan((c, c), "天元触发，AI 优先抢下天元")
+    return None
 
-    star_pts = get_star_points(game.size)
+
+def tengen_followup_points(game: Any, ai_move_count: int) -> Optional[AiPointRestriction]:
+    if not (0 < ai_move_count < gameplay_config.ROGUE_TENGEN_AI_MOVES):
+        return None
+    c = game.size // 2
     available = [
         (x, y)
-        for x, y in star_pts
-        if game.board[y][x] == 0 and (x, y) != (game.size // 2, game.size // 2)
+        for x, y in diamond_points(c, c, 2, game.size)
+        if game.board[y][x] == 0
     ]
     if not available:
         return None
-    return AiTargetPlan(random.choice(available), "天元触发，AI 优先补下星位")
+    return AiPointRestriction("allow_only", available, "天元牵引：AI 被限制在天元 5x5 菱形区域内落子")
 
 
 def gravity_allowed_points(game: Any, ai_move_count: int) -> Optional[AiPointRestriction]:
@@ -144,26 +149,20 @@ def lowline_allowed_points(game: Any, ai_move_count: int) -> Optional[AiPointRes
 
 
 def sansan_opening_restriction(game: Any, ai_move_count: int) -> Optional[AiPointRestriction]:
-    if ai_move_count < 2:
-        available = [
-            (x, y)
-            for x, y in get_sansan_points(game.size)
-            if game.board[y][x] == 0
-        ]
-        if not available:
-            return None
-        return AiPointRestriction("allow_only", available, "三三开局触发，AI 优先抢角三三")
-
-    if ai_move_count >= 4:
+    if ai_move_count >= 3:
         return None
 
-    corner_ban = []
-    for cy in (0, game.size - 4):
-        for cx in (0, game.size - 4):
-            for dy in range(4):
-                for dx in range(4):
-                    corner_ban.append((cx + dx, cy + dy))
-    return AiPointRestriction("avoid", corner_ban, "三三开局后半段生效，AI 暂时避开角部 4x4")
+    points = []
+    for base_x in (0, game.size - 3):
+        for base_y in (0, game.size - 3):
+            for dy in range(3):
+                for dx in range(3):
+                    x, y = base_x + dx, base_y + dy
+                    if game.board[y][x] == 0:
+                        points.append((x, y))
+    if not points:
+        return None
+    return AiPointRestriction("allow_only", points, "三三开局触发，AI 前 3 手必须落在角部 3x3 区域")
 
 
 def shadow_followup_points(
@@ -173,9 +172,6 @@ def shadow_followup_points(
     *,
     gtp_to_coord: Callable[[str, int], Optional[tuple[int, int]]],
 ) -> Optional[AiPointRestriction]:
-    if ai_move_count not in gameplay_config.ROGUE_SHADOW_AI_MOVE_INDEXES:
-        return None
-
     prev_ai_gtp = None
     for move_color, move_gtp in reversed(game.moves):
         if move_color == color and move_gtp.upper() != "PASS":
@@ -210,13 +206,11 @@ def rogue_forbidden_points(
         return list(game.rogue_seal_points)
     if (
         "blackhole" in rogue_cards
-        and ai_move_count < gameplay_config.ROGUE_BLACKHOLE_AI_MOVES
     ):
         return challenge_zone_points(game, get_blackhole_points(game.size))
     if (
         "golden_corner" in rogue_cards
         and game.rogue_seal_points
-        and ai_move_count < gameplay_config.ROGUE_GOLDEN_CORNER_AI_MOVES
     ):
         return list(game.rogue_seal_points)
     return []

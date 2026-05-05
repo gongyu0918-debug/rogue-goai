@@ -4,6 +4,8 @@ let fineTunePos = null;
 let hoverXY = null;
 let lastPlayTime = 0;
 let aiResponseTimer = null;
+let exchangeModeActive = false;
+let exchangeModeSource = null;
 
 function updateFinetuneUI() {
   const ui = document.getElementById("finetune-ui");
@@ -81,6 +83,40 @@ function tryPlay(x, y) {
   commitPlay(x, y);
 }
 
+function handleExchangeClick(x, y) {
+  if (isCoachTakingOver()) {
+    logI18n("🎓 代练上号接管中，暂时不能使用乾坤挪移。", "🎓 Coach is controlling this phase. Exchange is paused.", "🎓 コーチモードが代打中のため、交換は使えません。", "🎓 코치 모드가 대리 착수 중이라 교환을 사용할 수 없습니다.");
+    return true;
+  }
+  if (!exchangeModeActive || !gameState || activeRogueCard !== "exchange" || (rogueUses.exchange || 0) <= 0) {
+    exchangeModeActive = false;
+    exchangeModeSource = null;
+    return false;
+  }
+  if (!twoPlayerMode && !isMyTurn) return true;
+  const playerVal = (twoPlayerMode ? gameState.current_player : myColor) === "B" ? 1 : 2;
+  const oppVal = 3 - playerVal;
+  if (!exchangeModeSource) {
+    if (gameState.board[y][x] !== oppVal) {
+      logI18n("🔄 乾坤挪移：先选择一颗对方棋子", "🔄 Exchange: choose one opponent stone first.", "🔄 交換：まず相手の石を選択", "🔄 교환: 먼저 상대 돌 하나를 선택하세요");
+      return true;
+    }
+    exchangeModeSource = { x, y };
+    logI18n("🔄 再选择一个空点作为摆动目标", "🔄 Now choose an empty destination.", "🔄 次に空点を移動先として選択", "🔄 이제 빈 점을 이동 목적지로 선택하세요");
+    if (!animFrameId) render();
+    return true;
+  }
+  const source = exchangeModeSource;
+  if (gameState.board[y][x] !== 0) {
+    logI18n("🔄 目标必须是空点", "🔄 Destination must be empty.", "🔄 移動先は空点である必要があります", "🔄 목적지는 빈 점이어야 합니다");
+    return true;
+  }
+  exchangeModeSource = null;
+  exchangeModeActive = false;
+  sendWS({ action: "rogue_use_exchange", from_x: source.x, from_y: source.y, to_x: x, to_y: y });
+  return true;
+}
+
 function commitPlay(x, y) {
   closeWoodSelectMenu();
   if (gameState.board[y][x] !== 0) return;
@@ -134,6 +170,9 @@ canvas.addEventListener("click", e => {
     sendWS({ action: "rogue_use_puppet", x, y });
     return;
   }
+  if (exchangeModeActive || exchangeModeSource) {
+    if (handleExchangeClick(x, y)) return;
+  }
   tryPlay(x, y);
 });
 
@@ -165,6 +204,9 @@ canvas.addEventListener("touchend", e => {
     puppetMode = false;
     sendWS({ action: "rogue_use_puppet", x, y });
     return;
+  }
+  if (exchangeModeActive || exchangeModeSource) {
+    if (handleExchangeClick(x, y)) return;
   }
   tryPlay(x, y);
 }, { passive: false });
