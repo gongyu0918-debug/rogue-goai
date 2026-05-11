@@ -210,18 +210,22 @@ async def _send_engine_not_ready(ctx: WebSocketActionContext, snapshot: dict, fa
 
 
 async def _wait_for_engine_ready(ctx: WebSocketActionContext, reason: str) -> bool:
+    def fully_ready() -> bool:
+        snapshot = ctx.engine_state_snapshot()
+        return bool(ctx.engine.ready and snapshot.get("phase") == "ready")
+
     snapshot = ctx.engine_state_snapshot()
     if snapshot.get("phase") not in {"initializing", "ready"}:
         ctx.start_engine_background(reason)
         snapshot = ctx.engine_state_snapshot()
     await _send_engine_not_ready(ctx, snapshot, "KataGo 正在随游戏启动")
     deadline = time.time() + 120
-    while not ctx.engine.ready and time.time() < deadline:
+    while not fully_ready() and time.time() < deadline:
         await asyncio.sleep(0.5)
         snapshot = ctx.engine_state_snapshot()
         if snapshot.get("phase") in {"failed", "disabled", "stopped"}:
             break
-    if ctx.engine.ready:
+    if fully_ready():
         return True
     snapshot = ctx.engine_state_snapshot()
     await _send_engine_not_ready(ctx, snapshot, "")

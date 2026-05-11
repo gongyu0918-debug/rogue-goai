@@ -44,7 +44,7 @@ a = Analysis(
     ],
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[],
+    runtime_hooks=['pyinstaller_hooks/pyi_runtime_wmi_guard.py'],
     excludes=[],
     noarchive=False,
     optimize=0,

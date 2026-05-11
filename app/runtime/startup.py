@@ -262,6 +262,20 @@ class EngineStartupManager:
             self._set_state(message=f"{label} 初始化中: {line[:180]}")
             return
 
+    def _validate_ready_engine(self, label: str, model: Path) -> None:
+        """Reject engines that start but crash when the game changes board size."""
+        for command in ("boardsize 9", "clear_board", "komi 7.5"):
+            response = self.engine.send_command(command, timeout=12.0)
+            if response.startswith("?"):
+                raise RuntimeError(
+                    f"{label} + {model.name} failed post-start probe {command!r}: {response}"
+                )
+            time.sleep(0.2)
+            if not self.engine.is_alive():
+                raise RuntimeError(
+                    f"{label} + {model.name} exited during post-start probe {command!r}"
+                )
+
     def _run_engine_startup(self, trigger: str, token: int) -> None:
         try:
             if self.no_katago:
@@ -371,12 +385,15 @@ class EngineStartupManager:
                                 current_label, token, line
                             ),
                         )
+                        self.engine.ready = False
+                        self._validate_ready_engine(label, model)
                         if not self._token_is_current(token):
                             self.engine.stop()
                             self.log_event(f"{trigger}: startup cancelled after {label} became ready")
                             return
                         attempt["status"] = "ready"
                         self._set_cpu_mode(is_cpu)
+                        self.engine.ready = True
                         self._set_state(
                             phase="ready",
                             message=f"{label} 引擎已就绪",

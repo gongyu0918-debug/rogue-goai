@@ -29,6 +29,26 @@ function Resolve-Iscc {
     throw "ISCC.exe not found. Please install Inno Setup 6 first."
 }
 
+function Enable-PythonWmiGuard {
+    $guardDir = Join-Path $env:TEMP "rogue-go-arena-py-wmi-guard"
+    New-Item -ItemType Directory -Force -Path $guardDir | Out-Null
+    @'
+import platform
+
+def _skip_wmi_query(*args, **kwargs):
+    raise OSError("WMI query skipped during release build")
+
+if hasattr(platform, "_wmi_query"):
+    platform._wmi_query = _skip_wmi_query
+'@ | Set-Content -LiteralPath (Join-Path $guardDir "sitecustomize.py") -Encoding UTF8
+
+    if ($env:PYTHONPATH) {
+        $env:PYTHONPATH = "$guardDir;$env:PYTHONPATH"
+    } else {
+        $env:PYTHONPATH = $guardDir
+    }
+}
+
 Write-Host "==> Repo root: $RepoRoot"
 Write-Host "==> Build version: $Version"
 Write-Host "==> Build dir: $BuildDir"
@@ -46,7 +66,10 @@ New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
 New-Item -ItemType Directory -Force -Path $ReleaseDir | Out-Null
 
 Push-Location $RepoRoot
+$oldPythonPath = $env:PYTHONPATH
 try {
+    Enable-PythonWmiGuard
+
     $frontendPackage = Join-Path $RepoRoot "frontend\package.json"
     if (Test-Path $frontendPackage) {
         $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
@@ -77,6 +100,7 @@ try {
         (Join-Path $RepoRoot "rogue-go-arena_Setup.iss")
 }
 finally {
+    $env:PYTHONPATH = $oldPythonPath
     Pop-Location
 }
 
