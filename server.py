@@ -12,6 +12,7 @@ import socket
 import time
 import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -1527,10 +1528,39 @@ def _sync_board_to_katago_locked(game: GoGame):
     if whites:
         sgf += "AW" + "".join(f"[{p}]" for p in whites)
     sgf += ")"
-    tmp = os.path.join(BASE_DIR, "_ultimate_sync.sgf")
-    with open(tmp, "w") as f:
+    tmp = _gtp_safe_sync_sgf_path(game)
+    with open(tmp, "w", encoding="utf-8") as f:
         f.write(sgf)
     engine._send_command_locked(f"loadsgf {tmp}")
+
+
+def _has_gtp_unsafe_whitespace(path: str) -> bool:
+    return any(ch.isspace() for ch in path)
+
+
+def _gtp_safe_sync_sgf_path(game: GoGame) -> str:
+    """Return a writable SGF path that KataGo GTP will not split on spaces."""
+    base_drive = Path(BASE_DIR).anchor
+    candidates = [
+        os.environ.get("ROGUE_GO_ARENA_GTP_TMP"),
+        tempfile.gettempdir(),
+        os.path.join(base_drive, "rogue-go-arena-gtp") if base_drive else None,
+        os.path.join(os.environ.get("PUBLIC", r"C:\Users\Public"), "rogue-go-arena-gtp"),
+        r"C:\Temp\rogue-go-arena-gtp",
+    ]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        candidate = os.path.abspath(candidate)
+        if _has_gtp_unsafe_whitespace(candidate):
+            continue
+        try:
+            os.makedirs(candidate, exist_ok=True)
+            filename = f"sync-{os.getpid()}-{id(game)}.sgf"
+            return Path(candidate, filename).as_posix()
+        except OSError:
+            continue
+    raise RuntimeError("No whitespace-free writable path available for KataGo SGF sync")
 
 
 async def _sync_board_to_katago(game: GoGame):

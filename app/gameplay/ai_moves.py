@@ -15,6 +15,9 @@ from app.gameplay.effect_utils import (
 )
 
 
+KATAGO_UNLIMITED_MAX_TIME = "1e20"
+
+
 @dataclass(frozen=True)
 class AiMovePlan:
     mode: str
@@ -294,6 +297,11 @@ class AiMoveService:
         self._engine = engine
         self._run_in_executor = run_in_executor
 
+    def _clear_max_time_locked(self) -> None:
+        self._engine._send_command_locked(
+            f"kata-set-param maxTime {KATAGO_UNLIMITED_MAX_TIME}"
+        )
+
     async def pick_nonpass_fallback_move(
         self,
         game: Any,
@@ -395,7 +403,7 @@ class AiMoveService:
                     f"genmove {color}",
                     timeout=max(60, time_limit + 15),
                 )
-                self._engine._send_command_locked("kata-set-param maxTime -1")
+                self._clear_max_time_locked()
 
                 gtp_move = resp.replace("=", "").strip()
                 if (
@@ -479,14 +487,14 @@ class AiMoveService:
                     resp = self._engine._send_command_locked(f"genmove {color}", timeout=15)
                     m = resp.replace("=", "").strip()
                     if m.upper() in ("PASS", "RESIGN"):
-                        self._engine._send_command_locked("kata-set-param maxTime -1")
+                        self._clear_max_time_locked()
                         return m
                     if m.upper() in allowed_gtp:
-                        self._engine._send_command_locked("kata-set-param maxTime -1")
+                        self._clear_max_time_locked()
                         return m
                     self._engine._send_command_locked("undo")
 
-                self._engine._send_command_locked("kata-set-param maxTime -1")
+                self._clear_max_time_locked()
                 random.shuffle(allowed)
                 for ax, ay in allowed:
                     if game.board[ay][ax] == 0:
@@ -549,7 +557,7 @@ class AiMoveService:
                     f"genmove {color}",
                     timeout=max(60, time_limit + 15),
                 )
-                self._engine._send_command_locked("kata-set-param maxTime -1")
+                self._clear_max_time_locked()
                 return resp
 
         return await self._run_in_executor(_genmove_atomic)
@@ -563,7 +571,7 @@ class AiMoveService:
                     self._engine._send_command_locked(f"kata-set-param maxVisits {v}")
                     self._engine._send_command_locked("kata-set-param maxTime 2")
                     resp = self._engine._send_command_locked(f"genmove {color}", timeout=10)
-                    self._engine._send_command_locked("kata-set-param maxTime -1")
+                    self._clear_max_time_locked()
                     m = resp.replace("=", "").strip()
                     if m.upper() != "RESIGN":
                         return m
@@ -583,7 +591,7 @@ class AiMoveService:
                     self._engine._send_command_locked(f"kata-set-param maxVisits {v}")
                     self._engine._send_command_locked("kata-set-param maxTime 3")
                     resp = self._engine._send_command_locked(f"genmove {color}", timeout=10)
-                    self._engine._send_command_locked("kata-set-param maxTime -1")
+                    self._clear_max_time_locked()
                     m = resp.replace("=", "").strip()
                     if m.upper() in ("PASS", "RESIGN"):
                         return m

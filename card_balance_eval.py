@@ -179,7 +179,7 @@ async def choose_legal_player_move(
                 resp = s.engine._send_command_locked(
                     f"genmove {color}", timeout=30
                 )
-                s.engine._send_command_locked("kata-set-param maxTime -1")
+                s.engine._send_command_locked("kata-set-param maxTime 1e20")
                 return resp.replace("=", "").strip()
 
         gtp = await s.run_in_executor(_genmove)

@@ -18,6 +18,7 @@ class DummyEngine:
         self.current_visits = 400
         self._queued_moves = list(queued_moves or [])
         self._played = []
+        self.commands = []
 
     def _next_empty_gtp(self, game, forbidden=None):
         forbidden = forbidden or set()
@@ -29,6 +30,7 @@ class DummyEngine:
         return "pass"
 
     def _send_command_locked(self, cmd, timeout=60):
+        self.commands.append(cmd)
         if cmd.startswith("genmove "):
             if self._queued_moves:
                 return "= " + self._queued_moves.pop(0)
@@ -1509,6 +1511,30 @@ async def smoke_corner_helper_can_trigger_per_corner():
     assert second_count > first_count
 
 
+async def smoke_katago_gtp_compatibility():
+    game = make_game(size=9)
+    game.board[0][0] = 1
+    game.board[8][8] = 2
+
+    old_engine = s.engine
+    try:
+        dummy = DummyEngine(["D4"])
+        s.engine = dummy
+        s._sync_board_to_katago_locked(game)
+        loadsgf_cmds = [cmd for cmd in dummy.commands if cmd.startswith("loadsgf ")]
+        assert loadsgf_cmds
+        sgf_path = loadsgf_cmds[-1].split(" ", 1)[1]
+        assert " " not in sgf_path
+        assert s.Path(sgf_path).exists()
+
+        s._bind_ai_move_service_runtime()
+        await s.ai_move_service.generate_move("W", 100, 0.25)
+        assert "kata-set-param maxTime -1" not in dummy.commands
+        assert "kata-set-param maxTime 1e20" in dummy.commands
+    finally:
+        s.engine = old_engine
+
+
 async def main():
     old_engine = s.engine
     try:
@@ -1530,6 +1556,7 @@ async def main():
         await smoke_ultimate_ai_effect_sync()
         await smoke_challenge_beta_set_bonuses()
         await smoke_corner_helper_can_trigger_per_corner()
+        await smoke_katago_gtp_compatibility()
         await smoke_quickthink_flow()
         await smoke_featured_pools()
         await smoke_suboptimal_extended()
